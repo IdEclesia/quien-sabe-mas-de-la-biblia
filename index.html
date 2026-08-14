@@ -392,7 +392,7 @@
     </div>
 
     <div class="countdown" id="countdownBox">
-      <div class="label">Faltan...</div>
+      <div class="label">Se viene el Mes de la Biblia, solo faltan...</div>
       <div class="countdown-grid" id="countdownGrid">
         <div class="countdown-unit"><span class="num" id="cd-days">--</span><span class="unit">Días</span></div>
         <div class="countdown-unit"><span class="num" id="cd-hours">--</span><span class="unit">Horas</span></div>
@@ -406,11 +406,11 @@
       <p>30 días para descubrir, aprender, compartir y vivir la Biblia.</p>
       <div class="banner-actions">
         <a class="btn btn-accent btn-block" id="sumarmeBtn" href="#" target="_blank" rel="noopener">Sumarme</a>
-        <a class="btn btn-outline btn-block" id="participarBtn" href="#" target="_blank" rel="noopener">Participar del Mes de la Biblia</a>
+        <button class="btn btn-outline btn-block" onclick="shareInvite()">Invitar a un amigo a participar del mes de la Biblia</button>
       </div>
     </div>
 
-    <footer class="credit">¿Quién sabe más de la Biblia? · Un desafío para compartir</footer>
+    <footer class="credit">¿Quién sabe más de la Biblia? · Un desafío para compartir<br>IdEclesia ©Matías Brizzio</footer>
   </section>
 
   <!-- ===================== PANTALLA: TEST (preguntas) ===================== -->
@@ -636,7 +636,7 @@ function initConfig(){
   setImageOrPlaceholder(document.getElementById('certPreviewWrap'), CERT_TEMPLATE_URL, 'Plantilla del certificado');
 
   // Enlaces al Mes de la Biblia (variable configurable MES_BIBLIA_URL)
-  ['sumarmeBtn','participarBtn','sumarmeBtn2'].forEach(id => {
+  ['sumarmeBtn','sumarmeBtn2'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.setAttribute('href', MES_BIBLIA_URL);
   });
@@ -980,15 +980,13 @@ function shareToFriend(){
   const pct = getResultPct();
   const link = currentPageUrl();
   const msg =
-`TE DESAFÍO
+`*TE DESAFÍO*
 
 Acabo de hacer el desafío "${testName}" de ¿Quién sabe más de la Biblia?
 
 Mi resultado fue ${pct}%.
 
 ¿Podés superarme?
-
-Son solamente 10 preguntas.
 
 ${link}
 
@@ -1002,15 +1000,13 @@ function shareToGroup(){
   const pct = getResultPct();
   const link = currentPageUrl();
   const msg =
-`DESAFÍO PARA EL GRUPO
+`*DESAFÍO PARA EL GRUPO*
 
 Acabo de hacer el desafío "${testName}" de ¿Quién sabe más de la Biblia?
 
 Mi resultado fue ${pct}%.
 
 ¿Quién puede superarme?
-
-Son solamente 10 preguntas.
 
 ${link}
 
