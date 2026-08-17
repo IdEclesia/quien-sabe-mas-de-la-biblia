@@ -395,7 +395,7 @@
     </div>
 
     <div class="countdown" id="countdownBox">
-      <div class="label">Faltan...</div>
+      <div class="label">Para el Mes de la Biblia faltan...</div>
       <div class="countdown-grid" id="countdownGrid">
         <div class="countdown-unit"><span class="num" id="cd-days">--</span><span class="unit">Días</span></div>
         <div class="countdown-unit"><span class="num" id="cd-hours">--</span><span class="unit">Horas</span></div>
@@ -408,8 +408,8 @@
       <h2>Sumate al Mes de la Biblia</h2>
       <p>Creá torneos bíblicos para tus amigos, tu familia o tu comunidad, o participá en un torneo internacional de preguntas y respuestas de la Biblia.</p>
       <div class="banner-actions">
-        <a class="btn btn-accent btn-block" id="sumarmeBtn" href="#" target="_blank" rel="noopener">Sumarme</a>
-        <a class="btn btn-outline btn-block" id="participarBtn" href="#" target="_blank" rel="noopener">Participar del Mes de la Biblia</a>
+        <a class="btn btn-accent btn-block" id="sumarmeBtn" href="#" target="_blank" rel="noopener">Participar en Torneo Bíblico</a>
+        <button class="btn btn-outline btn-block" onclick="shareInviteTrivia()">Enviar invitación a participar de ¿Quién sabe más de la Biblia?</button>
       </div>
     </div>
 
@@ -482,7 +482,7 @@
       <h3 style="font-size:1rem;color:var(--text)">Sumate al Mes de la Biblia</h3>
       <p>30 días. Una experiencia. La Biblia como nunca la habías descubierto.</p>
       <div class="banner-actions">
-        <a class="btn btn-accent btn-block" id="sumarmeBtn2" href="#" target="_blank" rel="noopener">Sumarme</a>
+        <a class="btn btn-accent btn-block" id="sumarmeBtn2" href="#" target="_blank" rel="noopener">Participar en Torneo Bíblico</a>
         <button class="btn btn-outline btn-block" onclick="shareInvite()">Invitar al Mes de la Biblia</button>
       </div>
     </div>
@@ -644,7 +644,7 @@ function initConfig(){
   setImageOrPlaceholder(document.getElementById('certPreviewWrap'), CERT_TEMPLATE_URL, 'Plantilla del certificado');
 
   // Enlaces al Mes de la Biblia (variable configurable MES_BIBLIA_URL)
-  ['sumarmeBtn','participarBtn','sumarmeBtn2'].forEach(id => {
+  ['sumarmeBtn','sumarmeBtn2'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.setAttribute('href', MES_BIBLIA_URL);
   });
@@ -986,21 +986,17 @@ function currentPageUrl(){
 function shareToFriend(){
   const testName = state.currentTest.title;
   const pct = getResultPct();
-  const link = currentPageUrl();
+  const link = "https://ideclesia.github.io/quien-sabe-mas-de-la-biblia/#";
   const msg =
 `TE DESAFÍO
 
-Acabo de hacer el desafío "${testName}" de ¿Quién sabe más de la Biblia?
+Acabo de hacer el desafío "${testName}" de *¿Quién sabe más de la Biblia?*
 
-Mi resultado fue ${pct}%.
+Mi resultado fue ${pct}%. ¿Podés superarme?
 
-¿Podés superarme?
+Ingresá en este link y demostralo: ${link}
 
-Son solamente 10 preguntas.
-
-${link}
-
-A ver quién sabe más de la Biblia.`;
+¡Feliz Mes de la Biblia!`;
   openWhatsApp(msg);
   trackShare('compartido_amigo');
 }
@@ -1008,21 +1004,20 @@ A ver quién sabe más de la Biblia.`;
 function shareToGroup(){
   const testName = state.currentTest.title;
   const pct = getResultPct();
-  const link = currentPageUrl();
+  const link = "https://ideclesia.github.io/quien-sabe-mas-de-la-biblia/#";
   const msg =
 `DESAFÍO PARA EL GRUPO
 
-Acabo de hacer el desafío "${testName}" de ¿Quién sabe más de la Biblia?
+Acabo de hacer el desafío "${testName}" de *¿Quién sabe más de la Biblia?*
 
 Mi resultado fue ${pct}%.
 
 ¿Quién puede superarme?
 
-Son solamente 10 preguntas.
-
+Ingresá en el siguiente link y demostralo:
 ${link}
 
-¡A ver quién sabe más de la Biblia!`;
+¡Feliz Mes de la Biblia!`;
   openWhatsApp(msg);
   trackShare('compartido_grupo');
 }
@@ -1038,6 +1033,12 @@ Comenzamos el 1 de septiembre.
 ${MES_BIBLIA_URL}
 
 ¡Sumate!`;
+  openWhatsApp(msg);
+}
+
+function shareInviteTrivia(){
+  const msg =
+`Querido hermano/a te invito a participar de *¿Quién sabe más de la Biblia?* una competencia de conocimiento Bíblico, muy divertido. Ingresá en el siguiente link: https://ideclesia.github.io/quien-sabe-mas-de-la-biblia/`;
   openWhatsApp(msg);
 }
 
