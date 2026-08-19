@@ -144,6 +144,45 @@
 
   .empty-state{text-align:center;padding:30px 10px;color:var(--text-soft);}
 
+  /* ---------- Tabs ---------- */
+  .tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+  .tab-btn{
+    appearance:none;border:2px solid #DCE9F5;background:var(--surface);color:var(--text-soft);
+    font-weight:700;font-size:.85rem;padding:9px 16px;border-radius:999px;cursor:pointer;
+  }
+  .tab-btn.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+
+  /* ---------- Torneos ---------- */
+  .torneo-form{display:grid;gap:12px;margin-bottom:20px;}
+  .torneo-form .field input{
+    width:100%;padding:12px 14px;border-radius:var(--radius-sm);
+    border:2px solid #DCE9F5;background:var(--secondary);font-size:.92rem;color:var(--text);
+  }
+  .torneo-form .field input:focus{border-color:var(--accent);outline:none;}
+  .torneo-card{
+    background:var(--surface);border:1px solid #DCE9F5;border-radius:var(--radius-md);
+    padding:16px;margin-bottom:12px;display:flex;flex-wrap:wrap;align-items:center;gap:12px;
+    justify-content:space-between;
+  }
+  .torneo-card .info h3{font-size:1rem;margin-bottom:2px;}
+  .torneo-card .info .code{
+    font-family:monospace;font-weight:700;color:var(--primary);letter-spacing:.04em;
+  }
+  .torneo-card .info .meta{font-size:.78rem;color:var(--text-soft);}
+  .torneo-card .actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .tag-activo{background:#E4F1E6;color:var(--success);}
+  .tag-cerrado{background:#FBE9E4;color:var(--danger);}
+  .rank-row{
+    display:flex;align-items:center;gap:12px;background:var(--secondary);
+    border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:8px;
+  }
+  .rank-pos{
+    width:26px;height:26px;border-radius:50%;background:var(--surface);color:var(--primary-dark);
+    font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.78rem;
+  }
+  .rank-name{flex:1;font-weight:700;color:var(--text);font-size:.88rem;}
+  .rank-score{font-weight:800;color:var(--primary);font-size:.85rem;white-space:nowrap;}
+
   footer.credit{text-align:center;font-size:.72rem;color:#8FA0B6;margin-top:20px;}
 
   @media (min-width:640px){
@@ -190,6 +229,12 @@
       </div>
     </div>
 
+    <div class="tabs">
+      <button class="tab-btn active" id="tabGeneralBtn" onclick="switchAdminTab('general')">General</button>
+      <button class="tab-btn" id="tabTorneosBtn" onclick="switchAdminTab('torneos')">Torneos</button>
+    </div>
+
+    <div id="panelGeneral">
     <div class="kpi-grid">
       <div class="kpi-card">
         <div class="label">Participantes</div>
@@ -236,6 +281,36 @@
           </thead>
           <tbody id="recentBody"></tbody>
         </table>
+      </div>
+    </div>
+    </div>
+
+    <div id="panelTorneos" style="display:none">
+      <div class="panel">
+        <h2>Crear torneo</h2>
+        <div class="torneo-form">
+          <div class="field">
+            <label for="torneoNombreInput">Nombre del torneo</label>
+            <input type="text" id="torneoNombreInput" placeholder="Ej: Torneo Internacional Mes de la Biblia" maxlength="80">
+          </div>
+          <div class="field">
+            <label for="torneoEmailInput">Email del organizador</label>
+            <input type="email" id="torneoEmailInput" placeholder="organizador@correo.com" maxlength="80">
+          </div>
+          <button class="btn btn-primary" style="margin-top:0" onclick="crearTorneo()">Crear torneo</button>
+          <div class="login-error" id="torneoCreateError" role="alert"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Torneos</h2>
+        <div id="torneosList"><div class="empty-state">Cargando torneos...</div></div>
+      </div>
+
+      <div class="panel" id="torneoRankingPanel" style="display:none">
+        <h2 id="torneoRankingTitle">Ranking</h2>
+        <div id="torneoRankingBody"></div>
+        <button class="btn btn-ghost" style="margin-top:14px" onclick="closeTorneoRanking()">Cerrar ranking</button>
       </div>
     </div>
 
@@ -427,6 +502,160 @@ function renderDashboard(rows){
         </tr>`;
     }).join('');
   }
+}
+
+/* =====================================================================
+   TABS
+   ===================================================================== */
+function switchAdminTab(tab){
+  const isGeneral = tab === 'general';
+  document.getElementById('panelGeneral').style.display = isGeneral ? '' : 'none';
+  document.getElementById('panelTorneos').style.display = isGeneral ? 'none' : '';
+  document.getElementById('tabGeneralBtn').classList.toggle('active', isGeneral);
+  document.getElementById('tabTorneosBtn').classList.toggle('active', !isGeneral);
+  if (!isGeneral) loadTorneos();
+}
+
+/* =====================================================================
+   TORNEOS: CREAR, LISTAR, RANKING
+   ===================================================================== */
+function generarCodigoTorneo(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+async function crearTorneo(){
+  const nombreInput = document.getElementById('torneoNombreInput');
+  const emailInput = document.getElementById('torneoEmailInput');
+  const errBox = document.getElementById('torneoCreateError');
+  errBox.classList.remove('show');
+
+  const nombre = nombreInput.value.trim();
+  const email = emailInput.value.trim();
+  if (!nombre){
+    errBox.textContent = 'Ingresá un nombre para el torneo.';
+    errBox.classList.add('show');
+    return;
+  }
+
+  const codigo = generarCodigoTorneo();
+  const { error } = await supabaseClient
+    .from('torneos')
+    .insert({
+      id: codigo,
+      nombre_torneo: nombre,
+      organizador_email: email || null,
+      estado: 'activo'
+    });
+
+  if (error){
+    console.error(error);
+    errBox.textContent = 'No se pudo crear el torneo. Intentá de nuevo.';
+    errBox.classList.add('show');
+    return;
+  }
+
+  nombreInput.value = '';
+  emailInput.value = '';
+  loadTorneos();
+}
+
+async function loadTorneos(){
+  const list = document.getElementById('torneosList');
+  const { data, error } = await supabaseClient
+    .from('torneos')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error){
+    console.error(error);
+    list.innerHTML = '<div class="empty-state">No se pudieron cargar los torneos.</div>';
+    return;
+  }
+
+  renderTorneos(data || []);
+}
+
+function renderTorneos(torneos){
+  const list = document.getElementById('torneosList');
+  if (!torneos.length){
+    list.innerHTML = '<div class="empty-state">Todavía no creaste ningún torneo.</div>';
+    return;
+  }
+  list.innerHTML = torneos.map(t => {
+    const date = t.created_at ? new Date(t.created_at).toLocaleDateString('es-PY', { day:'2-digit', month:'2-digit', year:'2-digit' }) : '--';
+    const activo = (t.estado || 'activo') === 'activo';
+    const tagClass = activo ? 'tag tag-activo' : 'tag tag-cerrado';
+    const tagLabel = activo ? 'Activo' : 'Cerrado';
+    return `
+      <div class="torneo-card">
+        <div class="info">
+          <h3>${t.nombre_torneo || 'Torneo sin nombre'} <span class="${tagClass}">${tagLabel}</span></h3>
+          <div class="code">Código: ${t.id}</div>
+          <div class="meta">Creado ${date}${t.organizador_email ? ' · ' + t.organizador_email : ''}</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-ghost" onclick="viewTorneoRanking('${t.id}', '${(t.nombre_torneo || '').replace(/'/g, "\\'")}')">Ver ranking</button>
+          <button class="btn btn-ghost" onclick="toggleTorneoEstado('${t.id}', '${activo ? 'cerrado' : 'activo'}')">${activo ? 'Cerrar' : 'Reabrir'}</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function toggleTorneoEstado(id, nuevoEstado){
+  const { error } = await supabaseClient
+    .from('torneos')
+    .update({ estado: nuevoEstado })
+    .eq('id', id);
+  if (error){
+    console.error(error);
+    return;
+  }
+  loadTorneos();
+}
+
+async function viewTorneoRanking(torneoId, nombreTorneo){
+  const panel = document.getElementById('torneoRankingPanel');
+  const title = document.getElementById('torneoRankingTitle');
+  const body = document.getElementById('torneoRankingBody');
+  title.textContent = 'Ranking' + (nombreTorneo ? ' · ' + nombreTorneo : '') + ' (' + torneoId + ')';
+  body.innerHTML = '<div class="empty-state">Cargando...</div>';
+  panel.style.display = '';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  const { data, error } = await supabaseClient
+    .from('participaciones')
+    .select('nombre, score, percentage, created_at')
+    .eq('torneo_id', torneoId)
+    .order('score', { ascending: false })
+    .order('percentage', { ascending: false })
+    .order('created_at', { ascending: true })
+    .limit(10);
+
+  if (error){
+    console.error(error);
+    body.innerHTML = '<div class="empty-state">No se pudo cargar el ranking.</div>';
+    return;
+  }
+
+  const rows = data || [];
+  if (!rows.length){
+    body.innerHTML = '<div class="empty-state">Todavía no hay participantes en este torneo.</div>';
+    return;
+  }
+
+  body.innerHTML = rows.map((r, i) => `
+    <div class="rank-row">
+      <div class="rank-pos">${i + 1}</div>
+      <div class="rank-name">${r.nombre || 'Anónimo'}</div>
+      <div class="rank-score">${r.score}/10 · ${r.percentage}%</div>
+    </div>`).join('');
+}
+
+function closeTorneoRanking(){
+  document.getElementById('torneoRankingPanel').style.display = 'none';
 }
 
 document.getElementById('loginPassword').addEventListener('keydown', (e)=>{
