@@ -311,7 +311,13 @@
       const email = document.getElementById('reg-email').value.trim();
       const password = document.getElementById('reg-password').value;
 
-      const { data, error } = await supabaseClient.auth.signUp({ email, password });
+      const { data, error } = await supabaseClient.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { nombre_apellido: nombre, pais, ciudad, iglesia }
+        }
+      });
 
       if (error) {
         btn.disabled = false;
@@ -320,23 +326,14 @@
         return;
       }
 
-      // Si el proyecto tiene "confirmar email" activado, todavía no hay sesión activa.
-      if (!data.session) {
-        btn.disabled = false;
-        msg.textContent = 'Cuenta creada. Revisá tu correo para confirmar antes de ingresar.';
-        msg.className = 'tv-msg ok';
-        return;
-      }
-
-      const { error: perfilError } = await supabaseClient
-        .from('perfiles')
-        .insert({ id: data.user.id, correo: email, nombre_apellido: nombre, pais, ciudad, iglesia });
-
+      // El perfil lo crea automáticamente un trigger en la base de datos
+      // (a partir de estos mismos datos), así que funciona haya o no
+      // confirmación por email de por medio.
       btn.disabled = false;
 
-      if (perfilError) {
-        msg.textContent = 'La cuenta se creó, pero no pudimos guardar el perfil: ' + perfilError.message;
-        msg.className = 'tv-msg error';
+      if (!data.session) {
+        msg.textContent = 'Cuenta creada. Revisá tu correo para confirmar antes de ingresar.';
+        msg.className = 'tv-msg ok';
         return;
       }
 
