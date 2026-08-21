@@ -233,6 +233,10 @@
         <div class="col-span-1 tv-card p-6 h-fit">
           <h3 class="font-bold mb-4" style="color:var(--primary-dark);">Crear Nuevo Torneo</h3>
           <input type="text" id="nuevo-torneo-nombre" placeholder="Ej: Jóvenes Central" class="tv-input mb-3">
+          <label class="tv-label" for="nuevo-torneo-fecha-inicio">Fecha de inicio</label>
+          <input type="date" id="nuevo-torneo-fecha-inicio" class="tv-input mb-3">
+          <label class="tv-label" for="nuevo-torneo-cantidad-fechas">Cantidad de fechas (cada una dura 2 días)</label>
+          <input type="number" id="nuevo-torneo-cantidad-fechas" class="tv-input mb-3" min="1" max="15" value="15">
           <button onclick="crearTorneo()" id="btn-crear-torneo" class="btn btn-accent btn-block">
             Generar Torneo
           </button>
@@ -423,11 +427,17 @@
       if (!currentUser) { alert('Tenés que iniciar sesión.'); return; }
       const nombreInput = document.getElementById('nuevo-torneo-nombre');
       const nombreTorneo = nombreInput.value.trim();
+      const fechaInicioInput = document.getElementById('nuevo-torneo-fecha-inicio');
+      const cantidadFechasInput = document.getElementById('nuevo-torneo-cantidad-fechas');
+      const fechaInicio = fechaInicioInput.value;
+      const cantidadFechas = parseInt(cantidadFechasInput.value, 10);
       const btn = document.getElementById('btn-crear-torneo');
       const msg = document.getElementById('torneo-msg');
       msg.textContent = ''; msg.className = 'tv-msg';
 
       if(!nombreTorneo) { msg.textContent = 'Escribí un nombre para el torneo'; msg.className = 'tv-msg error'; return; }
+      if(!fechaInicio) { msg.textContent = 'Elegí la fecha de inicio del torneo'; msg.className = 'tv-msg error'; return; }
+      if(!cantidadFechas || cantidadFechas < 1 || cantidadFechas > 15) { msg.textContent = 'La cantidad de fechas tiene que ser entre 1 y 15'; msg.className = 'tv-msg error'; return; }
 
       btn.disabled = true;
       let intentos = 0;
@@ -439,7 +449,7 @@
         const codigo = generarCodigo(nombreTorneo);
         const { data, error } = await supabaseClient
           .from('torneos')
-          .insert({ codigo, nombre_torneo: nombreTorneo, creador_id: currentUser.id })
+          .insert({ codigo, nombre_torneo: nombreTorneo, creador_id: currentUser.id, fecha_inicio: fechaInicio, cantidad_fechas: cantidadFechas })
           .select()
           .single();
         if (!error) { insertado = data; }
@@ -456,7 +466,31 @@
       }
 
       nombreInput.value = '';
+      fechaInicioInput.value = '';
+      cantidadFechasInput.value = '15';
       await cargarMisTorneos();
+    }
+
+    // Fecha 1 = fecha_inicio (00:01) hasta el día siguiente (23:59), fecha 2 = los 2 días
+    // siguientes, y así hasta cantidad_fechas. Devuelve null si todavía no empezó o si ya terminó.
+    function calcularFechaActual(fechaInicioStr, cantidadFechas){
+      if (!fechaInicioStr) return null;
+      const inicio = new Date(fechaInicioStr + 'T00:00:00');
+      const ahora = new Date();
+      const msPorDia = 24 * 60 * 60 * 1000;
+      const diasTranscurridos = Math.floor((ahora - inicio) / msPorDia);
+      if (diasTranscurridos < 0) return { estado: 'no-empezo' };
+      const fecha = Math.floor(diasTranscurridos / 2) + 1;
+      if (fecha > cantidadFechas) return { estado: 'termino' };
+      return { estado: 'en-curso', fecha, cantidadFechas };
+    }
+
+    function estadoTorneoTexto(t){
+      const r = calcularFechaActual(t.fecha_inicio, t.cantidad_fechas);
+      if (!r) return 'Sin fecha de inicio configurada';
+      if (r.estado === 'no-empezo') return `Empieza el ${t.fecha_inicio}`;
+      if (r.estado === 'termino') return `Finalizado (duró ${t.cantidad_fechas} fechas)`;
+      return `Fecha ${r.fecha} de ${r.cantidadFechas} en curso`;
     }
 
     async function cargarMisTorneos(){
@@ -487,6 +521,7 @@
               <div>
                 <p class="font-bold" style="color:var(--text);">${t.nombre_torneo}</p>
                 <p class="text-xs" style="color:var(--text-soft);">Código: <span class="font-mono px-1 rounded" style="background:var(--secondary);color:var(--primary);">${t.codigo}</span></p>
+                <p class="text-xs" style="color:var(--primary);font-weight:600;">${estadoTorneoTexto(t)}</p>
               </div>
               <div class="flex space-x-2">
                 <button onclick='invitar(${JSON.stringify(mensajeWpp)})' class="btn btn-sm btn-accent">
