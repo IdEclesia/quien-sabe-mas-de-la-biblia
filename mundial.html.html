@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mundial Bíblico</title>
+    <style>
+        /* Estilos visuales basados en tu diseño */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f2f7fb;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #0b2b45;
+        }
+
+        .contenedor-principal {
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+        }
+
+        .encabezado {
+            margin-bottom: 20px;
+        }
+
+        .categoria-titulo {
+            display: flex;
+            align-items: center;
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .progreso-texto {
+            font-size: 14px;
+            color: #1a4f7c;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .barra-progreso {
+            height: 6px;
+            background-color: #dbe7f4;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .barra-llena {
+            height: 100%;
+            background-color: #1a4f7c;
+            width: 10%; /* Se actualiza por JS */
+            transition: width 0.3s;
+        }
+
+        .temporizador-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: -25px; /* Para superponer con la tarjeta */
+            position: relative;
+            z-index: 10;
+        }
+
+        .circulo-tiempo {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: conic-gradient(#d68a59 100%, #e0e0e0 0);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            font-weight: 900;
+            color: #0b2b45;
+        }
+
+        .circulo-interno {
+            width: 50px;
+            height: 50px;
+            background-color: #f2f7fb;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .tarjeta-pregunta {
+            background-color: #ffffff;
+            border-radius: 20px;
+            padding: 40px 20px 20px 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+        }
+
+        .texto-pregunta {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 25px;
+            line-height: 1.3;
+        }
+
+        .boton-opcion {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            background-color: #f2f6fa;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            padding: 12px 15px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 16px;
+            font-weight: 500;
+            color: #000;
+            transition: all 0.2s;
+        }
+
+        .boton-opcion:hover {
+            background-color: #e2ecf5;
+        }
+
+        .letra-opcion {
+            background-color: #ffffff;
+            color: #1a4f7c;
+            font-weight: 700;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 6px;
+            margin-right: 15px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .footer-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .footer-link a {
+            color: #5c7891;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        /* Clases dinámicas para las respuestas */
+        .correcta { background-color: #d4edda; border-color: #28a745; }
+        .incorrecta { background-color: #f8d7da; border-color: #dc3545; }
+        .deshabilitado { pointer-events: none; opacity: 0.8; }
+    </style>
+</head>
+<body>
+
+<div class="contenedor-principal">
+    
+    <!-- Encabezado y Progreso -->
+    <div class="encabezado">
+        <div class="categoria-titulo">📖 <span id="txtCategoria" style="margin-left: 10px;">Personajes de la Biblia</span></div>
+        <div class="progreso-texto">Pregunta <span id="preguntaActualNum">1</span> de <span id="totalPreguntas">10</span></div>
+        <div class="barra-progreso"><div class="barra-llena" id="barraProgreso"></div></div>
+    </div>
+
+    <!-- Temporizador Circular -->
+    <div class="temporizador-container">
+        <div class="circulo-tiempo" id="anilloTiempo">
+            <div class="circulo-interno" id="txtTiempo">10</div>
+        </div>
+    </div>
+
+    <!-- Tarjeta de Juego -->
+    <div class="tarjeta-pregunta">
+        <div class="texto-pregunta" id="txtPregunta">Cargando pregunta...</div>
+        
+        <div id="contenedorOpciones">
+            <!-- Los botones se inyectan acá desde JS -->
+        </div>
+    </div>
+
+    <!-- Puntos actuales (Opcional, para que veas el sistema funcionando) -->
+    <div style="text-align: center; margin-top: 15px; font-weight: bold; color: #1a4f7c;">
+        Puntaje: <span id="txtPuntos">0</span>
+    </div>
+
+    <div class="footer-link">
+        <a href="#">← Elegir otro desafío</a>
+    </div>
+
+</div>
+
+<script>
+    // --- 1. SIMULACIÓN DE LA BASE DE DATOS (CSV) ---
+    // Aquí ponemos 2 preguntas extraídas de tu CSV para probar el motor.
+    const baseDeDatos = [
+        {
+            categoria: "Personajes",
+            pregunta: "¿Qué comandante del ejército de Saúl coronó a Is-boset como rey sobre Israel?",
+            opcion1: "Abner", // Siempre la correcta en el CSV
+            opcion2: "Benaías",
+            opcion3: "Joab"
+        },
+        {
+            categoria: "Personajes",
+            pregunta: "¿Qué rey de Moab era extremadamente obeso y fue asesinado por el juez Aod?",
+            opcion1: "Eglón", // Siempre la correcta en el CSV
+            opcion2: "Balac",
+            opcion3: "Hadad"
+        }
+    ];
+
+    // --- 2. VARIABLES DEL JUEGO ---
+    let indicePregunta = 0;
+    let puntosTotales = 0;
+    let tiempoRestante = 10;
+    let temporizadorIntervalo;
+
+    // --- 3. FUNCIONES DEL MOTOR ---
+
+    function iniciarJuego() {
+        indicePregunta = 0;
+        puntosTotales = 0;
+        actualizarPuntaje();
+        document.getElementById('totalPreguntas').innerText = baseDeDatos.length;
+        cargarPregunta();
+    }
+
+    function cargarPregunta() {
+        // Limpiamos intervalos si los hubiera
+        clearInterval(temporizadorIntervalo);
+        
+        if (indicePregunta >= baseDeDatos.length) {
+            alert(`¡Fin del juego! Lograste: ${puntosTotales} puntos.`);
+            return;
+        }
+
+        const datosFila = baseDeDatos[indicePregunta];
+        
+        // Actualizamos UI
+        document.getElementById('txtCategoria').innerText = datosFila.categoria;
+        document.getElementById('preguntaActualNum').innerText = indicePregunta + 1;
+        document.getElementById('txtPregunta').innerText = datosFila.pregunta;
+        document.getElementById('barraProgreso').style.width = `${((indicePregunta + 1) / baseDeDatos.length) * 100}%`;
+
+        // Agrupamos y etiquetamos (Opción 1 es TRUE)
+        let opciones = [
+            { texto: datosFila.opcion1, esCorrecta: true },
+            { texto: datosFila.opcion2, esCorrecta: false },
+            { texto: datosFila.opcion3, esCorrecta: false }
+        ];
+
+        // Mezclamos con Fisher-Yates
+        for (let i = opciones.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [opciones[i], opciones[j]] = [opciones[j], opciones[i]];
+        }
+
+        renderizarBotones(opciones);
+        iniciarReloj();
+    }
+
+    function renderizarBotones(opcionesMezcladas) {
+        const contenedor = document.getElementById('contenedorOpciones');
+        contenedor.innerHTML = ''; // Limpiamos anteriores
+        const letras = ['A', 'B', 'C'];
+
+        opcionesMezcladas.forEach((opcion, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'boton-opcion';
+            // Guardamos un atributo HTML para saber si es la correcta al hacer click
+            btn.dataset.correcta = opcion.esCorrecta; 
+            
+            btn.innerHTML = `
+                <div class="letra-opcion">${letras[index]}</div>
+                ${opcion.texto}
+            `;
+            
+            btn.onclick = () => procesarRespuesta(btn, opcion.esCorrecta);
+            contenedor.appendChild(btn);
+        });
+    }
+
+    function iniciarReloj() {
+        tiempoRestante = 10;
+        actualizarRelojVisual();
+
+        temporizadorIntervalo = setInterval(() => {
+            tiempoRestante--;
+            actualizarRelojVisual();
+
+            if (tiempoRestante <= 0) {
+                clearInterval(temporizadorIntervalo);
+                procesarRespuesta(null, false); // Se acabó el tiempo
+            }
+        }, 1000);
+    }
+
+    function actualizarRelojVisual() {
+        document.getElementById('txtTiempo').innerText = tiempoRestante;
+        // Calculamos el porcentaje para el anillo visual (conic-gradient)
+        let porcentaje = (tiempoRestante / 10) * 100;
+        let colorAnillo = tiempoRestante <= 3 ? '#dc3545' : '#d68a59'; // Se pone rojo en los ultimos 3s
+        document.getElementById('anilloTiempo').style.background = `conic-gradient(${colorAnillo} ${porcentaje}%, #e0e0e0 0)`;
+    }
+
+    function procesarRespuesta(botonClickeado, esAcertada) {
+        clearInterval(temporizadorIntervalo); // Frenamos el reloj
+        
+        // Bloqueamos todos los botones para que no hagan doble clic
+        const botones = document.querySelectorAll('.boton-opcion');
+        botones.forEach(b => b.classList.add('deshabilitado'));
+
+        // Lógica de Puntos: 100 base + (10 por segundo sobrante)
+        if (esAcertada) {
+            botonClickeado.classList.add('correcta');
+            let puntosGanados = 100 + (tiempoRestante * 10);
+            puntosTotales += puntosGanados;
+            actualizarPuntaje();
+        } else {
+            if (botonClickeado) botonClickeado.classList.add('incorrecta');
+            
+            // Le mostramos cuál era la correcta
+            botones.forEach(b => {
+                if(b.dataset.correcta === "true") b.classList.add('correcta');
+            });
+        }
+
+        // Esperamos 2 segundos para que el jugador vea el resultado y pasamos a la siguiente
+        setTimeout(() => {
+            indicePregunta++;
+            cargarPregunta();
+        }, 2000);
+    }
+
+    function actualizarPuntaje() {
+        document.getElementById('txtPuntos').innerText = puntosTotales;
+    }
+
+    // --- 4. ARRANQUE ---
+    iniciarJuego();
+
+</script>
+</body>
+</html>
