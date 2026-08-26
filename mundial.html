@@ -3,26 +3,167 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mundial Bíblico</title>
+    <title>Mundial de ¿Quién sabe más de la Biblia?</title>
     <style>
+        :root {
+            --primary-color: #1a365d;
+            --secondary-color: #d69e2e;
+            --bg-color: #f7fafc;
+            --card-bg: #ffffff;
+            --text-color: #2d3748;
+            --border-radius: 8px;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f2f7fb;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             margin: 0;
-            color: #0b2b45;
+            padding: 0;
         }
 
-        .contenedor-principal {
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+            border-bottom: 4px solid var(--secondary-color);
+        }
+
+        .logo-placeholder {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+
+        .container {
+            display: block;
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        input[type="text"], input[type="email"], select {
             width: 100%;
-            max-width: 500px;
-            padding: 20px;
+            padding: 0.75rem;
+            border: 1px solid #cbd5e0;
+            border-radius: 4px;
+            box-sizing: border-box;
         }
 
-        .encabezado {
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #2b6cb0;
+        }
+
+        .btn-whatsapp {
+            background-color: #25D366;
+            color: white;
+            text-decoration: none;
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-top: 1rem;
+        }
+
+        .dates-banner {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .date-card {
+            background: #ebf8ff;
+            border-left: 4px solid var(--primary-color);
+            padding: 1rem;
+            border-radius: 4px;
+        }
+
+        /* Estilos de Lista de Jugadores */
+        .jugador-fila {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .btn-confirmar-jugador {
+            background-color: #cbd5e0;
+            color: #2d3748;
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-confirmar-jugador.activo {
+            background-color: #38a169;
+            color: white;
+        }
+
+        /* Motor de Preguntas Estilos */
+        .selector-idiomas {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .btn-lang {
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+            color: #1a4f7c;
+        }
+        .btn-lang.activo {
+            background: #1a4f7c;
+            color: #fff;
+            border-color: #1a4f7c;
+        }
+
+        .encabezado-juego {
             margin-bottom: 20px;
         }
 
@@ -51,7 +192,7 @@
         .barra-llena {
             height: 100%;
             background-color: #1a4f7c;
-            width: 10%;
+            width: 0%;
             transition: width 0.3s;
         }
 
@@ -79,7 +220,7 @@
         .circulo-interno {
             width: 50px;
             height: 50px;
-            background-color: #f2f7fb;
+            background-color: #ffffff;
             border-radius: 50%;
             display: flex;
             justify-content: center;
@@ -90,13 +231,13 @@
             background-color: #ffffff;
             border-radius: 20px;
             padding: 40px 20px 20px 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+            border: 1px solid #e2e8f0;
         }
 
         .texto-pregunta {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 800;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
             line-height: 1.3;
         }
 
@@ -136,275 +277,449 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
 
-        .footer-link {
-            text-align: center;
-            margin-top: 20px;
-        }
-        
-        .footer-link a {
-            color: #5c7891;
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
         .correcta { background-color: #d4edda !important; border-color: #28a745 !important; }
         .incorrecta { background-color: #f8d7da !important; border-color: #dc3545 !important; }
         .deshabilitado { pointer-events: none; opacity: 0.8; }
-        
-        .selector-idiomas {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            margin-bottom: 10px;
+
+        footer {
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 1rem;
+            margin-top: 2rem;
         }
-        .btn-lang {
-            background: #fff;
-            border: 1px solid #cbd5e1;
-            padding: 4px 8px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 12px;
-            color: #1a4f7c;
-        }
-        .btn-lang.activo {
-            background: #1a4f7c;
-            color: #fff;
-            border-color: #1a4f7c;
-        }
+
+        .hidden { display: none; }
+        .mt-2 { margin-top: 1rem; }
     </style>
 </head>
 <body>
 
-<div class="contenedor-principal">
-    
-    <div class="selector-idiomas">
-        <button class="btn-lang activo" id="langES" onclick="cambiarIdioma('ES')">ES</button>
-        <button class="btn-lang" id="langPT" onclick="cambiarIdioma('PT')">PT</button>
-        <button class="btn-lang" id="langEN" onclick="cambiarIdioma('EN')">EN</button>
-    </div>
+    <header>
+        <div class="logo-placeholder">📖 Mundial Biblia 2026</div>
+        <h1>¿Quién Sabe Más de la Biblia?</h1>
+    </header>
 
-    <div class="encabezado">
-        <div class="categoria-titulo">📖 <span id="txtCategoria" style="margin-left: 10px;">Cargando...</span></div>
-        <div class="progreso-texto">Pregunta <span id="preguntaActualNum">0</span> de <span id="totalPreguntas">0</span></div>
-        <div class="barra-progreso"><div class="barra-llena" id="barraProgreso" style="width: 0%;"></div></div>
-    </div>
+    <div class="container">
+        <!-- Calendario de Torneos -->
+        <div class="dates-banner">
+            <div class="date-card">
+                <strong>Mundial 1 (Fecha 1 al 6)</strong><br>
+                07 de Sep - 12 de Sep
+            </div>
+            <div class="date-card">
+                <strong>Mundial 2</strong><br>
+                14 de Sep - 19 de Sep
+            </div>
+            <div class="date-card">
+                <strong>Mundial de Campeones</strong><br>
+                21 de Sep - 26 de Sep
+            </div>
+        </div>
 
-    <div class="temporizador-container">
-        <div class="circulo-tiempo" id="anilloTiempo">
-            <div class="circulo-interno" id="txtTiempo">10</div>
+        <!-- Sección 1: Crear Equipo y Convocados -->
+        <div class="card" id="sec-crear-equipo">
+            <h2>1. Crear Tu Equipo (Capitán + 6 Convocados)</h2>
+            <form id="form-equipo" onsubmit="registrarEquipo(event)">
+                <div class="form-group">
+                    <label for="nombre-equipo">Nombre del Equipo:</label>
+                    <input type="text" id="nombre-equipo" required placeholder="Ej: Los Bereanos">
+                </div>
+                
+                <label>Lista de Convocados (6 Jugadores):</label>
+                <div id="lista-invitados-inputs">
+                    <!-- Se generan 6 campos con su botón de confirmado -->
+                </div>
+
+                <button type="submit" class="mt-2">Crear Equipo y Guardar Datos</button>
+            </form>
+
+            <div id="invitacion-wa" class="hidden mt-2">
+                <h3>¡Equipo Creado con Éxito!</h3>
+                <p>Comparte la invitación con tu equipo:</p>
+                <a id="link-wa" href="#" target="_blank" class="btn-whatsapp">📲 Enviar Invitación por WhatsApp</a>
+            </div>
+        </div>
+
+        <!-- Sección 2: Perfil del Jugador y Confirmación en Equipo -->
+        <div class="card" id="sec-perfil">
+            <h2>2. Perfil de Usuario y Confirmación de Participación</h2>
+            <div id="vista-equipo-invitacion" class="form-group" style="background: #ebf8ff; padding: 10px; border-radius: 6px;">
+                <p><strong>Equipo Actual:</strong> <span id="lbl-nombre-equipo">Ninguno seleccionado</span></p>
+                <p>Busca tu nombre en la lista de convocados para confirmar:</p>
+                <div id="lbl-lista-convocados-view"></div>
+            </div>
+
+            <form id="form-perfil" class="mt-2">
+                <div class="form-group">
+                    <label for="perfil-nombre">Tu Nombre (Debe coincidir con la lista):</label>
+                    <input type="text" id="perfil-nombre" required placeholder="Tu nombre completo">
+                </div>
+                <div class="form-group">
+                    <label for="perfil-email">Correo Electrónico:</label>
+                    <input type="email" id="perfil-email" required placeholder="correo@ejemplo.com">
+                </div>
+                <button type="button" onclick="crearPerfilYConfirmar()">Crear Perfil y Confirmar Participación</button>
+            </form>
+
+            <div id="perfil-registrado" class="hidden">
+                <p>✅ Perfil Activo: <strong id="user-display"></strong></p>
+                <p>🏆 Estado en el Equipo: <span id="estado-participacion" style="color: green; font-weight: bold;">Confirmado</span></p>
+                <button onclick="mostrarSeccionJuego()" class="mt-2">🎮 Ir al Partido de Hoy (Mundial 1 - Fecha 1)</button>
+            </div>
+        </div>
+
+        <!-- Sección 3: Motor del Juego del Mundial con Filtros de Fecha -->
+        <div class="card hidden" id="sec-juego">
+            <h2>3. Partido en Vivo (Modo Cara a Cara)</h2>
+            
+            <div class="selector-idiomas">
+                <button class="btn-lang activo" id="langES" onclick="cambiarIdioma('ES')">ES</button>
+                <button class="btn-lang" id="langPT" onclick="cambiarIdioma('PT')">PT</button>
+                <button class="btn-lang" id="langEN" onclick="cambiarIdioma('EN')">EN</button>
+            </div>
+
+            <div class="encabezado-juego">
+                <div class="categoria-titulo">📖 <span id="txtCategoria" style="margin-left: 10px;">Cargando...</span></div>
+                <div class="progreso-texto">Pregunta <span id="preguntaActualNum">0</span> de <span id="totalPreguntas">0</span></div>
+                <div class="barra-progreso"><div class="barra-llena" id="barraProgreso"></div></div>
+            </div>
+
+            <div class="temporizador-container">
+                <div class="circulo-tiempo" id="anilloTiempo">
+                    <div class="circulo-interno" id="txtTiempo">10</div>
+                </div>
+            </div>
+
+            <div class="tarjeta-pregunta">
+                <div class="texto-pregunta" id="txtPregunta">Conectando con la base de datos...</div>
+                <div id="contenedorOpciones"></div>
+            </div>
+
+            <div style="text-align: center; margin-top: 15px; font-weight: bold; color: var(--primary-color);">
+                Puntaje Personal Acumulado: <span id="txtPuntos">0</span> pts
+            </div>
         </div>
     </div>
 
-    <div class="tarjeta-pregunta">
-        <div class="texto-pregunta" id="txtPregunta">Conectando con la base de datos...</div>
-        <div id="contenedorOpciones"></div>
-    </div>
+    <footer>
+        <p>&copy; 2026 Mundial de ¿Quién sabe más de la Biblia? - Todos los derechos reservados.</p>
+    </footer>
 
-    <div style="text-align: center; margin-top: 15px; font-weight: bold; color: #1a4f7c;">
-        Puntaje: <span id="txtPuntos">0</span>
-    </div>
+    <script>
+        // Variables Globales del Equipo y Juego
+        let equipoActual = {
+            nombre: "Los Bereanos",
+            jugadores: [
+                { nombre: "Capitán (Tú)", confirmado: true },
+                { nombre: "Pedro", confirmado: false },
+                { nombre: "María", confirmado: false },
+                { nombre: "Juan", confirmado: false },
+                { nombre: "Sara", confirmado: false },
+                { nombre: "David", confirmado: false },
+                { nombre: "Ruth", confirmado: false }
+            ]
+        };
 
-    <div class="footer-link">
-        <a href="index.html">← Salir del desafío</a>
-    </div>
+        let usuarioLogueado = null;
+        let baseDeDatos = [];
+        let indicePregunta = 0;
+        let puntosTotales = 0;
+        let tiempoRestante = 10;
+        let temporizadorIntervalo;
+        let idiomaActual = 'ES';
 
-</div>
+        // Configuración de Mundial y Fecha Activa (Ej: Mundial_1, Fecha 1)
+        let torneoActivo = 'Mundial_1';
+        let fechaActiva = 1;
 
-<script>
-    let baseDeDatos = [];
-    let indicePregunta = 0;
-    let puntosTotales = 0;
-    let tiempoRestante = 10;
-    let temporizadorIntervalo;
-    let idiomaActual = 'ES';
-
-    async function cargarCSV() {
-        try {
-            const respuesta = await fetch('preguntas_mundial - Hoja 1.csv');
-            if (!respuesta.ok) throw new Error('No se encontró el archivo CSV');
+        // Inicializar Inputs de los 6 jugadores invitados al cargar la página
+        window.onload = function() {
+            const contenedorInputs = document.getElementById('lista-invitados-inputs');
+            contenedorInputs.innerHTML = '';
             
-            const textoCsv = await respuesta.text();
-            procesarCSV(textoCsv);
-            iniciarJuego();
-        } catch (error) {
-            console.error("Error:", error);
-            document.getElementById('txtPregunta').innerText = "Error al cargar el archivo CSV. Revisa el nombre del archivo en el repositorio.";
-        }
-    }
+            // Empezamos desde el índice 1 (los 6 invitados, el 0 es el capitán)
+            for (let i = 1; i <= 6; i++) {
+                const fila = document.createElement('div');
+                fila.className = 'jugador-fila';
+                fila.innerHTML = `
+                    <input type="text" class="input-invitado" placeholder="Nombre del jugador ${i}" required>
+                    <button type="button" class="btn-confirmar-jugador" onclick="toggleConfirmarInput(this)">Confirmado</button>
+                `;
+                contenedorInputs.appendChild(fila);
+            }
+            renderizarVistaEquipo();
+        };
 
-    function procesarCSV(texto) {
-        const lineas = texto.split('\n').filter(linea => linea.trim() !== '');
-        const separador = lineas[0].includes(';') ? ';' : ','; 
-        
-        for (let i = 1; i < lineas.length; i++) {
-            const valores = lineas[i].split(new RegExp(separador + '(?=(?:(?:[^"]*"){2})*[^"]*$)'));
-            
-            if (valores.length >= 15) {
-                const limpiar = (str) => str ? str.replace(/^"|"$/g, '').trim() : '';
-
-                baseDeDatos.push({
-                    categoria: limpiar(valores[2]),
-                    preguntaES: limpiar(valores[3]),
-                    opcion1ES: limpiar(valores[4]),
-                    opcion2ES: limpiar(valores[5]),
-                    opcion3ES: limpiar(valores[6]),
-                    preguntaPT: limpiar(valores[7]),
-                    opcion1PT: limpiar(valores[8]),
-                    opcion2PT: limpiar(valores[9]),
-                    opcion3PT: limpiar(valores[10]),
-                    preguntaEN: limpiar(valores[11]),
-                    opcion1EN: limpiar(valores[12]),
-                    opcion2EN: limpiar(valores[13]),
-                    opcion3EN: limpiar(valores[14])
-                });
+        function toggleConfirmarInput(btn) {
+            btn.classList.toggle('activo');
+            if(btn.classList.contains('activo')) {
+                btn.innerText = "✅ Listo";
+            } else {
+                btn.innerText = "Confirmado";
             }
         }
-    }
 
-    function iniciarJuego() {
-        if (baseDeDatos.length === 0) {
-            document.getElementById('txtPregunta').innerText = "El archivo CSV está vacío o no se pudo leer.";
-            return;
-        }
-        indicePregunta = 0;
-        puntosTotales = 0;
-        actualizarPuntaje();
-        document.getElementById('totalPreguntas').innerText = baseDeDatos.length;
-        cargarPregunta();
-    }
+        function registrarEquipo(e) {
+            e.preventDefault();
+            const nombreEquipo = document.getElementById('nombre-equipo').value.trim();
+            const inputsInvitados = document.querySelectorAll('.input-invitado');
+            const botonesConfirmar = document.querySelectorAll('.btn-confirmar-jugador');
 
-    function cambiarIdioma(nuevoIdioma) {
-        idiomaActual = nuevoIdioma;
-        document.getElementById('langES').className = `btn-lang ${idiomaActual === 'ES' ? 'activo' : ''}`;
-        document.getElementById('langPT').className = `btn-lang ${idiomaActual === 'PT' ? 'activo' : ''}`;
-        document.getElementById('langEN').className = `btn-lang ${idiomaActual === 'EN' ? 'activo' : ''}`;
-        cargarPregunta();
-    }
+            equipoActual.nombre = nombreEquipo;
+            equipoActual.jugadores = [{ nombre: "Capitán (Creador)", confirmado: true }];
 
-    function cargarPregunta() {
-        clearInterval(temporizadorIntervalo);
-        
-        if (indicePregunta >= baseDeDatos.length) {
-            document.getElementById('txtPregunta').innerText = `¡Fin del juego! Lograste: ${puntosTotales} puntos.`;
-            document.getElementById('contenedorOpciones').innerHTML = '';
-            document.getElementById('anilloTiempo').style.background = `conic-gradient(#e0e0e0 100%, #e0e0e0 0)`;
-            return;
-        }
-
-        const datosFila = baseDeDatos[indicePregunta];
-        
-        let textoPregunta = datosFila.preguntaES;
-        let opCorrectaTexto = datosFila.opcion1ES;
-        let op2Texto = datosFila.opcion2ES;
-        let op3Texto = datosFila.opcion3ES;
-
-        if (idiomaActual === 'PT') {
-            textoPregunta = datosFila.preguntaPT;
-            opCorrectaTexto = datosFila.opcion1PT;
-            op2Texto = datosFila.opcion2PT;
-            op3Texto = datosFila.opcion3PT;
-        } else if (idiomaActual === 'EN') {
-            textoPregunta = datosFila.preguntaEN;
-            opCorrectaTexto = datosFila.opcion1EN;
-            op2Texto = datosFila.opcion2EN;
-            op3Texto = datosFila.opcion3EN;
-        }
-
-        document.getElementById('txtCategoria').innerText = datosFila.categoria;
-        document.getElementById('preguntaActualNum').innerText = indicePregunta + 1;
-        document.getElementById('txtPregunta').innerText = textoPregunta;
-        document.getElementById('barraProgreso').style.width = `${((indicePregunta + 1) / baseDeDatos.length) * 100}%`;
-
-        let opciones = [
-            { texto: opCorrectaTexto, esCorrecta: true },
-            { texto: op2Texto, esCorrecta: false },
-            { texto: op3Texto, esCorrecta: false }
-        ];
-
-        for (let i = opciones.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [opciones[i], opciones[j]] = [opciones[j], opciones[i]];
-        }
-
-        renderizarBotones(opciones);
-        iniciarReloj();
-    }
-
-    function renderizarBotones(opcionesMezcladas) {
-        const contenedor = document.getElementById('contenedorOpciones');
-        contenedor.innerHTML = ''; 
-        const letras = ['A', 'B', 'C'];
-
-        opcionesMezcladas.forEach((opcion, index) => {
-            const btn = document.createElement('button');
-            btn.className = 'boton-opcion';
-            btn.dataset.correcta = opcion.esCorrecta; 
-            
-            btn.innerHTML = `
-                <div class="letra-opcion">${letras[index]}</div>
-                ${opcion.texto}
-            `;
-            
-            btn.onclick = () => procesarRespuesta(btn, opcion.esCorrecta);
-            contenedor.appendChild(btn);
-        });
-    }
-
-    function iniciarReloj() {
-        tiempoRestante = 10;
-        actualizarRelojVisual();
-
-        temporizadorIntervalo = setInterval(() => {
-            tiempoRestante--;
-            actualizarRelojVisual();
-
-            if (tiempoRestante <= 0) {
-                clearInterval(temporizadorIntervalo);
-                procesarRespuesta(null, false); 
-            }
-        }, 1000);
-    }
-
-    function actualizarRelojVisual() {
-        document.getElementById('txtTiempo').innerText = tiempoRestante;
-        let porcentaje = (tiempoRestante / 10) * 100;
-        let colorAnillo = tiempoRestante <= 3 ? '#dc3545' : '#d68a59'; 
-        document.getElementById('anilloTiempo').style.background = `conic-gradient(${colorAnillo} ${porcentaje}%, #e0e0e0 0)`;
-    }
-
-    function procesarRespuesta(botonClickeado, esAcertada) {
-        clearInterval(temporizadorIntervalo); 
-        
-        const botones = document.querySelectorAll('.boton-opcion');
-        botones.forEach(b => b.classList.add('deshabilitado'));
-
-        if (esAcertada) {
-            botonClickeado.classList.add('correcta');
-            let puntosGanados = 100 + (tiempoRestante * 10);
-            puntosTotales += puntosGanados;
-            actualizarPuntaje();
-        } else {
-            if (botonClickeado) botonClickeado.classList.add('incorrecta');
-            botones.forEach(b => {
-                if(b.dataset.correcta === "true") {
-                    b.classList.add('correcta');
+            inputsInvitados.forEach((inp, idx) => {
+                if(inp.value.trim() !== "") {
+                    equipoActual.jugadores.push({
+                        nombre: inp.value.trim(),
+                        confirmado: botonesConfirmar[idx].classList.contains('activo')
+                    });
                 }
+            });
+
+            renderizarVistaEquipo();
+
+            // Enlace de WhatsApp preescrito
+            const linkInscripcion = window.location.href;
+            const mensajeWA = `¡Hola! Fuiste convocado para integrar el equipo *${nombreEquipo}* en el *Mundial de ¿Quién sabe más de la Biblia?*. Ingresa aquí para confirmar tu perfil y participar: ${linkInscripcion}`;
+            const waURL = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensajeWA)}`;
+
+            document.getElementById('link-wa').href = waURL;
+            document.getElementById('invitacion-wa').classList.remove('hidden');
+            alert('¡Equipo registrado correctamente! Ya puedes enviar las invitaciones.');
+        }
+
+        function renderizarVistaEquipo() {
+            document.getElementById('lbl-nombre-equipo').innerText = equipoActual.nombre;
+            const contenedorView = document.getElementById('lbl-lista-convocados-view');
+            contenedorView.innerHTML = '';
+
+            equipoActual.jugadores.forEach((jug, index) => {
+                const div = document.createElement('div');
+                div.style.display = "flex";
+                div.style.justify = "space-between";
+                div.style.align = "center";
+                div.style.padding = "4px 0";
+                div.innerHTML = `
+                    <span>👤 ${jug.nombre} ${index === 0 ? '(Capitán)' : ''}</span>
+                    <span>${jug.confirmado ? '✅ Confirmado' : '⏳ Pendiente'}</span>
+                `;
+                contenedorView.appendChild(div);
             });
         }
 
-        setTimeout(() => {
-            indicePregunta++;
-            cargarPregunta();
-        }, 2000);
-    }
+        function crearPerfilYConfirmar() {
+            const nombre = document.getElementById('perfil-nombre').value.trim();
+            const email = document.getElementById('perfil-email').value.trim();
 
-    function actualizarPuntaje() {
-        document.getElementById('txtPuntos').innerText = puntosTotales;
-    }
+            if(!nombre || !email) {
+                alert('Por favor completa todos los campos de tu perfil.');
+                return;
+            }
 
-    cargarCSV();
-</script>
+            // Buscar si el usuario está en la lista del equipo
+            let encontrado = equipoActual.jugadores.find(j => j.nombre.toLowerCase() === nombre.toLowerCase());
+            
+            if(!encontrado) {
+                // Si no está exacto, lo agregamos como invitado participante
+                equipoActual.jugadores.push({ nombre: nombre, confirmado: true });
+            } else {
+                encontrado.confirmado = true;
+            }
+
+            usuarioLogueado = nombre;
+            document.getElementById('user-display').innerText = nombre;
+            document.getElementById('form-perfil').classList.add('hidden');
+            document.getElementById('perfil-registrado').classList.remove('hidden');
+            renderizarVistaEquipo();
+            alert('¡Perfil creado y participación confirmada con éxito!');
+        }
+
+        function mostrarSeccionJuego() {
+            document.getElementById('sec-juego').classList.remove('hidden');
+            cargarCSVJuego();
+        }
+
+        // Motor de Preguntas conectado al CSV filtrado por Torneo y Fecha
+        async function cargarCSVJuego() {
+            try {
+                const respuesta = await fetch('preguntas_mundial - Hoja 1.csv');
+                if (!respuesta.ok) throw new Error('No se encontró el archivo CSV de preguntas');
+                
+                const textoCsv = await respuesta.text();
+                procesarCSV(textoCsv);
+                iniciarJuegoPreguntas();
+            } catch (error) {
+                console.error("Error:", error);
+                document.getElementById('txtPregunta').innerText = "Error al conectar con el archivo de preguntas CSV en el servidor.";
+            }
+        }
+
+        function procesarCSV(texto) {
+            const lineas = texto.split('\n').filter(linea => linea.trim() !== '');
+            const separador = lineas[0].includes(';') ? ';' : ','; 
+            baseDeDatos = [];
+
+            for (let i = 1; i < lineas.length; i++) {
+                const valores = lineas[i].split(new RegExp(separador + '(?=(?:(?:[^"]*"){2})*[^"]*$)'));
+                
+                if (valores.length >= 15) {
+                    const limpiar = (str) => str ? str.replace(/^"|"$/g, '').trim() : '';
+
+                    let torneoFila = limpiar(valores[0]);
+                    let fechaFila = parseInt(limpiar(valores[1]));
+
+                    // FILTRO INTELIGENTE: Filtra por Mundial y la Fecha activa del torneo
+                    if (torneoFila === torneoActivo && fechaFila === fechaActiva) {
+                        baseDeDatos.push({
+                            categoria: limpiar(valores[2]),
+                            preguntaES: limpiar(valores[3]),
+                            opcion1ES: limpiar(valores[4]),
+                            opcion2ES: limpiar(valores[5]),
+                            opcion3ES: limpiar(valores[6]),
+                            preguntaPT: limpiar(valores[7]),
+                            opcion1PT: limpiar(valores[8]),
+                            opcion2PT: limpiar(valores[9]),
+                            opcion3PT: limpiar(valores[10]),
+                            preguntaEN: limpiar(valores[11]),
+                            opcion1EN: limpiar(valores[12]),
+                            opcion2EN: limpiar(valores[13]),
+                            opcion3EN: limpiar(valores[14])
+                        });
+                    }
+                }
+            }
+        }
+
+        function iniciarJuegoPreguntas() {
+            if (baseDeDatos.length === 0) {
+                document.getElementById('txtPregunta').innerText = `No hay preguntas cargadas para ${torneoActivo} - Fecha ${fechaActiva}.`;
+                return;
+            }
+            indicePregunta = 0;
+            puntosTotales = 0;
+            actualizarPuntaje();
+            document.getElementById('totalPreguntas').innerText = baseDeDatos.length;
+            cargarPreguntaActual();
+        }
+
+        function cambiarIdioma(nuevoIdioma) {
+            idiomaActual = nuevoIdioma;
+            document.getElementById('langES').className = `btn-lang ${idiomaActual === 'ES' ? 'activo' : ''}`;
+            document.getElementById('langPT').className = `btn-lang ${idiomaActual === 'PT' ? 'activo' : ''}`;
+            document.getElementById('langEN').className = `btn-lang ${idiomaActual === 'EN' ? 'activo' : ''}`;
+            cargarPreguntaActual();
+        }
+
+        function cargarPreguntaActual() {
+            clearInterval(temporizadorIntervalo);
+            
+            if (indicePregunta >= baseDeDatos.length) {
+                document.getElementById('txtPregunta').innerText = `¡Fecha completada! Sumaste ${puntosTotales} puntos para tu equipo (${equipoActual.nombre}).`;
+                document.getElementById('contenedorOpciones').innerHTML = '';
+                document.getElementById('anilloTiempo').style.background = `conic-gradient(#38a169 100%, #e0e0e0 0)`;
+                return;
+            }
+
+            const datosFila = baseDeDatos[indicePregunta];
+            
+            let textoPregunta = datosFila.preguntaES;
+            let op1 = datosFila.opcion1ES, op2 = datosFila.opcion2ES, op3 = datosFila.opcion3ES;
+
+            if (idiomaActual === 'PT') {
+                textoPregunta = datosFila.preguntaPT;
+                op1 = datosFila.opcion1PT; op2 = datosFila.opcion2PT; op3 = datosFila.opcion3PT;
+            } else if (idiomaActual === 'EN') {
+                textoPregunta = datosFila.preguntaEN;
+                op1 = datosFila.opcion1EN; op2 = datosFila.opcion2EN; op3 = datosFila.opcion3EN;
+            }
+
+            document.getElementById('txtCategoria').innerText = `${datosFila.categoria} (${torneoActivo} - Fecha ${fechaActiva})`;
+            document.getElementById('preguntaActualNum').innerText = indicePregunta + 1;
+            document.getElementById('txtPregunta').innerText = textoPregunta;
+            document.getElementById('barraProgreso').style.width = `${((indicePregunta + 1) / baseDeDatos.length) * 100}%`;
+
+            let opciones = [
+                { texto: op1, esCorrecta: true },
+                { texto: op2, esCorrecta: false },
+                { texto: op3, esCorrecta: false }
+            ];
+
+            // Mezclar opciones aleatoriamente
+            for (let i = opciones.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [opciones[i], opciones[j]] = [opciones[j], opciones[i]];
+            }
+
+            renderizarBotones(opciones);
+            iniciarReloj();
+        }
+
+        function renderizarBotones(opcionesMezcladas) {
+            const contenedor = document.getElementById('contenedorOpciones');
+            contenedor.innerHTML = ''; 
+            const letras = ['A', 'B', 'C'];
+
+            opcionesMezcladas.forEach((opcion, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'boton-opcion';
+                btn.dataset.correcta = opcion.esCorrecta; 
+                btn.innerHTML = `<div class="letra-opcion">${letras[index]}</div> ${opcion.texto}`;
+                btn.onclick = () => procesarRespuesta(btn, opcion.esCorrecta);
+                contenedor.appendChild(btn);
+            });
+        }
+
+        function iniciarReloj() {
+            tiempoRestante = 10;
+            actualizarRelojVisual();
+
+            temporizadorIntervalo = setInterval(() => {
+                tiempoRestante--;
+                actualizarRelojVisual();
+
+                if (tiempoRestante <= 0) {
+                    clearInterval(temporizadorIntervalo);
+                    procesarRespuesta(null, false); 
+                }
+            }, 1000);
+        }
+
+        function actualizarRelojVisual() {
+            document.getElementById('txtTiempo').innerText = tiempoRestante;
+            let porcentaje = (tiempoRestante / 10) * 100;
+            let colorAnillo = tiempoRestante <= 3 ? '#dc3545' : '#d68a59'; 
+            document.getElementById('anilloTiempo').style.background = `conic-gradient(${colorAnillo} ${porcentaje}%, #e0e0e0 0)`;
+        }
+
+        function procesarRespuesta(botonClickeado, esAcertada) {
+            clearInterval(temporizadorIntervalo); 
+            
+            const botones = document.querySelectorAll('.boton-opcion');
+            botones.forEach(b => b.classList.add('deshabilitado'));
+
+            if (esAcertada) {
+                botonClickeado.classList.add('correcta');
+                let puntosGanados = 100 + (tiempoRestante * 10);
+                puntosTotales += puntosGanados;
+                actualizarPuntaje();
+            } else {
+                if (botonClickeado) botonClickeado.classList.add('incorrecta');
+                botones.forEach(b => {
+                    if(b.dataset.correcta === "true") b.classList.add('correcta');
+                });
+            }
+
+            setTimeout(() => {
+                indicePregunta++;
+                cargarPreguntaActual();
+            }, 2000);
+        }
+
+        function actualizarPuntaje() {
+            document.getElementById('txtPuntos').innerText = puntosTotales;
+        }
+    </script>
 </body>
 </html>
