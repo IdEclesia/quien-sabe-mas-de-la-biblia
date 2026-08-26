@@ -152,7 +152,6 @@
         .incorrecta { background-color: #f8d7da !important; border-color: #dc3545 !important; }
         .deshabilitado { pointer-events: none; opacity: 0.8; }
         
-        /* Selector de idiomas visual */
         .selector-idiomas {
             display: flex;
             justify-content: flex-end;
@@ -180,31 +179,26 @@
 
 <div class="contenedor-principal">
     
-    <!-- Selector de Idiomas -->
     <div class="selector-idiomas">
         <button class="btn-lang activo" id="langES" onclick="cambiarIdioma('ES')">ES</button>
         <button class="btn-lang" id="langPT" onclick="cambiarIdioma('PT')">PT</button>
         <button class="btn-lang" id="langEN" onclick="cambiarIdioma('EN')">EN</button>
     </div>
 
-    <!-- Encabezado y Progreso -->
     <div class="encabezado">
         <div class="categoria-titulo">📖 <span id="txtCategoria" style="margin-left: 10px;">Cargando...</span></div>
         <div class="progreso-texto">Pregunta <span id="preguntaActualNum">0</span> de <span id="totalPreguntas">0</span></div>
         <div class="barra-progreso"><div class="barra-llena" id="barraProgreso" style="width: 0%;"></div></div>
     </div>
 
-    <!-- Temporizador Circular -->
     <div class="temporizador-container">
         <div class="circulo-tiempo" id="anilloTiempo">
             <div class="circulo-interno" id="txtTiempo">10</div>
         </div>
     </div>
 
-    <!-- Tarjeta de Juego -->
     <div class="tarjeta-pregunta">
         <div class="texto-pregunta" id="txtPregunta">Conectando con la base de datos...</div>
-        
         <div id="contenedorOpciones"></div>
     </div>
 
@@ -224,7 +218,7 @@
     let puntosTotales = 0;
     let tiempoRestante = 10;
     let temporizadorIntervalo;
-    let idiomaActual = 'ES'; // Idioma por defecto
+    let idiomaActual = 'ES';
 
     async function cargarCSV() {
         try {
@@ -236,7 +230,7 @@
             iniciarJuego();
         } catch (error) {
             console.error("Error:", error);
-            document.getElementById('txtPregunta').innerText = "Error al cargar el archivo de preguntas. Verifica que el archivo CSV esté en la misma carpeta.";
+            document.getElementById('txtPregunta').innerText = "Error al cargar el archivo CSV. Revisa el nombre del archivo en el repositorio.";
         }
     }
 
@@ -252,19 +246,16 @@
 
                 baseDeDatos.push({
                     categoria: limpiar(valores[2]),
-                    // Español
                     preguntaES: limpiar(valores[3]),
-                    opcion1ES: limpiar(valores[4]), // Correcta ES
+                    opcion1ES: limpiar(valores[4]),
                     opcion2ES: limpiar(valores[5]),
                     opcion3ES: limpiar(valores[6]),
-                    // Portugués
                     preguntaPT: limpiar(valores[7]),
-                    opcion1PT: limpiar(valores[8]), // Correcta PT
+                    opcion1PT: limpiar(valores[8]),
                     opcion2PT: limpiar(valores[9]),
                     opcion3PT: limpiar(valores[10]),
-                    // Inglés
                     preguntaEN: limpiar(valores[11]),
-                    opcion1EN: limpiar(valores[12]), // Correcta EN
+                    opcion1EN: limpiar(valores[12]),
                     opcion2EN: limpiar(valores[13]),
                     opcion3EN: limpiar(valores[14])
                 });
@@ -274,7 +265,7 @@
 
     function iniciarJuego() {
         if (baseDeDatos.length === 0) {
-            document.getElementById('txtPregunta').innerText = "El archivo CSV está vacío.";
+            document.getElementById('txtPregunta').innerText = "El archivo CSV está vacío o no se pudo leer.";
             return;
         }
         indicePregunta = 0;
@@ -286,13 +277,9 @@
 
     function cambiarIdioma(nuevoIdioma) {
         idiomaActual = nuevoIdioma;
-        
-        // Actualizar diseño visual de los botones de idioma
         document.getElementById('langES').className = `btn-lang ${idiomaActual === 'ES' ? 'activo' : ''}`;
         document.getElementById('langPT').className = `btn-lang ${idiomaActual === 'PT' ? 'activo' : ''}`;
         document.getElementById('langEN').className = `btn-lang ${idiomaActual === 'EN' ? 'activo' : ''}`;
-
-        // Recargar la pregunta actual en el nuevo idioma sin perder el avance
         cargarPregunta();
     }
 
@@ -308,7 +295,6 @@
 
         const datosFila = baseDeDatos[indicePregunta];
         
-        // Seleccionar textos según el idioma activo
         let textoPregunta = datosFila.preguntaES;
         let opCorrectaTexto = datosFila.opcion1ES;
         let op2Texto = datosFila.opcion2ES;
@@ -326,20 +312,17 @@
             op3Texto = datosFila.opcion3EN;
         }
 
-        // Actualizar interfaz
         document.getElementById('txtCategoria').innerText = datosFila.categoria;
         document.getElementById('preguntaActualNum').innerText = indicePregunta + 1;
         document.getElementById('txtPregunta').innerText = textoPregunta;
         document.getElementById('barraProgreso').style.width = `${((indicePregunta + 1) / baseDeDatos.length) * 100}%`;
 
-        // Crear array con las opciones del idioma actual, marcando inequívocamente la correcta
         let opciones = [
             { texto: opCorrectaTexto, esCorrecta: true },
             { texto: op2Texto, esCorrecta: false },
             { texto: op3Texto, esCorrecta: false }
         ];
 
-        // Mezclador aleatorio de opciones (Fisher-Yates) para que la respuesta no esté fija arriba
         for (let i = opciones.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [opciones[i], opciones[j]] = [opciones[j], opciones[i]];
@@ -357,7 +340,6 @@
         opcionesMezcladas.forEach((opcion, index) => {
             const btn = document.createElement('button');
             btn.className = 'boton-opcion';
-            // Guardamos un atributo seguro para verificar si el usuario acertó
             btn.dataset.correcta = opcion.esCorrecta; 
             
             btn.innerHTML = `
@@ -405,8 +387,6 @@
             actualizarPuntaje();
         } else {
             if (botonClickeado) botonClickeado.classList.add('incorrecta');
-            
-            // Revelar cuál era la verdadera opción correcta
             botones.forEach(b => {
                 if(b.dataset.correcta === "true") {
                     b.classList.add('correcta');
@@ -418,10 +398,6 @@
             indicePregunta++;
             cargarPregunta();
         }, 2000);
-    }
-
-    fn actualizarPuntaje() { // Nota: Corregido el tipado aquí abajo por si acaso
-        document.getElementById('txtPuntos').innerText = puntosTotales;
     }
 
     function actualizarPuntaje() {
