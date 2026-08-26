@@ -38,7 +38,7 @@
 
         .container {
             display: block;
-            max-width: 900px;
+            max-width: 1100px;
             margin: 2rem auto;
             padding: 0 1rem;
         }
@@ -101,21 +101,7 @@
             margin-top: 1rem;
         }
 
-        .dates-banner {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .date-card {
-            background: #ebf8ff;
-            border-left: 4px solid var(--primary-color);
-            padding: 1rem;
-            border-radius: 4px;
-        }
-
-        /* Estilos de Lista de Jugadores */
+        /* Estilos de Lista de Convocados */
         .jugador-fila {
             display: flex;
             gap: 10px;
@@ -123,22 +109,64 @@
             align-items: center;
         }
 
-        .btn-confirmar-jugador {
-            background-color: #cbd5e0;
-            color: #2d3748;
-            padding: 0.75rem 1rem;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.2s;
-            white-space: nowrap;
+        .lista-equipo-view {
+            background: #ebf8ff;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
         }
 
-        .btn-confirmar-jugador.activo {
-            background-color: #38a169;
-            color: white;
+        .item-convocado {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            border-radius: 4px;
+            border: 1px solid #bee3f8;
         }
+
+        .badge-estado {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .badge-pendiente { background: #feebc8; color: #c05621; }
+        .badge-confirmado { background: #c6f6d5; color: #22543d; }
+
+        /* Estilos del Fixture Estilo Mundial */
+        .fixture-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            overflow-x: auto;
+            padding: 10px 0;
+        }
+
+        .fixture-columna {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+        }
+
+        .fixture-match {
+            background: #f8fafc;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            padding: 8px;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+
+        .fixture-team {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid #edf2f7;
+        }
+        .fixture-team:last-child { border-bottom: none; }
 
         /* Motor de Preguntas Estilos */
         .selector-idiomas {
@@ -163,38 +191,11 @@
             border-color: #1a4f7c;
         }
 
-        .encabezado-juego {
-            margin-bottom: 20px;
-        }
-
-        .categoria-titulo {
-            display: flex;
-            align-items: center;
-            font-weight: 700;
-            font-size: 18px;
-            margin-bottom: 10px;
-        }
-
-        .progreso-texto {
-            font-size: 14px;
-            color: #1a4f7c;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        .barra-progreso {
-            height: 6px;
-            background-color: #dbe7f4;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-
-        .barra-llena {
-            height: 100%;
-            background-color: #1a4f7c;
-            width: 0%;
-            transition: width 0.3s;
-        }
+        .encabezado-juego { margin-bottom: 20px; }
+        .categoria-titulo { display: flex; align-items: center; font-weight: 700; font-size: 18px; margin-bottom: 10px; }
+        .progreso-texto { font-size: 14px; color: #1a4f7c; font-weight: 600; margin-bottom: 8px; }
+        .barra-progreso { height: 6px; background-color: #dbe7f4; border-radius: 4px; overflow: hidden; }
+        .barra-llena { height: 100%; background-color: #1a4f7c; width: 0%; transition: width 0.3s; }
 
         .temporizador-container {
             display: flex;
@@ -234,12 +235,7 @@
             border: 1px solid #e2e8f0;
         }
 
-        .texto-pregunta {
-            font-size: 18px;
-            font-weight: 800;
-            margin-bottom: 20px;
-            line-height: 1.3;
-        }
+        .texto-pregunta { font-size: 18px; font-weight: 800; margin-bottom: 20px; line-height: 1.3; }
 
         .boton-opcion {
             display: flex;
@@ -257,10 +253,7 @@
             color: #000;
             transition: all 0.2s;
         }
-
-        .boton-opcion:hover {
-            background-color: #e2ecf5;
-        }
+        .boton-opcion:hover { background-color: #e2ecf5; }
 
         .letra-opcion {
             background-color: #ffffff;
@@ -281,14 +274,7 @@
         .incorrecta { background-color: #f8d7da !important; border-color: #dc3545 !important; }
         .deshabilitado { pointer-events: none; opacity: 0.8; }
 
-        footer {
-            background-color: var(--primary-color);
-            color: white;
-            text-align: center;
-            padding: 1rem;
-            margin-top: 2rem;
-        }
-
+        footer { background-color: var(--primary-color); color: white; text-align: center; padding: 1rem; margin-top: 2rem; }
         .hidden { display: none; }
         .mt-2 { margin-top: 1rem; }
     </style>
@@ -301,77 +287,87 @@
     </header>
 
     <div class="container">
-        <!-- Calendario de Torneos -->
-        <div class="dates-banner">
-            <div class="date-card">
-                <strong>Mundial 1 (Fecha 1 al 6)</strong><br>
-                07 de Sep - 12 de Sep
-            </div>
-            <div class="date-card">
-                <strong>Mundial 2</strong><br>
-                14 de Sep - 19 de Sep
-            </div>
-            <div class="date-card">
-                <strong>Mundial de Campeones</strong><br>
-                21 de Sep - 26 de Sep
-            </div>
-        </div>
-
-        <!-- Sección 1: Crear Equipo y Convocados -->
+        
+        <!-- Sección 1: Creación de Equipo (Capitán) -->
         <div class="card" id="sec-crear-equipo">
-            <h2>1. Crear Tu Equipo (Capitán + 6 Convocados)</h2>
+            <h2>1. Registrar Equipo y 6 Convocados</h2>
             <form id="form-equipo" onsubmit="registrarEquipo(event)">
                 <div class="form-group">
                     <label for="nombre-equipo">Nombre del Equipo:</label>
                     <input type="text" id="nombre-equipo" required placeholder="Ej: Los Bereanos">
                 </div>
                 
-                <label>Lista de Convocados (6 Jugadores):</label>
+                <label>Nombres de los 6 Convocados:</label>
                 <div id="lista-invitados-inputs">
-                    <!-- Se generan 6 campos con su botón de confirmado -->
+                    <input type="text" class="input-invitado form-group" placeholder="Jugador 1" required>
+                    <input type="text" class="input-invitado form-group" placeholder="Jugador 2" required>
+                    <input type="text" class="input-invitado form-group" placeholder="Jugador 3" required>
+                    <input type="text" class="input-invitado form-group" placeholder="Jugador 4" required>
+                    <input type="text" class="input-invitado form-group" placeholder="Jugador 5" required>
+                    <input type="text" class="input-invitado form-group" placeholder="Jugador 6" required>
                 </div>
 
-                <button type="submit" class="mt-2">Crear Equipo y Guardar Datos</button>
+                <button type="submit">Generar Enlace de Invitación</button>
             </form>
 
             <div id="invitacion-wa" class="hidden mt-2">
-                <h3>¡Equipo Creado con Éxito!</h3>
-                <p>Comparte la invitación con tu equipo:</p>
+                <h3>¡Equipo Registrado!</h3>
+                <p>Envía este enlace a tus compañeros para que confirmen su participación:</p>
                 <a id="link-wa" href="#" target="_blank" class="btn-whatsapp">📲 Enviar Invitación por WhatsApp</a>
             </div>
         </div>
 
-        <!-- Sección 2: Perfil del Jugador y Confirmación en Equipo -->
-        <div class="card" id="sec-perfil">
-            <h2>2. Perfil de Usuario y Confirmación de Participación</h2>
-            <div id="vista-equipo-invitacion" class="form-group" style="background: #ebf8ff; padding: 10px; border-radius: 6px;">
-                <p><strong>Equipo Actual:</strong> <span id="lbl-nombre-equipo">Ninguno seleccionado</span></p>
-                <p>Busca tu nombre en la lista de convocados para confirmar:</p>
-                <div id="lbl-lista-convocados-view"></div>
+        <!-- Sección 2: Pantalla del Invitado (Buscar Equipo y Confirmar Perfil) -->
+        <div class="card" id="sec-invitado">
+            <h2>2. Acceso de Convocado / Creación de Perfil</h2>
+            <p>¿Fuiste invitado? Escribe el nombre del equipo para buscar la lista de convocados:</p>
+            
+            <div class="form-group">
+                <input type="text" id="buscar-nombre-equipo" placeholder="Nombre exacto del equipo...">
+                <button type="button" class="mt-2" onclick="buscarEquipo()">Buscar Equipo</button>
             </div>
 
-            <form id="form-perfil" class="mt-2">
-                <div class="form-group">
-                    <label for="perfil-nombre">Tu Nombre (Debe coincidir con la lista):</label>
-                    <input type="text" id="perfil-nombre" required placeholder="Tu nombre completo">
-                </div>
-                <div class="form-group">
-                    <label for="perfil-email">Correo Electrónico:</label>
-                    <input type="email" id="perfil-email" required placeholder="correo@ejemplo.com">
-                </div>
-                <button type="button" onclick="crearPerfilYConfirmar()">Crear Perfil y Confirmar Participación</button>
-            </form>
+            <div id="resultado-busqueda-equipo" class="hidden lista-equipo-view">
+                <h3 id="lbl-eq-encontrado"></h3>
+                <p>Busca tu nombre en la lista y haz clic para registrar tu perfil:</p>
+                <div id="lista-miembros-convocados"></div>
+            </div>
 
-            <div id="perfil-registrado" class="hidden">
-                <p>✅ Perfil Activo: <strong id="user-display"></strong></p>
-                <p>🏆 Estado en el Equipo: <span id="estado-participacion" style="color: green; font-weight: bold;">Confirmado</span></p>
-                <button onclick="mostrarSeccionJuego()" class="mt-2">🎮 Ir al Partido de Hoy (Mundial 1 - Fecha 1)</button>
+            <!-- Formulario de perfil al hacer clic en su nombre -->
+            <div id="sec-crear-perfil" class="hidden mt-2" style="background: #fff; padding: 15px; border: 1px solid #cbd5e0; border-radius: 6px;">
+                <h3>Crear Perfil para: <span id="lbl-nombre-seleccionado" style="color: var(--primary-color);"></span></h3>
+                <form id="form-perfil-invitado" onsubmit="guardarPerfilConfirmado(event)">
+                    <div class="form-group">
+                        <label>Correo Electrónico:</label>
+                        <input type="email" id="perfil-email" required placeholder="correo@ejemplo.com">
+                    </div>
+                    <button type="submit">Guardar Perfil y Confirmar Automáticamente</button>
+                </form>
+            </div>
+
+            <div id="panel-estado-equipo" class="hidden mt-2">
+                <p>Estado del Equipo: <strong id="lbl-estado-equipo-global" style="color: #c05621;">Esperando confirmación de todos (0/7)</strong></p>
+                <button id="btn-ir-juego" class="hidden" onclick="mostrarSeccionJuego()">🎮 Entrar al Partido (Mundial 1 - Fecha 1)</button>
             </div>
         </div>
 
-        <!-- Sección 3: Motor del Juego del Mundial con Filtros de Fecha -->
+        <!-- Sección 3: Fixture del Mundial (64 Equipos Habilitados) -->
+        <div class="card" id="sec-fixture">
+            <h2>3. Sorteo y Fixture del Mundial (64 Equipos)</h2>
+            <p>Equipos habilitados con plantel 100% confirmado: <span id="contador-equipos-habilitados">0</span> / 64</p>
+            <button type="button" onclick="ejecutarSorteoMundial()">🎲 Simular / Ejecutar Sorteo de 64 Equipos</button>
+
+            <div id="cuadro-fixture-container" class="hidden mt-2">
+                <h3>Cuadro de Enfrentamientos</h3>
+                <div class="fixture-container" id="fixture-grid">
+                    <!-- Generado dinámicamente -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección 4: Motor del Juego (Preguntas por Fechas) -->
         <div class="card hidden" id="sec-juego">
-            <h2>3. Partido en Vivo (Modo Cara a Cara)</h2>
+            <h2>4. Partido en Vivo (Modo Cara a Cara)</h2>
             
             <div class="selector-idiomas">
                 <button class="btn-lang activo" id="langES" onclick="cambiarIdioma('ES')">ES</button>
@@ -397,9 +393,10 @@
             </div>
 
             <div style="text-align: center; margin-top: 15px; font-weight: bold; color: var(--primary-color);">
-                Puntaje Personal Acumulado: <span id="txtPuntos">0</span> pts
+                Puntaje Personal: <span id="txtPuntos">0</span> pts
             </div>
         </div>
+
     </div>
 
     <footer>
@@ -407,159 +404,203 @@
     </footer>
 
     <script>
-        // Variables Globales del Equipo y Juego
-        let equipoActual = {
-            nombre: "Los Bereanos",
-            jugadores: [
-                { nombre: "Capitán (Tú)", confirmado: true },
-                { nombre: "Pedro", confirmado: false },
-                { nombre: "María", confirmado: false },
-                { nombre: "Juan", confirmado: false },
-                { nombre: "Sara", confirmado: false },
-                { nombre: "David", confirmado: false },
-                { nombre: "Ruth", confirmado: false }
-            ]
-        };
+        // Base de datos simulada de equipos registrados en el sistema
+        let baseEquiposGlobal = [
+            // Pre-cargamos algunos equipos ficticios para llegar rápido a 64 si quieres probar el sorteo automático
+        ];
 
-        let usuarioLogueado = null;
-        let baseDeDatos = [];
+        let equipoSeleccionadoActual = null;
+        let jugadorSeleccionadoIdx = null;
+
+        // Variables del motor de juego
+        let baseDeDatosPreguntas = [];
         let indicePregunta = 0;
         let puntosTotales = 0;
         let tiempoRestante = 10;
         let temporizadorIntervalo;
         let idiomaActual = 'ES';
-
-        // Configuración de Mundial y Fecha Activa (Ej: Mundial_1, Fecha 1)
         let torneoActivo = 'Mundial_1';
         let fechaActiva = 1;
 
-        // Inicializar Inputs de los 6 jugadores invitados al cargar la página
-        window.onload = function() {
-            const contenedorInputs = document.getElementById('lista-invitados-inputs');
-            contenedorInputs.innerHTML = '';
-            
-            // Empezamos desde el índice 1 (los 6 invitados, el 0 es el capitán)
-            for (let i = 1; i <= 6; i++) {
-                const fila = document.createElement('div');
-                fila.className = 'jugador-fila';
-                fila.innerHTML = `
-                    <input type="text" class="input-invitado" placeholder="Nombre del jugador ${i}" required>
-                    <button type="button" class="btn-confirmar-jugador" onclick="toggleConfirmarInput(this)">Confirmado</button>
-                `;
-                contenedorInputs.appendChild(fila);
-            }
-            renderizarVistaEquipo();
-        };
-
-        function toggleConfirmarInput(btn) {
-            btn.classList.toggle('activo');
-            if(btn.classList.contains('activo')) {
-                btn.innerText = "✅ Listo";
-            } else {
-                btn.innerText = "Confirmado";
-            }
-        }
-
+        // 1. Registro del Equipo (Capitán)
         function registrarEquipo(e) {
             e.preventDefault();
             const nombreEquipo = document.getElementById('nombre-equipo').value.trim();
             const inputsInvitados = document.querySelectorAll('.input-invitado');
-            const botonesConfirmar = document.querySelectorAll('.btn-confirmar-jugador');
+            
+            let miembros = [{ nombre: "Capitán (Creador)", email: "capitan@mail.com", confirmado: true }];
 
-            equipoActual.nombre = nombreEquipo;
-            equipoActual.jugadores = [{ nombre: "Capitán (Creador)", confirmado: true }];
-
-            inputsInvitados.forEach((inp, idx) => {
+            inputsInvitados.forEach(inp => {
                 if(inp.value.trim() !== "") {
-                    equipoActual.jugadores.push({
-                        nombre: inp.value.trim(),
-                        confirmado: botonesConfirmar[idx].classList.contains('activo')
-                    });
+                    miembros.push({ nombre: inp.value.trim(), email: "", confirmado: false });
                 }
             });
 
-            renderizarVistaEquipo();
+            if(miembros.length < 7) {
+                alert('Debes completar los 6 nombres de los convocados.');
+                return;
+            }
 
-            // Enlace de WhatsApp preescrito
+            let nuevoEquipo = {
+                nombre: nombreEquipo,
+                miembros: miembros,
+                habilitado: false
+            };
+
+            baseEquiposGlobal.push(nuevoEquipo);
+
+            // Generar enlace WhatsApp
             const linkInscripcion = window.location.href;
-            const mensajeWA = `¡Hola! Fuiste convocado para integrar el equipo *${nombreEquipo}* en el *Mundial de ¿Quién sabe más de la Biblia?*. Ingresa aquí para confirmar tu perfil y participar: ${linkInscripcion}`;
+            const mensajeWA = `¡Hola! Fuiste convocado para el equipo *${nombreEquipo}* en el Mundial Bíblico. Entra aquí para buscar tu equipo y confirmar tu perfil: ${linkInscripcion}`;
             const waURL = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensajeWA)}`;
 
             document.getElementById('link-wa').href = waURL;
             document.getElementById('invitacion-wa').classList.remove('hidden');
-            alert('¡Equipo registrado correctamente! Ya puedes enviar las invitaciones.');
+            alert('¡Equipo creado exitosamente! Comparte el enlace por WhatsApp.');
+            actualizarContadorHabilitados();
         }
 
-        function renderizarVistaEquipo() {
-            document.getElementById('lbl-nombre-equipo').innerText = equipoActual.nombre;
-            const contenedorView = document.getElementById('lbl-lista-convocados-view');
-            contenedorView.innerHTML = '';
+        // 2. Búsqueda de Equipo por el Invitado
+        function buscarEquipo() {
+            const nombreBuscado = document.getElementById('buscar-nombre-equipo').value.trim().toLowerCase();
+            let encontrado = baseEquiposGlobal.find(eq => eq.nombre.toLowerCase() === nombreBuscado);
 
-            equipoActual.jugadores.forEach((jug, index) => {
-                const div = document.createElement('div');
-                div.style.display = "flex";
-                div.style.justify = "space-between";
-                div.style.align = "center";
-                div.style.padding = "4px 0";
-                div.innerHTML = `
-                    <span>👤 ${jug.nombre} ${index === 0 ? '(Capitán)' : ''}</span>
-                    <span>${jug.confirmado ? '✅ Confirmado' : '⏳ Pendiente'}</span>
-                `;
-                contenedorView.appendChild(div);
-            });
-        }
-
-        function crearPerfilYConfirmar() {
-            const nombre = document.getElementById('perfil-nombre').value.trim();
-            const email = document.getElementById('perfil-email').value.trim();
-
-            if(!nombre || !email) {
-                alert('Por favor completa todos los campos de tu perfil.');
+            if(!encontrado) {
+                alert('No se encontró ningún equipo con ese nombre. Verifica con tu capitán.');
                 return;
             }
 
-            // Buscar si el usuario está en la lista del equipo
-            let encontrado = equipoActual.jugadores.find(j => j.nombre.toLowerCase() === nombre.toLowerCase());
-            
-            if(!encontrado) {
-                // Si no está exacto, lo agregamos como invitado participante
-                equipoActual.jugadores.push({ nombre: nombre, confirmado: true });
-            } else {
-                encontrado.confirmado = true;
-            }
-
-            usuarioLogueado = nombre;
-            document.getElementById('user-display').innerText = nombre;
-            document.getElementById('form-perfil').classList.add('hidden');
-            document.getElementById('perfil-registrado').classList.remove('hidden');
-            renderizarVistaEquipo();
-            alert('¡Perfil creado y participación confirmada con éxito!');
+            equipoSeleccionadoActual = encontrado;
+            document.getElementById('lbl-eq-encontrado').innerText = `Equipo: ${encontrado.nombre}`;
+            renderizarListaConvocadosInvitado();
+            document.getElementById('resultado-busqueda-equipo').classList.remove('hidden');
         }
 
+        function renderizarListaConvocadosInvitado() {
+            const contenedor = document.getElementById('lista-miembros-convocados');
+            contenedor.innerHTML = '';
+
+            let todosConfirmados = true;
+
+            equipoSeleccionadoActual.miembros.forEach((m, idx) => {
+                if(!m.confirmado) todosConfirmados = false;
+
+                const div = document.createElement('div');
+                div.className = 'item-convocado';
+                div.innerHTML = `
+                    <span>👤 ${m.name || m.nombre}</span>
+                    <div>
+                        <span class="badge-estado ${m.confirmado ? 'badge-confirmado' : 'badge-pendiente'}">
+                            ${m.confirmado ? '✅ Confirmado' : '⏳ Pendiente'}
+                        </span>
+                        ${!m.confirmado ? `<button style="padding: 4px 8px; font-size: 11px; margin-left: 6px;" onclick="seleccionarParaPerfil(${idx})">Crear Perfil</button>` : ''}
+                    </div>
+                `;
+                contenedor.appendChild(div);
+            });
+
+            // Verificar si el equipo completo está habilitado
+            if(todosConfirmados) {
+                equipoSeleccionadoActual.habilitado = true;
+                document.getElementById('lbl-estado-equipo-global').innerText = "🎉 ¡Equipo 100% Confirmado e Habilitado para el Mundial!";
+                document.getElementById('lbl-estado-equipo-global').style.color = "green";
+                document.getElementById('btn-ir-juego').classList.remove('hidden');
+            }
+            actualizarContadorHabilitados();
+        }
+
+        function seleccionarParaPerfil(idx) {
+            jugadorSeleccionadoIdx = idx;
+            document.getElementById('lbl-nombre-seleccionado').innerText = equipoSeleccionadoActual.miembros[idx].nombre;
+            document.getElementById('sec-crear-perfil').classList.remove('hidden');
+        }
+
+        // 3. Guardar Perfil y Confirmar Automáticamente
+        function guardarPerfilConfirmado(e) {
+            e.preventDefault();
+            const email = document.getElementById('perfil-email').value.trim();
+
+            if(jugadorSeleccionadoIdx !== null && equipoSeleccionadoActual) {
+                equipoSeleccionadoActual.miembros[jugadorSeleccionadoIdx].email = email;
+                equipoSeleccionadoActual.miembros[jugadorSeleccionadoIdx].confirmado = true; // Automático
+
+                document.getElementById('sec-crear-perfil').classList.add('hidden');
+                document.getElementById('form-perfil-invitado').reset();
+                
+                alert('¡Perfil creado con éxito! Tu participación en el equipo ha sido confirmada automáticamente.');
+                renderizarListaConvocadosInvitado();
+            }
+        }
+
+        function actualizarContadorHabilitados() {
+            let habilitadosCount = baseEquiposGlobal.filter(eq => eq.habilitado).length;
+            document.getElementById('contador-equipos-habilitados').innerText = habilitadosCount;
+        }
+
+        // 4. Sorteo y Fixture de 64 Equipos
+        function ejecutarSorteoMundial() {
+            let listaHabilitados = baseEquiposGlobal.filter(eq => eq.habilitado).map(eq => eq.nombre);
+
+            // Si faltan equipos para completar los 64, rellenamos con equipos de prueba automáticos para la demo
+            while(listaHabilitados.length < 64) {
+                listaHabilitados.push(`Equipo Clasificado ${listaHabilitados.length + 1}`);
+            }
+
+            // Mezclar aleatoriamente (Fisher-Yates)
+            for (let i = listaHabilitados.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [listaHabilitados[i], listaHabilitados[j]] = [listaHabilitados[j], listaHabilitados[i]];
+            }
+
+            renderizarCuadroFixture(listaHabilitados);
+            document.getElementById('cuadro-fixture-container').classList.remove('hidden');
+        }
+
+        function renderizarCuadroFixture(equipos64) {
+            const grid = document.getElementById('fixture-grid');
+            grid.innerHTML = '';
+
+            // Columna 1: 32 Partidos de Dieciseisavos / Octavos
+            let col1 = document.createElement('div');
+            col1.className = 'fixture-columna';
+            col1.innerHTML = '<h4>Ronda 1 (32 Partidos)</h4>';
+
+            for (let i = 0; i < equipos64.length; i += 2) {
+                const match = document.createElement('div');
+                match.className = 'fixture-match';
+                match.innerHTML = `
+                    <div class="fixture-team"><span>${equipos64[i]}</span></div>
+                    <div class="fixture-team"><span>${equipos64[i+1]}</span></div>
+                `;
+                col1.appendChild(match);
+            }
+            grid.appendChild(col1);
+        }
+
+        // 5. Motor de Preguntas (Conectado al CSV con Filtros de Fecha)
         function mostrarSeccionJuego() {
             document.getElementById('sec-juego').classList.remove('hidden');
             cargarCSVJuego();
         }
 
-        // Motor de Preguntas conectado al CSV filtrado por Torneo y Fecha
         async function cargarCSVJuego() {
             try {
                 const respuesta = await fetch('preguntas_mundial - Hoja 1.csv');
-                if (!respuesta.ok) throw new Error('No se encontró el archivo CSV de preguntas');
+                if (!respuesta.ok) throw new Error('No se encontró el archivo CSV');
                 
                 const textoCsv = await respuesta.text();
                 procesarCSV(textoCsv);
                 iniciarJuegoPreguntas();
             } catch (error) {
                 console.error("Error:", error);
-                document.getElementById('txtPregunta').innerText = "Error al conectar con el archivo de preguntas CSV en el servidor.";
+                document.getElementById('txtPregunta').innerText = "Error al conectar con el archivo CSV de preguntas en el servidor.";
             }
         }
 
         function procesarCSV(texto) {
             const lineas = texto.split('\n').filter(linea => linea.trim() !== '');
             const separador = lineas[0].includes(';') ? ';' : ','; 
-            baseDeDatos = [];
+            baseDeDatosPreguntas = [];
 
             for (let i = 1; i < lineas.length; i++) {
                 const valores = lineas[i].split(new RegExp(separador + '(?=(?:(?:[^"]*"){2})*[^"]*$)'));
@@ -570,9 +611,9 @@
                     let torneoFila = limpiar(valores[0]);
                     let fechaFila = parseInt(limpiar(valores[1]));
 
-                    // FILTRO INTELIGENTE: Filtra por Mundial y la Fecha activa del torneo
+                    // Filtro exacto por Mundial y Fecha activa
                     if (torneoFila === torneoActivo && fechaFila === fechaActiva) {
-                        baseDeDatos.push({
+                        baseDeDatosPreguntas.push({
                             categoria: limpiar(valores[2]),
                             preguntaES: limpiar(valores[3]),
                             opcion1ES: limpiar(valores[4]),
@@ -593,14 +634,14 @@
         }
 
         function iniciarJuegoPreguntas() {
-            if (baseDeDatos.length === 0) {
-                document.getElementById('txtPregunta').innerText = `No hay preguntas cargadas para ${torneoActivo} - Fecha ${fechaActiva}.`;
+            if (baseDeDatosPreguntas.length === 0) {
+                document.getElementById('txtPregunta').innerText = `No hay preguntas para ${torneoActivo} - Fecha ${fechaActiva}.`;
                 return;
             }
             indicePregunta = 0;
             puntosTotales = 0;
             actualizarPuntaje();
-            document.getElementById('totalPreguntas').innerText = baseDeDatos.length;
+            document.getElementById('totalPreguntas').innerText = baseDeDatosPreguntas.length;
             cargarPreguntaActual();
         }
 
@@ -615,15 +656,14 @@
         function cargarPreguntaActual() {
             clearInterval(temporizadorIntervalo);
             
-            if (indicePregunta >= baseDeDatos.length) {
-                document.getElementById('txtPregunta').innerText = `¡Fecha completada! Sumaste ${puntosTotales} puntos para tu equipo (${equipoActual.nombre}).`;
+            if (indicePregunta >= baseDeDatosPreguntas.length) {
+                document.getElementById('txtPregunta').innerText = `¡Fecha completada! Sumaste ${puntosTotales} puntos para tu equipo.`;
                 document.getElementById('contenedorOpciones').innerHTML = '';
                 document.getElementById('anilloTiempo').style.background = `conic-gradient(#38a169 100%, #e0e0e0 0)`;
                 return;
             }
 
-            const datosFila = baseDeDatos[indicePregunta];
-            
+            const datosFila = baseDeDatosPreguntas[indicePregunta];
             let textoPregunta = datosFila.preguntaES;
             let op1 = datosFila.opcion1ES, op2 = datosFila.opcion2ES, op3 = datosFila.opcion3ES;
 
@@ -638,7 +678,7 @@
             document.getElementById('txtCategoria').innerText = `${datosFila.categoria} (${torneoActivo} - Fecha ${fechaActiva})`;
             document.getElementById('preguntaActualNum').innerText = indicePregunta + 1;
             document.getElementById('txtPregunta').innerText = textoPregunta;
-            document.getElementById('barraProgreso').style.width = `${((indicePregunta + 1) / baseDeDatos.length) * 100}%`;
+            document.getElementById('barraProgreso').style.width = `${((indicePregunta + 1) / baseDeDatosPreguntas.length) * 100}%`;
 
             let opciones = [
                 { texto: op1, esCorrecta: true },
@@ -646,7 +686,6 @@
                 { texto: op3, esCorrecta: false }
             ];
 
-            // Mezclar opciones aleatoriamente
             for (let i = opciones.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [opciones[i], opciones[j]] = [opciones[j], opciones[i]];
