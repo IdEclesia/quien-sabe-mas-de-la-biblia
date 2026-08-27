@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mundial de ¿Quién sabe más de la Biblia?</title>
+    <!-- 1. Agregamos el CDN de Supabase para poder conectarnos -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --primary-color: #1a365d;
@@ -404,11 +406,13 @@
     </footer>
 
     <script>
-        // Base de datos simulada de equipos registrados en el sistema
-        let baseEquiposGlobal = [
-            // Pre-cargamos algunos equipos ficticios para llegar rápido a 64 si quieres probar el sorteo automático
-        ];
+        // --- 2. CONFIGURACIÓN DE SUPABASE ---
+        const SUPABASE_URL = 'https://wfwmyuuxceyulmkhogqr.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indmd215dXV4Y2V5dWxta2hvZ3FyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0MzgzMzUsImV4cCI6MjEwMjAxNDMzNX0.5fno1VaS6GBo-tKFi7oHJXCfqZpohv7lnmnk-WZGDf0';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // Base de datos simulada de equipos registrados en el sistema
+        let baseEquiposGlobal = [];
         let equipoSeleccionadoActual = null;
         let jugadorSeleccionadoIdx = null;
 
@@ -577,59 +581,47 @@
             grid.appendChild(col1);
         }
 
-        // 5. Motor de Preguntas (Conectado al CSV con Filtros de Fecha)
+        // --- 5. MOTOR DE JUEGO ADAPTADO A SUPABASE ---
+        
         function mostrarSeccionJuego() {
             document.getElementById('sec-juego').classList.remove('hidden');
-            cargarCSVJuego();
+            // Reemplazamos cargarCSVJuego por cargarPreguntasSupabase
+            cargarPreguntasSupabase();
         }
 
-        async function cargarCSVJuego() {
+        async function cargarPreguntasSupabase() {
             try {
-                const respuesta = await fetch('preguntas_mundial - Hoja 1.csv');
-                if (!respuesta.ok) throw new Error('No se encontró el archivo CSV');
-                
-                const textoCsv = await respuesta.text();
-                procesarCSV(textoCsv);
+                // Hacemos el SELECT a la base de datos de Supabase filtrando por torneo y fecha
+                const { data, error } = await supabase
+                    .from('preguntas_mundial_26')
+                    .select('id, torneo, fecha, categoria, pregunta_es, opcion1_es, opcion2_es, opcion3_es, pregunta_pt, opcion1_pt, opcion2_pt, opcion3_pt, pregunta_en, opcion1_en, opcion2_en, opcion3_en')
+                    .eq('torneo', torneoActivo)
+                    .eq('fecha', fechaActiva);
+
+                if (error) throw error;
+
+                // Mapeamos los datos para que el resto del motor los lea igual que antes
+                baseDeDatosPreguntas = data.map(row => ({
+                    id: row.id,
+                    categoria: row.categoria,
+                    preguntaES: row.pregunta_es,
+                    opcion1ES: row.opcion1_es,
+                    opcion2ES: row.opcion2_es,
+                    opcion3ES: row.opcion3_es,
+                    preguntaPT: row.pregunta_pt,
+                    opcion1PT: row.opcion1_pt,
+                    opcion2PT: row.opcion2_pt,
+                    opcion3PT: row.opcion3_pt,
+                    preguntaEN: row.pregunta_en,
+                    opcion1EN: row.opcion1_en,
+                    opcion2EN: row.opcion2_en,
+                    opcion3EN: row.opcion3_en
+                }));
+
                 iniciarJuegoPreguntas();
             } catch (error) {
-                console.error("Error:", error);
-                document.getElementById('txtPregunta').innerText = "Error al conectar con el archivo CSV de preguntas en el servidor.";
-            }
-        }
-
-        function procesarCSV(texto) {
-            const lineas = texto.split('\n').filter(linea => linea.trim() !== '');
-            const separador = lineas[0].includes(';') ? ';' : ','; 
-            baseDeDatosPreguntas = [];
-
-            for (let i = 1; i < lineas.length; i++) {
-                const valores = lineas[i].split(new RegExp(separador + '(?=(?:(?:[^"]*"){2})*[^"]*$)'));
-                
-                if (valores.length >= 15) {
-                    const limpiar = (str) => str ? str.replace(/^"|"$/g, '').trim() : '';
-
-                    let torneoFila = limpiar(valores[0]);
-                    let fechaFila = parseInt(limpiar(valores[1]));
-
-                    // Filtro exacto por Mundial y Fecha activa
-                    if (torneoFila === torneoActivo && fechaFila === fechaActiva) {
-                        baseDeDatosPreguntas.push({
-                            categoria: limpiar(valores[2]),
-                            preguntaES: limpiar(valores[3]),
-                            opcion1ES: limpiar(valores[4]),
-                            opcion2ES: limpiar(valores[5]),
-                            opcion3ES: limpiar(valores[6]),
-                            preguntaPT: limpiar(valores[7]),
-                            opcion1PT: limpiar(valores[8]),
-                            opcion2PT: limpiar(valores[9]),
-                            opcion3PT: limpiar(valores[10]),
-                            preguntaEN: limpiar(valores[11]),
-                            opcion1EN: limpiar(valores[12]),
-                            opcion2EN: limpiar(valores[13]),
-                            opcion3EN: limpiar(valores[14])
-                        });
-                    }
-                }
+                console.error("Error al conectar con Supabase:", error);
+                document.getElementById('txtPregunta').innerText = "Error al conectar con la base de datos de preguntas.";
             }
         }
 
@@ -680,22 +672,25 @@
             document.getElementById('txtPregunta').innerText = textoPregunta;
             document.getElementById('barraProgreso').style.width = `${((indicePregunta + 1) / baseDeDatosPreguntas.length) * 100}%`;
 
+            // Asignamos la identificación de las opciones numéricamente
+            // (La Opción 1 original siempre es la correcta en la base de datos)
             let opciones = [
-                { texto: op1, esCorrecta: true },
-                { texto: op2, esCorrecta: false },
-                { texto: op3, esCorrecta: false }
+                { texto: op1, idOpcion: 1 },
+                { texto: op2, idOpcion: 2 },
+                { texto: op3, idOpcion: 3 }
             ];
 
+            // Mezclamos aleatoriamente
             for (let i = opciones.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [opciones[i], opciones[j]] = [opciones[j], opciones[i]];
             }
 
-            renderizarBotones(opciones);
+            renderizarBotones(opciones, datosFila.id);
             iniciarReloj();
         }
 
-        function renderizarBotones(opcionesMezcladas) {
+        function renderizarBotones(opcionesMezcladas, preguntaId) {
             const contenedor = document.getElementById('contenedorOpciones');
             contenedor.innerHTML = ''; 
             const letras = ['A', 'B', 'C'];
@@ -703,9 +698,11 @@
             opcionesMezcladas.forEach((opcion, index) => {
                 const btn = document.createElement('button');
                 btn.className = 'boton-opcion';
-                btn.dataset.correcta = opcion.esCorrecta; 
+                // Guardamos el id de la opción en el dataset del botón
+                btn.dataset.idOpcion = opcion.idOpcion; 
                 btn.innerHTML = `<div class="letra-opcion">${letras[index]}</div> ${opcion.texto}`;
-                btn.onclick = () => procesarRespuesta(btn, opcion.esCorrecta);
+                // Llamamos a la nueva función de validación por servidor
+                btn.onclick = () => procesarRespuestaServidor(btn, preguntaId, opcion.idOpcion);
                 contenedor.appendChild(btn);
             });
         }
@@ -720,7 +717,9 @@
 
                 if (tiempoRestante <= 0) {
                     clearInterval(temporizadorIntervalo);
-                    procesarRespuesta(null, false); 
+                    // Si se acaba el tiempo, enviamos idOpcion = 0 (incorrecto por defecto)
+                    const preguntaIdActual = baseDeDatosPreguntas[indicePregunta]?.id;
+                    procesarRespuestaServidor(null, preguntaIdActual, 0); 
                 }
             }, 1000);
         }
@@ -732,21 +731,38 @@
             document.getElementById('anilloTiempo').style.background = `conic-gradient(${colorAnillo} ${porcentaje}%, #e0e0e0 0)`;
         }
 
-        function procesarRespuesta(botonClickeado, esAcertada) {
+        // Nueva función de procesamiento conectada al servidor (Supabase RPC)
+        async function procesarRespuestaServidor(botonClickeado, preguntaId, idOpcionElegida) {
             clearInterval(temporizadorIntervalo); 
             
             const botones = document.querySelectorAll('.boton-opcion');
             botones.forEach(b => b.classList.add('deshabilitado'));
 
+            let esAcertada = false;
+
+            // Validamos mediante la función SQL segura que creaste
+            if (preguntaId && idOpcionElegida > 0) {
+                const { data, error } = await supabase.rpc('validar_respuesta_mundial', {
+                    p_pregunta_id: preguntaId,
+                    p_opcion_elegida: idOpcionElegida
+                });
+
+                if (!error && data === true) {
+                    esAcertada = true;
+                }
+            }
+
             if (esAcertada) {
-                botonClickeado.classList.add('correcta');
+                if (botonClickeado) botonClickeado.classList.add('correcta');
                 let puntosGanados = 100 + (tiempoRestante * 10);
                 puntosTotales += puntosGanados;
                 actualizarPuntaje();
             } else {
                 if (botonClickeado) botonClickeado.classList.add('incorrecta');
+                
+                // Mostrar siempre cuál era la correcta (la opción 1 original)
                 botones.forEach(b => {
-                    if(b.dataset.correcta === "true") b.classList.add('correcta');
+                    if (b.dataset.idOpcion === "1") b.classList.add('correcta');
                 });
             }
 
