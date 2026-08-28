@@ -71,6 +71,27 @@
   .ranking-row:last-child{border-bottom:none;}
 
   footer.credit{text-align:center;font-size:.72rem;color:#8FA0B6;margin-top:34px;padding-bottom:24px;}
+
+  /* --- Motor de juego (preguntas_torneo) --- */
+  .tv-selector-idiomas{display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px;}
+  .tv-btn-lang{background:#fff;border:2px solid #DCE9F5;padding:4px 10px;border-radius:999px;cursor:pointer;font-weight:700;font-size:.75rem;color:var(--primary);font-family:inherit;}
+  .tv-btn-lang.activo{background:var(--primary);color:#fff;border-color:var(--primary);}
+  .tv-juego-encabezado{margin-bottom:16px;}
+  .tv-juego-categoria{display:flex;align-items:center;font-weight:800;font-size:1.05rem;margin-bottom:8px;color:var(--primary-dark);}
+  .tv-juego-progreso{font-size:.85rem;color:var(--text-soft);font-weight:700;margin-bottom:6px;}
+  .tv-barra-progreso{height:6px;background:#DCE9F5;border-radius:4px;overflow:hidden;}
+  .tv-barra-llena{height:100%;background:var(--accent);width:0%;transition:width .3s;}
+  .tv-temporizador-container{display:flex;justify-content:center;margin-bottom:-24px;position:relative;z-index:10;}
+  .tv-circulo-tiempo{width:56px;height:56px;border-radius:50%;background:conic-gradient(var(--accent) 100%, #e0e0e0 0);display:flex;justify-content:center;align-items:center;}
+  .tv-circulo-interno{width:46px;height:46px;background:#fff;border-radius:50%;display:flex;justify-content:center;align-items:center;font-size:1rem;font-weight:900;color:var(--primary-dark);}
+  .tv-tarjeta-pregunta{background:var(--surface);border-radius:var(--radius-lg);padding:36px 18px 18px;border:1px solid #DCE9F5;}
+  .tv-texto-pregunta{font-size:1.05rem;font-weight:800;margin-bottom:18px;line-height:1.3;color:var(--text);}
+  .tv-boton-opcion{display:flex;align-items:center;width:100%;background:var(--secondary);border:2px solid transparent;border-radius:var(--radius-md);padding:12px 14px;margin-bottom:10px;cursor:pointer;text-align:left;font-size:.95rem;font-weight:600;color:var(--text);transition:all .15s;font-family:inherit;}
+  .tv-boton-opcion:hover{background:#e2ecf5;}
+  .tv-letra-opcion{background:#fff;color:var(--primary);font-weight:800;width:28px;height:28px;display:flex;justify-content:center;align-items:center;border-radius:6px;margin-right:12px;flex-shrink:0;box-shadow:0 2px 4px rgba(0,0,0,.05);}
+  .tv-boton-opcion.correcta{background:#d4edda !important;border-color:#28a745 !important;}
+  .tv-boton-opcion.incorrecta{background:#f8d7da !important;border-color:#dc3545 !important;}
+  .tv-boton-opcion.deshabilitado{pointer-events:none;opacity:.8;}
 </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -130,6 +151,35 @@
           Comenzar Juego
         </button>
       </form>
+    </div>
+
+    <div id="view-juego" class="hidden-view w-full max-w-lg tv-card p-8">
+      <div class="tv-selector-idiomas">
+        <button class="tv-btn-lang activo" id="tv-langES" onclick="tvCambiarIdioma('ES')">ES</button>
+        <button class="tv-btn-lang" id="tv-langPT" onclick="tvCambiarIdioma('PT')">PT</button>
+        <button class="tv-btn-lang" id="tv-langEN" onclick="tvCambiarIdioma('EN')">EN</button>
+      </div>
+
+      <div class="tv-juego-encabezado">
+        <div class="tv-juego-categoria">📖 <span id="tv-txtCategoria" style="margin-left:8px;">Cargando...</span></div>
+        <div class="tv-juego-progreso">Pregunta <span id="tv-preguntaActualNum">0</span> de <span id="tv-totalPreguntas">0</span></div>
+        <div class="tv-barra-progreso"><div class="tv-barra-llena" id="tv-barraProgreso"></div></div>
+      </div>
+
+      <div class="tv-temporizador-container">
+        <div class="tv-circulo-tiempo" id="tv-anilloTiempo">
+          <div class="tv-circulo-interno" id="tv-txtTiempo">10</div>
+        </div>
+      </div>
+
+      <div class="tv-tarjeta-pregunta">
+        <div class="tv-texto-pregunta" id="tv-txtPregunta">Conectando con la base de datos...</div>
+        <div id="tv-contenedorOpciones"></div>
+      </div>
+
+      <div style="text-align:center;margin-top:14px;font-weight:800;color:var(--primary-dark);">
+        Puntaje: <span id="tv-txtPuntos">0</span> pts
+      </div>
     </div>
 
     <div id="view-mundial" class="hidden-view w-full max-w-lg tv-card p-8">
@@ -361,7 +411,7 @@
     let currentPerfil = null;
 
     // 2. NAVEGACIÓN Y VISTAS
-    const vistas = ['view-menu', 'view-participar', 'view-mundial', 'view-unirse-mundial', 'view-login', 'view-registro', 'view-dashboard'];
+    const vistas = ['view-menu', 'view-participar', 'view-juego', 'view-mundial', 'view-unirse-mundial', 'view-login', 'view-registro', 'view-dashboard'];
 
     function mostrarVista(vistaId) {
       vistas.forEach(v => document.getElementById(v).classList.add('hidden-view'));
@@ -383,6 +433,12 @@
     }
 
     // 3. LÓGICA DE INVITADOS (JUGAR)
+    // NOTA: preguntas_torneo no tiene columna "torneo", solo fecha_torneo.
+    // Por eso el motor de juego reemplaza el redirect a JUEGO_URL (index.html, no compartido)
+    // y muestra las preguntas directamente acá, dentro de torneos.html.
+    let tvJugadorNombre = '';
+    let tvCodigoTorneo = '';
+
     function ingresarAlJuego() {
       const nombre = document.getElementById('invitado-nombre').value.trim();
       const codigo = document.getElementById('invitado-codigo').value.trim().toUpperCase();
@@ -392,7 +448,200 @@
         return;
       }
 
-      window.location.href = `${JUEGO_URL}?torneo=${encodeURIComponent(codigo)}&jugador=${encodeURIComponent(nombre)}`;
+      tvJugadorNombre = nombre;
+      tvCodigoTorneo = codigo;
+
+      mostrarVista('view-juego');
+      tvCargarPreguntasTorneo(1); // Fecha 1 por defecto: ajustar cuando se defina cómo mapear "código" -> fecha_torneo
+    }
+
+    // --- MOTOR DE JUEGO: preguntas_torneo (adaptado de mundial.html) ---
+    let tvBaseDeDatosPreguntas = [];
+    let tvIndicePregunta = 0;
+    let tvPuntosTotales = 0;
+    let tvTiempoRestante = 10;
+    let tvTemporizadorIntervalo;
+    let tvIdiomaActual = 'ES';
+    let tvFechaActiva = 1;
+
+    async function tvCargarPreguntasTorneo(numeroFecha) {
+      tvFechaActiva = numeroFecha;
+
+      try {
+        // Nunca seleccionamos respuesta_correcta ni es_ordenamiento: la validación
+        // se hace en el servidor vía RPC para no exponer la respuesta al cliente.
+        const { data, error } = await supabaseClient
+          .from('preguntas_torneo')
+          .select('id, categoria, pregunta_es, opcion_1_es, opcion_2_es, opcion_3_es, pregunta_pt, opcion_1_pt, opcion_2_pt, opcion_3_pt, pregunta_en, opcion_1_en, opcion_2_en, opcion_3_en, es_ordenamiento')
+          .eq('fecha_torneo', tvFechaActiva);
+
+        if (error) throw error;
+
+        // Por ahora dejamos afuera las preguntas de "ordenar" (es_ordenamiento = true);
+        // este motor solo maneja opción múltiple.
+        tvBaseDeDatosPreguntas = data
+          .filter(row => !row.es_ordenamiento)
+          .map(row => ({
+            id: row.id,
+            categoria: row.categoria,
+            preguntaES: row.pregunta_es,
+            opcion1ES: row.opcion_1_es,
+            opcion2ES: row.opcion_2_es,
+            opcion3ES: row.opcion_3_es,
+            preguntaPT: row.pregunta_pt,
+            opcion1PT: row.opcion_1_pt,
+            opcion2PT: row.opcion_2_pt,
+            opcion3PT: row.opcion_3_pt,
+            preguntaEN: row.pregunta_en,
+            opcion1EN: row.opcion_1_en,
+            opcion2EN: row.opcion_2_en,
+            opcion3EN: row.opcion_3_en
+          }));
+
+        tvIniciarJuego();
+      } catch (error) {
+        console.error("Error al cargar preguntas del torneo:", error);
+        document.getElementById('tv-txtPregunta').innerText = "Error al conectar con la base de datos de preguntas.";
+      }
+    }
+
+    function tvIniciarJuego() {
+      if (tvBaseDeDatosPreguntas.length === 0) {
+        document.getElementById('tv-txtPregunta').innerText = `No hay preguntas para la Fecha ${tvFechaActiva}.`;
+        return;
+      }
+      tvIndicePregunta = 0;
+      tvPuntosTotales = 0;
+      tvActualizarPuntaje();
+      document.getElementById('tv-totalPreguntas').innerText = tvBaseDeDatosPreguntas.length;
+      tvCargarPreguntaActual();
+    }
+
+    function tvCambiarIdioma(nuevoIdioma) {
+      tvIdiomaActual = nuevoIdioma;
+      ['ES', 'PT', 'EN'].forEach(lang => {
+        const btn = document.getElementById(`tv-lang${lang}`);
+        if (btn) btn.className = `tv-btn-lang ${tvIdiomaActual === lang ? 'activo' : ''}`;
+      });
+      tvCargarPreguntaActual();
+    }
+
+    function tvCargarPreguntaActual() {
+      clearInterval(tvTemporizadorIntervalo);
+
+      if (tvIndicePregunta >= tvBaseDeDatosPreguntas.length) {
+        document.getElementById('tv-txtPregunta').innerText = `¡Fecha completada! Sumaste ${tvPuntosTotales} puntos.`;
+        document.getElementById('tv-contenedorOpciones').innerHTML = '';
+        document.getElementById('tv-anilloTiempo').style.background = `conic-gradient(#38a169 100%, #e0e0e0 0)`;
+        return;
+      }
+
+      const datos = tvBaseDeDatosPreguntas[tvIndicePregunta];
+      let textoPregunta = datos.preguntaES;
+      let op1 = datos.opcion1ES, op2 = datos.opcion2ES, op3 = datos.opcion3ES;
+
+      if (tvIdiomaActual === 'PT') {
+        textoPregunta = datos.preguntaPT; op1 = datos.opcion1PT; op2 = datos.opcion2PT; op3 = datos.opcion3PT;
+      } else if (tvIdiomaActual === 'EN') {
+        textoPregunta = datos.preguntaEN; op1 = datos.opcion1EN; op2 = datos.opcion2EN; op3 = datos.opcion3EN;
+      }
+
+      document.getElementById('tv-txtCategoria').innerText = `${datos.categoria} (Fecha ${tvFechaActiva})`;
+      document.getElementById('tv-preguntaActualNum').innerText = tvIndicePregunta + 1;
+      document.getElementById('tv-txtPregunta').innerText = textoPregunta;
+      document.getElementById('tv-barraProgreso').style.width = `${((tvIndicePregunta + 1) / tvBaseDeDatosPreguntas.length) * 100}%`;
+
+      // Mezclamos el orden de visualización; el servidor sabe cuál opción (1, 2 o 3)
+      // es la correcta según la columna respuesta_correcta.
+      let opciones = [
+        { texto: op1, idOpcion: 1 },
+        { texto: op2, idOpcion: 2 },
+        { texto: op3, idOpcion: 3 }
+      ];
+      for (let i = opciones.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [opciones[i], opciones[j]] = [opciones[j], opciones[i]];
+      }
+
+      tvRenderizarBotones(opciones, datos.id);
+      tvIniciarReloj();
+    }
+
+    function tvRenderizarBotones(opcionesMezcladas, preguntaId) {
+      const contenedor = document.getElementById('tv-contenedorOpciones');
+      contenedor.innerHTML = '';
+      const letras = ['A', 'B', 'C'];
+
+      opcionesMezcladas.forEach((opcion, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'tv-boton-opcion';
+        btn.dataset.idOpcion = opcion.idOpcion;
+        btn.innerHTML = `<div class="tv-letra-opcion">${letras[index]}</div> ${opcion.texto}`;
+        btn.onclick = () => tvProcesarRespuesta(btn, preguntaId, opcion.idOpcion);
+        contenedor.appendChild(btn);
+      });
+    }
+
+    function tvIniciarReloj() {
+      tvTiempoRestante = 10;
+      tvActualizarRelojVisual();
+
+      tvTemporizadorIntervalo = setInterval(() => {
+        tvTiempoRestante--;
+        tvActualizarRelojVisual();
+
+        if (tvTiempoRestante <= 0) {
+          clearInterval(tvTemporizadorIntervalo);
+          const preguntaIdActual = tvBaseDeDatosPreguntas[tvIndicePregunta]?.id;
+          tvProcesarRespuesta(null, preguntaIdActual, 0); // 0 fuerza fallo por tiempo agotado
+        }
+      }, 1000);
+    }
+
+    function tvActualizarRelojVisual() {
+      document.getElementById('tv-txtTiempo').innerText = tvTiempoRestante;
+      let porcentaje = (tvTiempoRestante / 10) * 100;
+      let colorAnillo = tvTiempoRestante <= 3 ? '#dc3545' : 'var(--accent)';
+      document.getElementById('tv-anilloTiempo').style.background = `conic-gradient(${colorAnillo} ${porcentaje}%, #e0e0e0 0)`;
+    }
+
+    // Validación en servidor vía RPC (ver validar_respuesta_torneo en Supabase)
+    async function tvProcesarRespuesta(botonClickeado, preguntaId, idOpcionElegida) {
+      clearInterval(tvTemporizadorIntervalo);
+
+      const botones = document.querySelectorAll('#tv-contenedorOpciones .tv-boton-opcion');
+      botones.forEach(b => b.classList.add('deshabilitado'));
+
+      let esAcertada = false;
+      let idOpcionCorrecta = null;
+
+      if (preguntaId && idOpcionElegida > 0) {
+        const { data, error } = await supabaseClient.rpc('validar_respuesta_torneo', {
+          p_pregunta_id: preguntaId,
+          p_opcion_elegida: idOpcionElegida
+        });
+        if (!error && data === true) esAcertada = true;
+      }
+
+      if (esAcertada) {
+        if (botonClickeado) botonClickeado.classList.add('correcta');
+        let puntosGanados = 10 + tvTiempoRestante; // 10 pts por acierto + hasta 10 por velocidad
+        tvPuntosTotales += puntosGanados;
+        tvActualizarPuntaje();
+      } else {
+        if (botonClickeado) botonClickeado.classList.add('incorrecta');
+        // No conocemos la opción correcta en el cliente (no se selecciona respuesta_correcta),
+        // así que no la resaltamos aquí; solo se marca la elección del jugador como incorrecta.
+      }
+
+      setTimeout(() => {
+        tvIndicePregunta++;
+        tvCargarPreguntaActual();
+      }, 2000);
+    }
+
+    function tvActualizarPuntaje() {
+      document.getElementById('tv-txtPuntos').innerText = tvPuntosTotales;
     }
 
     // 4. AUTENTICACIÓN REAL CON SUPABASE
