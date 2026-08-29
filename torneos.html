@@ -72,6 +72,17 @@
 
   footer.credit{text-align:center;font-size:.72rem;color:#8FA0B6;margin-top:34px;padding-bottom:24px;}
 
+  /* --- Resumen Mundial en el Perfil --- */
+  #dash-mundial-tabla th,#dash-mundial-tabla td{padding:8px 10px;text-align:left;border-bottom:1px solid #DCE9F5;white-space:nowrap;}
+  #dash-mundial-tabla th{font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;color:var(--text-soft);}
+  #dash-mundial-tabla td.mn-total{font-weight:800;color:var(--primary-dark);}
+  .mn-badge{padding:3px 8px;border-radius:999px;font-size:.72rem;font-weight:700;}
+  .mn-badge.confirmado{background:#d4edda;color:#1d6b3a;}
+  .mn-badge.pendiente{background:#F7E2B8;color:#7a5714;}
+
+  /* --- Jugar fecha del Mundial (dentro de view-mundial) --- */
+  .mn-tarjeta-pregunta{background:var(--surface);border-radius:var(--radius-lg);padding:30px 18px 18px;border:1px solid #DCE9F5;margin-top:14px;}
+
   /* --- Motor de juego (preguntas_torneo) --- */
   .tv-selector-idiomas{display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px;}
   .tv-btn-lang{background:#fff;border:2px solid #DCE9F5;padding:4px 10px;border-radius:999px;cursor:pointer;font-weight:700;font-size:.75rem;color:var(--primary);font-family:inherit;}
@@ -216,6 +227,53 @@
         </div>
         <h3 class="font-bold mb-2" style="color:var(--primary-dark);">Plantilla (<span id="mundial-cupo-actual">0</span>/7 aceptados)</h3>
         <ul id="mundial-lista-miembros" class="divide-y" style="border-color:#DCE9F5;"></ul>
+
+        <div id="mn-jugar-bloque" class="hidden-view" style="margin-top:16px;">
+          <h3 class="font-bold mb-2" style="color:var(--primary-dark);">Fecha <span id="mn-fecha-numero"></span> <span id="mn-fecha-fechas" class="text-sm font-normal" style="color:var(--text-soft);"></span></h3>
+
+          <div id="mn-jugar-no-empezo" class="hidden-view">
+            <p class="text-sm" style="color:var(--text-soft);">Esta fecha todavía no arrancó. Se habilita el <span id="mn-no-empezo-desde"></span>.</p>
+          </div>
+
+          <div id="mn-jugar-disponible" class="hidden-view">
+            <p class="text-sm mb-3" style="color:var(--text-soft);">Respondé las preguntas de esta fecha. Tenés una sola oportunidad, así que jugala cuando estés listo. Se cierra el <span id="mn-disponible-hasta"></span>.</p>
+            <button onclick="mnEmpezarJuego()" id="btn-mn-jugar" class="btn btn-accent btn-block">🎮 Jugar esta fecha</button>
+          </div>
+
+          <div id="mn-jugar-ya-jugada" class="hidden-view">
+            <p class="text-sm font-bold" style="color:var(--primary);">Ya jugaste esta fecha — sumaste <span id="mn-puntos-ya-jugada">0</span> puntos.</p>
+          </div>
+
+          <div id="mn-jugar-finalizado" class="hidden-view">
+            <p class="text-sm font-bold" style="color:var(--text-soft);">El Mundial ya terminó (jugó sus 15 fechas).</p>
+          </div>
+
+          <div id="mn-vista-juego" class="hidden-view">
+            <div class="tv-selector-idiomas">
+              <button class="tv-btn-lang activo" id="mn-langES" onclick="mnCambiarIdioma('ES')">ES</button>
+              <button class="tv-btn-lang" id="mn-langPT" onclick="mnCambiarIdioma('PT')">PT</button>
+              <button class="tv-btn-lang" id="mn-langEN" onclick="mnCambiarIdioma('EN')">EN</button>
+            </div>
+            <div class="tv-juego-encabezado">
+              <div class="tv-juego-categoria">📖 <span id="mn-txtCategoria" style="margin-left:8px;">Cargando...</span></div>
+              <div class="tv-juego-progreso">Pregunta <span id="mn-preguntaActualNum">0</span> de <span id="mn-totalPreguntas">0</span></div>
+              <div class="tv-barra-progreso"><div class="tv-barra-llena" id="mn-barraProgreso"></div></div>
+            </div>
+            <div class="tv-temporizador-container">
+              <div class="tv-circulo-tiempo" id="mn-anilloTiempo">
+                <div class="tv-circulo-interno" id="mn-txtTiempo">10</div>
+              </div>
+            </div>
+            <div class="mn-tarjeta-pregunta">
+              <div class="tv-texto-pregunta" id="mn-txtPregunta">Conectando con la base de datos...</div>
+              <div id="mn-contenedorOpciones"></div>
+            </div>
+            <div style="text-align:center;margin-top:14px;font-weight:800;color:var(--primary-dark);">
+              Puntaje: <span id="mn-txtPuntos">0</span> pts
+            </div>
+          </div>
+        </div>
+
         <a href="torneo_internacional.html" target="_blank" class="btn btn-outline btn-block" style="margin-top:16px;">Ver llaves y resultados del Mundial</a>
       </div>
     </div>
@@ -370,6 +428,31 @@
           <ul id="lista-torneos" class="divide-y" style="border-color:#DCE9F5;">
             <li class="p-6 text-center text-sm" style="color:var(--text-soft);">Cargando...</li>
           </ul>
+        </div>
+      </div>
+
+      <div class="tv-card p-6 mt-6">
+        <h3 class="font-bold mb-1" style="color:var(--primary-dark);">🌍 Mundial de la Biblia</h3>
+
+        <div id="dash-mundial-sin-equipo" class="hidden-view">
+          <p class="text-sm mb-3" style="color:var(--text-soft);">Todavía no armaste tu equipo para el Mundial.</p>
+          <button onclick="mostrarVista('view-mundial'); cargarVistaMundial();" class="btn btn-accent">
+            Crear equipo
+          </button>
+        </div>
+
+        <div id="dash-mundial-con-equipo" class="hidden-view">
+          <p class="text-xs" style="color:var(--text-soft);">Tu equipo</p>
+          <p class="font-bold text-lg mb-3" id="dash-mundial-equipo-nombre" style="color:var(--primary-dark);"></p>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm" id="dash-mundial-tabla" style="border-collapse:collapse;">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <button onclick="mostrarVista('view-mundial'); cargarVistaMundial();" class="btn btn-outline btn-sm" style="margin-top:14px;">
+            Ver mi equipo / invitar compañeros
+          </button>
         </div>
       </div>
     </div>
@@ -662,6 +745,7 @@
       }
       mostrarVista('view-dashboard');
       await cargarMisTorneos();
+      await cargarResumenMundialDashboard();
     }
 
     document.getElementById('form-login').addEventListener('submit', async (e) => {
@@ -1017,6 +1101,7 @@
           nombreMundialEl.textContent = evento ? evento.nombre : '';
         }
         await cargarMiembrosMundial(miEquipoMundial.id, currentUser.id === miEquipoMundial.capitan_id);
+        await mnCargarBloqueJugar(miEquipoMundial.id, currentUser.id);
       } else {
         document.getElementById('mundial-sin-equipo').classList.remove('hidden-view');
         document.getElementById('mundial-con-equipo').classList.add('hidden-view');
@@ -1048,6 +1133,366 @@
             <span>${estadoTexto}${btnInvitar}</span>
           </li>`;
       }).join('');
+    }
+
+    // ===================== RESUMEN DEL MUNDIAL EN EL PERFIL =====================
+    async function cargarResumenMundialDashboard(){
+      const sinEquipo = document.getElementById('dash-mundial-sin-equipo');
+      const conEquipo = document.getElementById('dash-mundial-con-equipo');
+      if (!sinEquipo || !conEquipo) return;
+
+      if (!currentUser) {
+        sinEquipo.classList.remove('hidden-view');
+        conEquipo.classList.add('hidden-view');
+        return;
+      }
+
+      let equipo = null;
+      const { data: comoCapitan } = await supabaseClient
+        .from('mundial_equipos').select('*').eq('capitan_id', currentUser.id).maybeSingle();
+      if (comoCapitan) {
+        equipo = comoCapitan;
+      } else {
+        const { data: comoMiembro } = await supabaseClient
+          .from('mundial_miembros')
+          .select('*, mundial_equipos(*)')
+          .eq('perfil_id', currentUser.id)
+          .eq('estado', 'aceptada')
+          .maybeSingle();
+        if (comoMiembro && comoMiembro.mundial_equipos) equipo = comoMiembro.mundial_equipos;
+      }
+
+      if (!equipo) {
+        sinEquipo.classList.remove('hidden-view');
+        conEquipo.classList.add('hidden-view');
+        return;
+      }
+
+      sinEquipo.classList.add('hidden-view');
+      conEquipo.classList.remove('hidden-view');
+      document.getElementById('dash-mundial-equipo-nombre').textContent = equipo.nombre;
+
+      const { data: miembros } = await supabaseClient
+        .from('mundial_miembros')
+        .select('id, nombre, es_capitan, estado')
+        .eq('equipo_id', equipo.id)
+        .order('created_at', { ascending: true });
+
+      const listaMiembros = miembros || [];
+      const idsMiembros = listaMiembros.map(m => m.id);
+      let puntos = [];
+      if (idsMiembros.length > 0) {
+        const { data: puntosData } = await supabaseClient
+          .from('mundial_puntos')
+          .select('miembro_id, fecha, puntos')
+          .in('miembro_id', idsMiembros);
+        puntos = puntosData || [];
+      }
+
+      const fechas = [];
+      const estadoMundialAhora = mnCalcularEstadoDelMundial();
+      const ultimaFechaAMostrar = estadoMundialAhora.estado === 'no_empezo'
+        ? estadoMundialAhora.fecha - 1
+        : estadoMundialAhora.fecha;
+      for (let f = 1; f <= ultimaFechaAMostrar; f++) fechas.push(f);
+
+      const thead = document.querySelector('#dash-mundial-tabla thead');
+      const tbody = document.querySelector('#dash-mundial-tabla tbody');
+
+      thead.innerHTML = '<tr><th>Jugador</th><th>Estado</th>' +
+        fechas.map(f => `<th>Fecha ${f}</th>`).join('') +
+        '<th>Total</th></tr>';
+
+      tbody.innerHTML = listaMiembros.map(m => {
+        const puntosDelMiembro = puntos.filter(p => p.miembro_id === m.id);
+        const total = puntosDelMiembro.reduce((acc, p) => acc + (p.puntos || 0), 0);
+        const celdasFechas = fechas.map(f => {
+          const fila = puntosDelMiembro.find(p => p.fecha === f);
+          return `<td>${fila ? fila.puntos : '—'}</td>`;
+        }).join('');
+        const estadoTexto = m.es_capitan
+          ? '<span class="mn-badge confirmado">Capitán</span>'
+          : m.estado === 'aceptada'
+            ? '<span class="mn-badge confirmado">Confirmado</span>'
+            : '<span class="mn-badge pendiente">Pendiente</span>';
+        return `<tr><td>${m.nombre}</td><td>${estadoTexto}</td>${celdasFechas}<td class="mn-total">${total}</td></tr>`;
+      }).join('');
+
+      if (fechas.length === 0) {
+        tbody.innerHTML += '<tr><td colspan="3" class="text-sm" style="color:var(--text-soft);">Todavía no hay puntos cargados de ninguna fecha.</td></tr>';
+      }
+    }
+
+    // ===================== CALENDARIO FIJO DEL MUNDIAL (15 fechas, 2 días cada una) =====================
+    // Fecha 1: 1 y 2 de septiembre. Fecha 2: 3 y 4. Fecha 3: 5 y 6... así hasta la Fecha 15.
+    // Cada fecha se habilita 00:05 del primer día y se cierra 23:55 del segundo día (hora local del dispositivo).
+    // Ajustar MUNDIAL_ANIO y MUNDIAL_TORNEO_ID si cambian de un año/edición a otra.
+    const MUNDIAL_ANIO = 2026;
+    const MUNDIAL_MES = 8; // 8 = septiembre (0 = enero)
+    const MUNDIAL_TOTAL_FECHAS = 15;
+    const MUNDIAL_TORNEO_ID = 'Mundial_1'; // debe coincidir con la columna "torneo" de preguntas_mundial_26
+
+    function mnVentanaDeFecha(numeroFecha){
+      const diaInicio = 1 + (numeroFecha - 1) * 2;
+      const inicio = new Date(MUNDIAL_ANIO, MUNDIAL_MES, diaInicio, 0, 5, 0);
+      const fin = new Date(MUNDIAL_ANIO, MUNDIAL_MES, diaInicio + 1, 23, 55, 0);
+      return { inicio, fin };
+    }
+
+    function mnFormatearFecha(fecha){
+      return fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+    }
+
+    // Devuelve la fecha (1 a 15) que corresponde jugar ahora mismo, y si su ventana está abierta,
+    // todavía no empezó, o si el Mundial ya jugó sus 15 fechas.
+    function mnCalcularEstadoDelMundial(ahora = new Date()){
+      for (let n = 1; n <= MUNDIAL_TOTAL_FECHAS; n++) {
+        const { inicio, fin } = mnVentanaDeFecha(n);
+        if (ahora >= inicio && ahora <= fin) return { fecha: n, estado: 'en_curso', inicio, fin };
+        if (ahora < inicio) return { fecha: n, estado: 'no_empezo', inicio, fin };
+      }
+      return { fecha: MUNDIAL_TOTAL_FECHAS, estado: 'finalizado' };
+    }
+
+    let mnMiembroIdActual = null; // id de mi propia fila en mundial_miembros, para guardar mis puntos
+
+    async function mnCargarBloqueJugar(equipoId, userId){
+      const bloque = document.getElementById('mn-jugar-bloque');
+      if (!bloque) return;
+
+      const { data: miMiembro } = await supabaseClient
+        .from('mundial_miembros')
+        .select('id, estado')
+        .eq('equipo_id', equipoId)
+        .eq('perfil_id', userId)
+        .maybeSingle();
+
+      if (!miMiembro || miMiembro.estado !== 'aceptada') {
+        bloque.classList.add('hidden-view');
+        return;
+      }
+
+      mnMiembroIdActual = miMiembro.id;
+      bloque.classList.remove('hidden-view');
+
+      const estadoMundial = mnCalcularEstadoDelMundial();
+      document.getElementById('mn-fecha-numero').textContent = estadoMundial.fecha;
+
+      const noEmpezoDiv = document.getElementById('mn-jugar-no-empezo');
+      const disponible = document.getElementById('mn-jugar-disponible');
+      const yaJugadaDiv = document.getElementById('mn-jugar-ya-jugada');
+      const finalizadoDiv = document.getElementById('mn-jugar-finalizado');
+      const vistaJuego = document.getElementById('mn-vista-juego');
+      [noEmpezoDiv, disponible, yaJugadaDiv, finalizadoDiv, vistaJuego].forEach(d => d.classList.add('hidden-view'));
+
+      if (estadoMundial.estado === 'finalizado') {
+        document.getElementById('mn-fecha-fechas').textContent = '';
+        finalizadoDiv.classList.remove('hidden-view');
+        return;
+      }
+
+      document.getElementById('mn-fecha-fechas').textContent =
+        `(${mnFormatearFecha(estadoMundial.inicio)} y ${mnFormatearFecha(estadoMundial.fin)})`;
+
+      if (estadoMundial.estado === 'no_empezo') {
+        document.getElementById('mn-no-empezo-desde').textContent = mnFormatearFecha(estadoMundial.inicio);
+        noEmpezoDiv.classList.remove('hidden-view');
+        return;
+      }
+
+      // estado === 'en_curso' → ver si ya la jugó
+      const { data: yaJugada } = await supabaseClient
+        .from('mundial_puntos')
+        .select('puntos')
+        .eq('miembro_id', mnMiembroIdActual)
+        .eq('fecha', estadoMundial.fecha)
+        .maybeSingle();
+
+      if (yaJugada) {
+        yaJugadaDiv.classList.remove('hidden-view');
+        document.getElementById('mn-puntos-ya-jugada').textContent = yaJugada.puntos;
+      } else {
+        document.getElementById('mn-disponible-hasta').textContent = mnFormatearFecha(estadoMundial.fin);
+        disponible.classList.remove('hidden-view');
+      }
+    }
+
+    let mnBaseDeDatosPreguntas = [];
+    let mnIndicePregunta = 0;
+    let mnPuntosTotales = 0;
+    let mnTiempoRestante = 10;
+    let mnTemporizadorIntervalo;
+    let mnIdiomaActual = 'ES';
+    let mnFechaJugadaAhora = null; // qué número de fecha corresponde a la partida en curso
+
+    async function mnEmpezarJuego(){
+      const estadoMundial = mnCalcularEstadoDelMundial();
+      if (estadoMundial.estado !== 'en_curso') { await mnCargarBloqueJugar(miEquipoMundial.id, currentUser.id); return; }
+      const fechaAJugar = estadoMundial.fecha;
+
+      // Chequeo de seguridad extra: si ya la jugó (por ejemplo en otra pestaña), no la deja repetir.
+      const { data: yaJugada } = await supabaseClient
+        .from('mundial_puntos')
+        .select('puntos')
+        .eq('miembro_id', mnMiembroIdActual)
+        .eq('fecha', fechaAJugar)
+        .maybeSingle();
+      if (yaJugada) { await mnCargarBloqueJugar(miEquipoMundial.id, currentUser.id); return; }
+
+      document.getElementById('mn-jugar-disponible').classList.add('hidden-view');
+      document.getElementById('mn-vista-juego').classList.remove('hidden-view');
+
+      try {
+        // Reutiliza la misma tabla de preguntas ya conectada del Mundial (preguntas_mundial_26).
+        const { data, error } = await supabaseClient
+          .from('preguntas_mundial_26')
+          .select('id, categoria, pregunta_es, opcion1_es, opcion2_es, opcion3_es, pregunta_pt, opcion1_pt, opcion2_pt, opcion3_pt, pregunta_en, opcion1_en, opcion2_en, opcion3_en')
+          .eq('torneo', MUNDIAL_TORNEO_ID)
+          .eq('fecha', fechaAJugar);
+        if (error) throw error;
+
+        mnBaseDeDatosPreguntas = data.map(row => ({
+          id: row.id,
+          categoria: row.categoria,
+          preguntaES: row.pregunta_es, opcion1ES: row.opcion1_es, opcion2ES: row.opcion2_es, opcion3ES: row.opcion3_es,
+          preguntaPT: row.pregunta_pt, opcion1PT: row.opcion1_pt, opcion2PT: row.opcion2_pt, opcion3PT: row.opcion3_pt,
+          preguntaEN: row.pregunta_en, opcion1EN: row.opcion1_en, opcion2EN: row.opcion2_en, opcion3EN: row.opcion3_en
+        }));
+
+        mnIndicePregunta = 0;
+        mnPuntosTotales = 0;
+        mnFechaJugadaAhora = fechaAJugar;
+        mnActualizarPuntaje();
+        document.getElementById('mn-totalPreguntas').textContent = mnBaseDeDatosPreguntas.length;
+        mnCargarPreguntaActual();
+      } catch (err) {
+        console.error('Error al cargar preguntas del Mundial:', err);
+        document.getElementById('mn-txtPregunta').textContent = 'Error al conectar con la base de datos de preguntas.';
+      }
+    }
+
+    function mnCambiarIdioma(nuevoIdioma){
+      mnIdiomaActual = nuevoIdioma;
+      ['ES', 'PT', 'EN'].forEach(lang => {
+        const btn = document.getElementById(`mn-lang${lang}`);
+        if (btn) btn.className = `tv-btn-lang ${mnIdiomaActual === lang ? 'activo' : ''}`;
+      });
+      if (mnBaseDeDatosPreguntas.length > 0) mnCargarPreguntaActual();
+    }
+
+    async function mnCargarPreguntaActual(){
+      clearInterval(mnTemporizadorIntervalo);
+
+      if (mnIndicePregunta >= mnBaseDeDatosPreguntas.length) {
+        document.getElementById('mn-txtPregunta').textContent = `¡Fecha completada! Sumaste ${mnPuntosTotales} puntos.`;
+        document.getElementById('mn-contenedorOpciones').innerHTML = '';
+        document.getElementById('mn-anilloTiempo').style.background = 'conic-gradient(#38a169 100%, #e0e0e0 0)';
+
+        // Se guarda una sola vez por fecha (protegido además por la restricción única en la base de datos).
+        await supabaseClient.from('mundial_puntos').insert({
+          miembro_id: mnMiembroIdActual,
+          fecha: mnFechaJugadaAhora,
+          puntos: mnPuntosTotales
+        });
+        await mnCargarBloqueJugar(miEquipoMundial.id, currentUser.id);
+        await cargarResumenMundialDashboard();
+        return;
+      }
+
+      const datos = mnBaseDeDatosPreguntas[mnIndicePregunta];
+      let textoPregunta = datos.preguntaES;
+      let op1 = datos.opcion1ES, op2 = datos.opcion2ES, op3 = datos.opcion3ES;
+      if (mnIdiomaActual === 'PT') { textoPregunta = datos.preguntaPT; op1 = datos.opcion1PT; op2 = datos.opcion2PT; op3 = datos.opcion3PT; }
+      else if (mnIdiomaActual === 'EN') { textoPregunta = datos.preguntaEN; op1 = datos.opcion1EN; op2 = datos.opcion2EN; op3 = datos.opcion3EN; }
+
+      document.getElementById('mn-txtCategoria').textContent = `${datos.categoria} (Fecha ${mnFechaJugadaAhora})`;
+      document.getElementById('mn-preguntaActualNum').textContent = mnIndicePregunta + 1;
+      document.getElementById('mn-txtPregunta').textContent = textoPregunta;
+      document.getElementById('mn-barraProgreso').style.width = `${((mnIndicePregunta + 1) / mnBaseDeDatosPreguntas.length) * 100}%`;
+
+      // El orden se mezcla en pantalla; la respuesta correcta se valida en el servidor
+      // y nunca se le muestra al jugador (ni siquiera cuando falla), para que no se pueda hacer trampa.
+      let opciones = [
+        { texto: op1, idOpcion: 1 },
+        { texto: op2, idOpcion: 2 },
+        { texto: op3, idOpcion: 3 }
+      ];
+      for (let i = opciones.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [opciones[i], opciones[j]] = [opciones[j], opciones[i]];
+      }
+
+      mnRenderizarBotones(opciones, datos.id);
+      mnIniciarReloj();
+    }
+
+    function mnRenderizarBotones(opcionesMezcladas, preguntaId){
+      const contenedor = document.getElementById('mn-contenedorOpciones');
+      contenedor.innerHTML = '';
+      const letras = ['A', 'B', 'C'];
+      opcionesMezcladas.forEach((opcion, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'tv-boton-opcion';
+        btn.dataset.idOpcion = opcion.idOpcion;
+        btn.innerHTML = `<div class="tv-letra-opcion">${letras[index]}</div> ${opcion.texto}`;
+        btn.onclick = () => mnProcesarRespuesta(btn, preguntaId, opcion.idOpcion);
+        contenedor.appendChild(btn);
+      });
+    }
+
+    function mnIniciarReloj(){
+      mnTiempoRestante = 10;
+      mnActualizarRelojVisual();
+      mnTemporizadorIntervalo = setInterval(() => {
+        mnTiempoRestante--;
+        mnActualizarRelojVisual();
+        if (mnTiempoRestante <= 0) {
+          clearInterval(mnTemporizadorIntervalo);
+          const preguntaIdActual = mnBaseDeDatosPreguntas[mnIndicePregunta]?.id;
+          mnProcesarRespuesta(null, preguntaIdActual, 0);
+        }
+      }, 1000);
+    }
+
+    function mnActualizarRelojVisual(){
+      document.getElementById('mn-txtTiempo').textContent = mnTiempoRestante;
+      let porcentaje = (mnTiempoRestante / 10) * 100;
+      let colorAnillo = mnTiempoRestante <= 3 ? '#dc3545' : 'var(--accent)';
+      document.getElementById('mn-anilloTiempo').style.background = `conic-gradient(${colorAnillo} ${porcentaje}%, #e0e0e0 0)`;
+    }
+
+    // Validación en servidor vía RPC (validar_respuesta_mundial) — nunca se expone acá cuál era la opción correcta.
+    async function mnProcesarRespuesta(botonClickeado, preguntaId, idOpcionElegida){
+      clearInterval(mnTemporizadorIntervalo);
+      document.querySelectorAll('#mn-contenedorOpciones .tv-boton-opcion').forEach(b => b.classList.add('deshabilitado'));
+
+      let esAcertada = false;
+      if (preguntaId && idOpcionElegida > 0) {
+        const { data, error } = await supabaseClient.rpc('validar_respuesta_mundial', {
+          p_pregunta_id: preguntaId,
+          p_opcion_elegida: idOpcionElegida
+        });
+        if (!error && data === true) esAcertada = true;
+      }
+
+      if (esAcertada) {
+        if (botonClickeado) botonClickeado.classList.add('correcta');
+        mnPuntosTotales += 10 + mnTiempoRestante;
+        mnActualizarPuntaje();
+      } else if (botonClickeado) {
+        botonClickeado.classList.add('incorrecta');
+        // No se resalta cuál era la correcta: así ningún jugador puede "aprender" la respuesta
+        // mirando la pantalla de un compañero antes de jugar su propia fecha.
+      }
+
+      setTimeout(() => {
+        mnIndicePregunta++;
+        mnCargarPreguntaActual();
+      }, 2000);
+    }
+
+    function mnActualizarPuntaje(){
+      document.getElementById('mn-txtPuntos').textContent = mnPuntosTotales;
     }
 
     function generarCodigoEquipo(nombreEquipo){
@@ -1236,4 +1681,3 @@
   </script>
 </body>
 </html>
-
