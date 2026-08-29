@@ -958,6 +958,9 @@
     function invitar(mensaje){
       const url = "https://wa.me/?text=" + encodeURIComponent(mensaje);
       window.open(url, '_blank', 'noopener');
+      if (currentUser) {
+        supabaseClient.from('eventos_invitacion').insert({ tipo: 'torneo', perfil_id: currentUser.id }).then(() => {});
+      }
     }
 
     async function verRanking(codigo, btnEl){
@@ -1509,6 +1512,9 @@
       const link = `${TORNEOS_URL}?vista=unirse_mundial&codigo=${codigoInvitacion}`;
       const mensaje = `¡Hola ${nombreJugador}! Te invité a formar parte del equipo "${nombreEquipo}" para el Mundial de la Biblia. Ingresá acá para sumarte: ${link}`;
       window.open('https://wa.me/?text=' + encodeURIComponent(mensaje), '_blank', 'noopener');
+      if (currentUser) {
+        supabaseClient.from('eventos_invitacion').insert({ tipo: 'mundial', perfil_id: currentUser.id }).then(() => {});
+      }
     }
 
     async function crearEquipoMundial(){
