@@ -432,6 +432,14 @@
         </div>
       </div>
 
+      <div class="tv-card p-6 mt-6" id="dash-ranking-card">
+        <h3 class="font-bold mb-1" style="color:var(--primary-dark);">🏆 Tu ranking en el Torneo Bíblico</h3>
+        <p class="text-xs mb-3" style="color:var(--text-soft);">Suma de todos los puntos que hiciste jugando fechas del Torneo Bíblico con tu cuenta.</p>
+        <div id="dash-ranking-body">
+          <p class="text-sm" style="color:var(--text-soft);">Cargando...</p>
+        </div>
+      </div>
+
       <div class="tv-card p-6 mt-6">
         <h3 class="font-bold mb-1" style="color:var(--primary-dark);">🌍 Mundial de la Biblia</h3>
 
@@ -746,6 +754,7 @@
       }
       mostrarVista('view-dashboard');
       await cargarMisTorneos();
+      await cargarRankingPerfil();
       await cargarResumenMundialDashboard();
     }
 
@@ -909,6 +918,46 @@
       if (r.estado === 'no-empezo') return `Empieza el ${t.fecha_inicio}`;
       if (r.estado === 'termino') return `Finalizado (duró ${t.cantidad_fechas} fechas)`;
       return `Fecha ${r.fecha} de ${r.cantidadFechas} en curso`;
+    }
+
+    async function cargarRankingPerfil(){
+      const body = document.getElementById('dash-ranking-body');
+      if (!currentUser) return;
+
+      const { data, error } = await supabaseClient
+        .rpc('ranking_perfil', { p_perfil_id: currentUser.id });
+
+      if (error) {
+        console.error('No se pudo cargar el ranking:', error);
+        body.innerHTML = `<p class="text-sm" style="color:var(--danger);">No se pudo cargar tu ranking.</p>`;
+        return;
+      }
+
+      const fila = (data && data[0]) || null;
+
+      if (!fila || !fila.puesto_mundial) {
+        body.innerHTML = `<p class="text-sm" style="color:var(--text-soft);">Todavía no jugaste ninguna fecha del Torneo Bíblico con tu cuenta. Cuando juegues, tu puesto va a aparecer acá.</p>`;
+        return;
+      }
+
+      const tarjeta = (etiqueta, puesto, total) => `
+        <div class="p-4 rounded-lg" style="background:var(--secondary);">
+          <p class="text-xs font-bold uppercase tracking-wide" style="color:var(--text-soft);">${etiqueta}</p>
+          <p class="text-2xl font-bold" style="color:var(--primary-dark);">#${puesto}</p>
+          <p class="text-xs" style="color:var(--text-soft);">de ${total} jugador${total == 1 ? '' : 'es'}</p>
+        </div>`;
+
+      let tarjetas = tarjeta('Puesto mundial', fila.puesto_mundial, fila.total_mundial);
+      if (fila.pais) {
+        tarjetas += tarjeta(`Puesto en ${fila.pais}`, fila.puesto_pais, fila.total_pais);
+      }
+      if (fila.pais && fila.ciudad) {
+        tarjetas += tarjeta(`Puesto en ${fila.ciudad}`, fila.puesto_ciudad, fila.total_ciudad);
+      }
+
+      body.innerHTML = `
+        <p class="text-sm mb-3" style="color:var(--text);">Llevás <span class="font-bold" style="color:var(--primary);">${fila.puntos_totales} puntos</span> acumulados en el Torneo Bíblico.</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">${tarjetas}</div>`;
     }
 
     async function cargarMisTorneos(){
