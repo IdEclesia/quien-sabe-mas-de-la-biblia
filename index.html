@@ -1056,6 +1056,19 @@ async function trackResult(pct, clasificacion){
     if (!fecha) {
       state.torneoFueraDeFecha = true;
     } else {
+      // Si la persona tiene una sesión activa (por ejemplo, entró desde
+      // torneos.html con su cuenta), estos puntos quedan atados a su perfil
+      // y cuentan para su ranking global/país/ciudad. Si no hay sesión
+      // (invitado jugando solo con nombre+código), queda null exactamente
+      // como antes: cero fricción, no se le pide iniciar sesión para jugar.
+      let perfilId = null;
+      try {
+        const { data: sessionData } = await supabaseClient.auth.getSession();
+        perfilId = sessionData?.session?.user?.id || null;
+      } catch (e) {
+        // sin sesión o error al leerla: seguimos como invitado
+      }
+
       try {
         const { error } = await supabaseClient
           .from('torneo_resultados')
@@ -1064,7 +1077,8 @@ async function trackResult(pct, clasificacion){
             jugador_nombre: state.jugadorNombre || 'Anónimo',
             puntaje_total: state.puntajeTorneo,
             fecha: fecha,
-            categoria: state.currentTestKey
+            categoria: state.currentTestKey,
+            perfil_id: perfilId
           });
         if (error && error.code === '23505') {
           // ya existía un intento para este jugador+torneo+fecha+categoría
