@@ -572,60 +572,213 @@ const CERT_CANVAS_SIZE = { w: 1080, h: 1920 };
    ===================================================================== */
 const tests = {
   personajes: {
-    title: "Personajes de la Biblia",
+    title: {
+      es: "Personajes de la Biblia",
+      en: "Bible Characters",
+      pt: "Personagens da Bíblia"
+    },
     icon: () => ICON_PERSONAJES_URL,
     type: "choice",
     questions: [
-      { q: "¿Quién fue designado como primer sumo sacerdote de Israel?", options: ["Josué","Aarón","Eleazar"], correct: 1 },
-      { q: "¿Qué juez de Israel hizo un voto que terminó involucrando a su propia hija?", options: ["Jefté","Otoniel","Barac"], correct: 0 },
-      { q: "¿Qué sacerdote y escriba fue enviado por el rey Artajerjes a Jerusalén para enseñar la Ley de Dios al pueblo?", options: ["Esdras","Zorobabel","Malaquías"], correct: 0 },
-      { q: "¿Qué personaje mató a Sísara clavándole una estaca en la cabeza mientras dormía?", options: ["Débora","Jael","Abigail"], correct: 1 },
-      { q: "¿Quién fue el profeta que confrontó al rey David después de su pecado con Betsabé?", options: ["Gad","Natán","Samuel"], correct: 1 },
-      { q: "¿Qué personaje fue descendiente de Moab y terminó formando parte de la genealogía de David?", options: ["Rahab","Rut","Tamar"], correct: 1 },
-      { q: "¿Quién era el hermano de Rebeca y padre de Lea y Raquel?", options: ["Labán","Betuel","Esaú"], correct: 0 },
-      { q: "¿Qué personaje fue llevado por su madre al santuario de Silo cuando era niño y allí sirvió al Señor bajo el sacerdote Elí?", options: ["Samuel","Eliseo","Josías"], correct: 0 },
-      { q: "¿Quién era el padre de Betsabé?", options: ["Eliam","Ahitofel","Urías"], correct: 0 },
-      { q: "¿Quién fue el padre de Micaías, el profeta que habló contra Acab y sus profetas?", options: ["Imlá","Hilcías","Azarías"], correct: 0 }
+      { 
+        es: { q: "¿Quién fue designado como primer sumo sacerdote de Israel?", options: ["Josué","Aarón","Eleazar"] },
+        en: { q: "Who was appointed as the first high priest of Israel?", options: ["Joshua","Aaron","Eleazar"] },
+        pt: { q: "Quem foi nomeado como o primeiro sumo sacerdote de Israel?", options: ["Josué","Arão","Eleazar"] },
+        correct: 1 
+      },
+      { 
+        es: { q: "¿Qué juez de Israel hizo un voto que terminó involucrando a su propia hija?", options: ["Jefté","Otoniel","Barac"] },
+        en: { q: "Which judge of Israel made a vow that ended up involving his own daughter?", options: ["Jephthah","Othniel","Barak"] },
+        pt: { q: "Qual juiz de Israel fez um voto que acabou envolvendo sua própria filha?", options: ["Jefté","Otoniel","Baraque"] },
+        correct: 0 
+      },
+      { 
+        es: { q: "¿Qué sacerdote y escriba fue enviado por el rey Artajerjes a Jerusalén para enseñar la Ley de Dios al pueblo?", options: ["Esdras","Zorobabel","Malaquías"] },
+        en: { q: "Which priest and scribe was sent by King Artaxerxes to Jerusalem to teach the Law of God to the people?", options: ["Ezra","Zerubbabel","Malachi"] },
+        pt: { q: "Qual sacerdote e escriba foi enviado pelo rei Artaxerxes a Jerusalém para ensinar a Lei de Deus ao povo?", options: ["Esdras","Zorobabel","Malaquias"] },
+        correct: 0 
+      },
+      { 
+        es: { q: "¿Qué personaje mató a Sísara clavándole una estaca en la cabeza mientras dormía?", options: ["Débora","Jael","Abigail"] },
+        en: { q: "Who killed Sisera by driving a tent peg through his temple while he slept?", options: ["Deborah","Jael","Abigail"] },
+        pt: { q: "Que personagem matou Sísera cravando uma estaca em sua cabeça enquanto ele dormia?", options: ["Débora","Jael","Abigail"] },
+        correct: 1 
+      },
+      { 
+        es: { q: "¿Quién fue el profeta que confrontó al rey David después de su pecado con Betsabé?", options: ["Gad","Natán","Samuel"] },
+        en: { q: "Who was the prophet that confronted King David after his sin with Bathsheba?", options: ["Gad","Nathan","Samuel"] },
+        pt: { q: "Quem foi o profeta que confrontou o rei Davi após seu pecado com Bate-Seba?", options: ["Gade","Natã","Samuel"] },
+        correct: 1 
+      },
+      { 
+        es: { q: "¿Qué personaje fue descendiente de Moab y terminó formando parte de la genealogía de David?", options: ["Rahab","Rut","Tamar"] },
+        en: { q: "Which character was a descendant of Moab and ended up being part of David's genealogy?", options: ["Rahab","Ruth","Tamar"] },
+        pt: { q: "Que personagem era descendente de Moabe e acabou fazendo parte da genealogia de Davi?", options: ["Raabe","Rute","Tamar"] },
+        correct: 1 
+      },
+      { 
+        es: { q: "¿Quién era el hermano de Rebeca y padre de Lea y Raquel?", options: ["Labán","Betuel","Esaú"] },
+        en: { q: "Who was Rebekah's brother and the father of Leah and Rachel?", options: ["Laban","Bethuel","Esau"] },
+        pt: { q: "Quem era o irmão de Rebeca e pai de Lia e Raquel?", options: ["Labão","Betuel","Esaú"] },
+        correct: 0 
+      },
+      { 
+        es: { q: "¿Qué personaje fue llevado por su madre al santuario de Silo cuando era niño y allí sirvió al Señor bajo el sacerdote Elí?", options: ["Samuel","Eliseo","Josías"] },
+        en: { q: "Which character was taken by his mother to the sanctuary at Shiloh as a child and served the Lord there under the priest Eli?", options: ["Samuel","Elisha","Josiah"] },
+        pt: { q: "Que personagem foi levado por sua mãe ao santuário de Siló quando menino e lá serviu ao Senhor sob o sacerdote Eli?", options: ["Samuel","Eliseu","Josias"] },
+        correct: 0 
+      },
+      { 
+        es: { q: "¿Quién era el padre de Betsabé?", options: ["Eliam","Ahitofel","Urías"] },
+        en: { q: "Who was Bathsheba's father?", options: ["Eliam","Ahithophel","Uriah"] },
+        pt: { q: "Quem era o pai de Bate-Seba?", options: ["Eliã","Aitofel","Urias"] },
+        correct: 0 
+      },
+      { 
+        es: { q: "¿Quién fue el padre de Micaías, el profeta que habló contra Acab y sus profetas?", options: ["Imlá","Hilcías","Azarías"] },
+        en: { q: "Who was the father of Micaiah, the prophet who prophesied against Ahab and his prophets?", options: ["Imlah","Hilkiah","Azariah"] },
+        pt: { q: "Quem foi o pai de Micaías, o profeta que falou contra Acabe e seus profetas?", options: ["Inlá","Hilquias","Azarias"] },
+        correct: 0 
+      }
     ]
   },
 
   ciudades: {
-    title: "Ciudades de la Biblia",
+    title: {
+      es: "Ciudades de la Biblia",
+      en: "Bible Cities",
+      pt: "Cidades da Bíblia"
+    },
     icon: () => ICON_CIUDADES_URL,
     type: "choice",
     questions: [
-      { q: "¿En qué ciudad fueron llamados \u201ccristianos\u201d por primera vez los discípulos de Jesús?", options: ["Antioquía","Éfeso","Corinto"], correct: 0 },
-      { q: "¿En qué ciudad cayó el muro después de que los israelitas marcharan alrededor de ella durante siete días?", options: ["Hai","Jericó","Hebrón"], correct: 1 },
-      { q: "¿En qué ciudad fue apedreado Esteban?", options: ["Jerusalén","Damasco","Cesarea"], correct: 0 },
-      { q: "¿En qué ciudad se encontraba el templo de Artemisa, cuyo culto provocó una gran revuelta contra Pablo?", options: ["Éfeso","Filipos","Tesalónica"], correct: 0 },
-      { q: "¿En qué ciudad permaneció Pablo durante un año y seis meses, enseñando la palabra de Dios?", options: ["Corinto","Tesalónica","Filipos"], correct: 0 },
-      { q: "¿Qué ciudad fue reconstruida por Hiel de Betel durante el reinado de Acab, cumpliéndose una antigua profecía de Josué?", options: ["Jericó","Samaria","Hai"], correct: 0 },
-      { q: "¿Qué ciudad se convirtió en la capital del reino del norte de Israel después de que Omrí comprara el monte de Samaria?", options: ["Siquem","Samaria","Jezreel"], correct: 1 },
-      { q: "¿En qué ciudad los habitantes fueron considerados \u201cmás nobles\u201d porque examinaban cada día las Escrituras para comprobar si lo que decía Pablo era cierto?", options: ["Berea","Derbe","Listra"], correct: 0 },
-      { q: "¿En qué ciudad Pablo resucitó a Eutico después de que este cayera desde una ventana durante una reunión?", options: ["Troas","Mileto","Tiro"], correct: 0 },
-      { q: "¿En qué ciudad fueron llamados \u201cdioses\u201d Pablo y Bernabé después de que Pablo sanara a un hombre cojo de nacimiento?", options: ["Listra","Iconio","Derbe"], correct: 0 }
+      { 
+        es: { q: "¿En qué ciudad fueron llamados “cristianos” por primera vez los discípulos de Jesús?", options: ["Antioquía","Éfeso","Corinto"] },
+        en: { q: "In which city were the disciples of Jesus first called “Christians”?", options: ["Antioch","Ephesus","Corinth"] },
+        pt: { q: "Em qual cidade os discípulos de Jesus foram chamados de “cristãos” pela primeira vez?", options: ["Antioquia","Éfeso","Corinto"] },
+        correct: 0 
+      },
+      { 
+        es: { q: "¿En qué ciudad cayó el muro después de que los israelitas marcharan alrededor de ella durante siete días?", options: ["Hai","Jericó","Hebrón"] },
+        en: { q: "In which city did the walls fall after the Israelites marched around it for seven days?", options: ["Ai","Jericho","Hebron"] },
+        pt: { q: "Em qual cidade as muralhas caíram após os israelitas marcharem ao redor dela durante sete dias?", options: ["Ai","Jericó","Hebrom"] },
+        correct: 1 
+      },
+      { 
+        es: { q: "¿En qué ciudad fue apedreado Esteban?", options: ["Jerusalén","Damasco","Cesarea"] },
+        en: { q: "In which city was Stephen stoned?", options: ["Jerusalem","Damascus","Caesarea"] },
+        pt: { q: "Em qual cidade Estêvão foi apedrejado?", options: ["Jerusalém","Damasco","Cesareia"] },
+        correct: 0 
+      },
+      { 
+        es: { q: "¿En qué ciudad se encontraba el templo de Artemisa, cuyo culto provocó una gran revuelta contra Pablo?", options: ["Éfeso","Filipos","Tesalónica"] },
+        en: { q: "In which city was the temple of Artemis located, whose cult provoked a great riot against Paul?", options: ["Ephesus","Philippi","Thessalonica"] },
+        pt: { q: "Em qual cidade ficava o templo de Ártemis, cujo culto provocou uma grande revolta contra Paulo?", options: ["Éfeso","Filipos","Tessalônica"] },
+        correct: 0 
+      },
+      { 
+        es: { q: "¿En qué ciudad permaneció Pablo durante un año y seis meses, enseñando la palabra de Dios?", options: ["Corinto","Tesalónica","Filipos"] },
+        en: { q: "In which city did Paul stay for a year and six months, teaching the word of God?", options: ["Corinth","Thessalonica","Philippi"] },
+        pt: { q: "Em qual cidade Paulo permaneceu durante um ano e seis meses, ensinando a palavra de Deus?", options: ["Corinto","Tessalônica","Filipos"] },
+        correct: 0 
+      },
+      { 
+        es: { q: "¿Qué ciudad fue reconstruida por Hiel de Betel durante el reinado de Acab, cumpliéndose una antigua profecía de Josué?", options: ["Jericó","Samaria","Hai"] },
+        en: { q: "Which city was rebuilt by Hiel of Bethel during the reign of Ahab, fulfilling an ancient prophecy of Joshua?", options: ["Jericho","Samaria","Ai"] },
+        pt: { q: "Qual cidade foi reconstruída por Hiel de Betel durante o reinado de Acabe, cumprindo uma antiga profecia de Josué?", options: ["Jericó","Samaria","Ai"] },
+        correct: 0 
+      },
+      { 
+        es: { q: "¿Qué ciudad se convirtió en la capital del reino del norte de Israel después de que Omrí comprara el monte de Samaria?", options: ["Siquem","Samaria","Jezreel"] },
+        en: { q: "Which city became the capital of the northern kingdom of Israel after Omri bought the hill of Samaria?", options: ["Shechem","Samaria","Jezreel"] },
+        pt: { q: "Qual cidade se tornou a capital do reino do norte de Israel depois que Onri comprou o monte de Samaria?", options: ["Siquém","Samaria","Jezreel"] },
+        correct: 1 
+      },
+      { 
+        es: { q: "¿En qué ciudad los habitantes fueron considerados “más nobles” porque examinaban cada día las Escrituras para comprobar si lo que decía Pablo era cierto?", options: ["Berea","Derbe","Listra"] },
+        en: { q: "In which city were the inhabitants considered “of more noble character” because they examined the Scriptures every day to see if what Paul said was true?", options: ["Berea","Derbe","Lystra"] },
+        pt: { q: "Em qual cidade os habitantes foram considerados “mais nobres” porque examinavam as Escrituras todos os dias para ver se o que Paulo dizia era verdade?", options: ["Berea","Derbe","Listra"] },
+        correct: 0 
+      },
+      { 
+        es: { q: "¿En qué ciudad Pablo resucitó a Eutico después de que este cayera desde una ventana durante una reunión?", options: ["Troas","Mileto","Tiro"] },
+        en: { q: "In which city did Paul raise Eutychus from the dead after he fell from a window during a meeting?", options: ["Troas","Miletus","Tyre"] },
+        pt: { q: "Em qual cidade Paulo ressuscitou Êutico depois que este caiu de uma janela durante uma reunião?", options: ["Trôade","Mileto","Tiro"] },
+        correct: 0 
+      },
+      { 
+        es: { q: "¿En qué ciudad fueron llamados “dioses” Pablo y Bernabé después de que Pablo sanara a un hombre cojo de nacimiento?", options: ["Listra","Iconio","Derbe"] },
+        en: { q: "In which city were Paul and Barnabas called “gods” after Paul healed a man lame from birth?", options: ["Lystra","Iconium","Derbe"] },
+        pt: { q: "Em qual cidade Paulo e Barnabé foram chamados de “deuses” depois que Paulo curou um homem coxo de nascença?", options: ["Listra","Icônio","Derbe"] },
+        correct: 0 
+      }
     ]
   },
 
   eventos: {
-    title: "Eventos de la Biblia",
+    title: {
+      es: "Eventos de la Biblia",
+      en: "Bible Events",
+      pt: "Eventos da Bíblia"
+    },
     icon: () => ICON_EVENTOS_URL,
     type: "order",
     questions: [
-      { order: ["El llamado de Abraham", "El nacimiento de Isaac", "La destrucción de Sodoma y Gomorra"] },
-      { order: ["Nacimiento de Moisés", "Cruce del Mar Rojo", "Entrega de los Diez Mandamientos"] },
-      { order: ["Saúl se convierte en rey", "David es ungido por Samuel", "David derrota a Goliat"] },
-      { order: ["David conquista Jerusalén", "Salomón se convierte en rey", "Salomón construye el templo"] },
-      { order: ["El reino de Israel se divide después de la muerte de Salomón", "Acab comienza a reinar sobre Israel", "Elías enfrenta a los profetas de Baal en el monte Carmelo"] },
-      { order: ["Ezequías comienza su reinado en Judá", "Josías encuentra el Libro de la Ley durante las reparaciones del templo", "Jerusalén es destruida por Babilonia"] },
-      { order: ["Daniel es llevado al exilio en Babilonia", "Ciro permite el regreso de los exiliados", "Nehemías reconstruye las murallas de Jerusalén"] },
-      { order: ["Nace Jesús", "Juan el Bautista comienza su ministerio", "Jesús es bautizado"] },
-      { order: ["Pentecostés", "La muerte de Esteban", "La conversión de Pablo"] },
-      { order: ["La conversión de Cornelio", "Pablo y Bernabé comienzan su primer viaje misionero", "El Concilio de Jerusalén"] }
+      { 
+        es: { order: ["El llamado de Abraham", "El nacimiento de Isaac", "La destrucción de Sodoma y Gomorra"] },
+        en: { order: ["The call of Abraham", "The birth of Isaac", "The destruction of Sodom and Gomorrah"] },
+        pt: { order: ["O chamado de Abraão", "O nascimento de Isaque", "A destruição de Sodoma e Gomorra"] }
+      },
+      { 
+        es: { order: ["Nacimiento de Moisés", "Cruce del Mar Rojo", "Entrega de los Diez Mandamientos"] },
+        en: { order: ["Birth of Moses", "Crossing of the Red Sea", "Giving of the Ten Commandments"] },
+        pt: { order: ["Nascimento de Moisés", "Travessia do Mar Vermelho", "Entrega dos Dez Mandamentos"] }
+      },
+      { 
+        es: { order: ["Saúl se convierte en rey", "David es ungido por Samuel", "David derrota a Goliat"] },
+        en: { order: ["Saul becomes king", "David is anointed by Samuel", "David defeats Goliath"] },
+        pt: { order: ["Saul se torna rei", "Davi é ungido por Samuel", "Davi derrota Golias"] }
+      },
+      { 
+        es: { order: ["David conquista Jerusalén", "Salomón se convierte en rey", "Salomón construye el templo"] },
+        en: { order: ["David conquers Jerusalem", "Solomon becomes king", "Solomon builds the temple"] },
+        pt: { order: ["Davi conquista Jerusalém", "Salomão se torna rei", "Salomão constrói o templo"] }
+      },
+      { 
+        es: { order: ["El reino de Israel se divide después de la muerte de Salomón", "Acab comienza a reinar sobre Israel", "Elías enfrenta a los profetas de Baal en el monte Carmelo"] },
+        en: { order: ["The kingdom of Israel divides after Solomon's death", "Ahab begins to reign over Israel", "Elijah confronts the prophets of Baal on Mount Carmel"] },
+        pt: { order: ["O reino de Israel se divide após a morte de Salomão", "Acabe começa a reinar sobre Israel", "Elias enfrenta os profetas de Baal no monte Carmelo"] }
+      },
+      { 
+        es: { order: ["Ezequías comienza su reinado en Judá", "Josías encuentra el Libro de la Ley durante las reparaciones del templo", "Jerusalén es destruida por Babilonia"] },
+        en: { order: ["Hezekiah begins his reign in Judah", "Josiah finds the Book of the Law during temple repairs", "Jerusalem is destroyed by Babylon"] },
+        pt: { order: ["Ezequias começa seu reinado em Judá", "Josias encontra o Livro da Lei durante os reparos do templo", "Jerusalém é destruída pela Babilônia"] }
+      },
+      { 
+        es: { order: ["Daniel es llevado al exilio en Babilonia", "Ciro permite el regreso de los exiliados", "Nehemías reconstruye las murallas de Jerusalén"] },
+        en: { order: ["Daniel is taken into exile in Babylon", "Cyrus allows the return of the exiles", "Nehemiah rebuilds the walls of Jerusalem"] },
+        pt: { order: ["Daniel é levado para o exílio na Babilônia", "Ciro permite o retorno dos exilados", "Neemias reconstrói as muralhas de Jerusalém"] }
+      },
+      { 
+        es: { order: ["Nace Jesús", "Juan el Bautista comienza su ministerio", "Jesús es bautizado"] },
+        en: { order: ["Jesus is born", "John the Baptist begins his ministry", "Jesus is baptized"] },
+        pt: { order: ["Jesus nasce", "João Batista começa seu ministério", "Jesus é batizado"] }
+      },
+      { 
+        es: { order: ["Pentecostés", "La muerte de Esteban", "La conversión de Pablo"] },
+        en: { order: ["Pentecost", "The death of Stephen", "The conversion of Paul"] },
+        pt: { order: ["Pentecostes", "A morte de Estêvão", "A conversão de Paulo"] }
+      },
+      { 
+        es: { order: ["La conversión de Cornelio", "Pablo y Bernabé comienzan su primer viaje misionero", "El Concilio de Jerusalén"] },
+        en: { order: ["The conversion of Cornelius", "Paul and Barnabas begin their first missionary journey", "The Council of Jerusalem"] },
+        pt: { order: ["A conversão de Cornélio", "Paulo e Barnabé começam sua primeira viagem missionária", "O Concílio de Jerusalém"] }
+      }
     ]
   }
 };
-
+      }
+    };
 /* =====================================================================
    ESTADO DEL JUEGO
    ===================================================================== */
@@ -1467,285 +1620,5 @@ initConfig();
     if (idiomaGuardado !== 'es') cambiarIdioma(idiomaGuardado);
   });
 </script>
-  <!-- Todo tu código HTML anterior termina aquí arriba -->
-    
-    <footer class="credit"><img src="data:image/png;base64,iVBORw0KGgoAAAANSU... (tu código largo) ...></footer>
-
-  </div> <!-- Cierre del div .wrap -->
-
-  <!-- ===================== PEGA EL SCRIPT AQUÍ, JUSTO ANTES DEL </body> ===================== -->
-  <script>
-    // 1. DICCIONARIO DE LA INTERFAZ (Títulos, descripciones, botones)
-    const traducciones = {
-      es: {
-        "hero-eyebrow": "Desafío bíblico",
-        "hero-title": "¿Quién sabe más de la Biblia?",
-        "hero-lead": "<strong>Poné a prueba cuánto conocés de la Biblia.</strong><br>Elegí uno de los tres desafíos.",
-        "card1-title": "Personajes de la Biblia",
-        "card1-desc": "¿Cuánto recordás sobre las personas que aparecen en la Biblia?",
-        "btn-start": "Comenzar"
-        // Agrega aquí el resto de las traducciones de tu interfaz...
-      },
-      en: {
-        "hero-eyebrow": "Bible Challenge",
-        "hero-title": "Who knows more about the Bible?",
-        "hero-lead": "<strong>Test how much you know about the Bible.</strong><br>Choose one of the three challenges.",
-        "card1-title": "Bible Characters",
-        "card1-desc": "How much do you remember about the people in the Bible?",
-        "btn-start": "Start"
-      },
-      pt: {
-        "hero-eyebrow": "Desafio Bíblico",
-        "hero-title": "Quem sabe mais sobre a Bíblia?",
-        "hero-lead": "<strong>Teste seus conhecimentos sobre a Bíblia.</strong><br>Escolha um dos três desafios.",
-        "card1-title": "Personagens da Bíblia",
-        "card1-desc": "O quanto você lembra sobre as pessoas da Bíblia?",
-        "btn-start": "Começar"
-      }
-    };
-
-    // 2. BASE DE DATOS DE LAS PREGUNTAS (Separadas por idioma y categoría)
-   const categorias = {
-  personajes: {
-    title: {
-      es: "Personajes de la Biblia",
-      en: "Bible Characters",
-      pt: "Personagens da Bíblia"
-    },
-    icon: () => ICON_PERSONAJES_URL,
-    type: "choice",
-    questions: [
-      { 
-        es: { q: "¿Quién fue designado como primer sumo sacerdote de Israel?", options: ["Josué","Aarón","Eleazar"] },
-        en: { q: "Who was appointed as the first high priest of Israel?", options: ["Joshua","Aaron","Eleazar"] },
-        pt: { q: "Quem foi nomeado como o primeiro sumo sacerdote de Israel?", options: ["Josué","Arão","Eleazar"] },
-        correct: 1 
-      },
-      { 
-        es: { q: "¿Qué juez de Israel hizo un voto que terminó involucrando a su propia hija?", options: ["Jefté","Otoniel","Barac"] },
-        en: { q: "Which judge of Israel made a vow that ended up involving his own daughter?", options: ["Jephthah","Othniel","Barak"] },
-        pt: { q: "Qual juiz de Israel fez um voto que acabou envolvendo sua própria filha?", options: ["Jefté","Otoniel","Baraque"] },
-        correct: 0 
-      },
-      { 
-        es: { q: "¿Qué sacerdote y escriba fue enviado por el rey Artajerjes a Jerusalén para enseñar la Ley de Dios al pueblo?", options: ["Esdras","Zorobabel","Malaquías"] },
-        en: { q: "Which priest and scribe was sent by King Artaxerxes to Jerusalem to teach the Law of God to the people?", options: ["Ezra","Zerubbabel","Malachi"] },
-        pt: { q: "Qual sacerdote e escriba foi enviado pelo rei Artaxerxes a Jerusalém para ensinar a Lei de Deus ao povo?", options: ["Esdras","Zorobabel","Malaquias"] },
-        correct: 0 
-      },
-      { 
-        es: { q: "¿Qué personaje mató a Sísara clavándole una estaca en la cabeza mientras dormía?", options: ["Débora","Jael","Abigail"] },
-        en: { q: "Who killed Sisera by driving a tent peg through his temple while he slept?", options: ["Deborah","Jael","Abigail"] },
-        pt: { q: "Que personagem matou Sísera cravando uma estaca em sua cabeça enquanto ele dormia?", options: ["Débora","Jael","Abigail"] },
-        correct: 1 
-      },
-      { 
-        es: { q: "¿Quién fue el profeta que confrontó al rey David después de su pecado con Betsabé?", options: ["Gad","Natán","Samuel"] },
-        en: { q: "Who was the prophet that confronted King David after his sin with Bathsheba?", options: ["Gad","Nathan","Samuel"] },
-        pt: { q: "Quem foi o profeta que confrontou o rei Davi após seu pecado com Bate-Seba?", options: ["Gade","Natã","Samuel"] },
-        correct: 1 
-      },
-      { 
-        es: { q: "¿Qué personaje fue descendiente de Moab y terminó formando parte de la genealogía de David?", options: ["Rahab","Rut","Tamar"] },
-        en: { q: "Which character was a descendant of Moab and ended up being part of David's genealogy?", options: ["Rahab","Ruth","Tamar"] },
-        pt: { q: "Que personagem era descendente de Moabe e acabou fazendo parte da genealogia de Davi?", options: ["Raabe","Rute","Tamar"] },
-        correct: 1 
-      },
-      { 
-        es: { q: "¿Quién era el hermano de Rebeca y padre de Lea y Raquel?", options: ["Labán","Betuel","Esaú"] },
-        en: { q: "Who was Rebekah's brother and the father of Leah and Rachel?", options: ["Laban","Bethuel","Esau"] },
-        pt: { q: "Quem era o irmão de Rebeca e pai de Lia e Raquel?", options: ["Labão","Betuel","Esaú"] },
-        correct: 0 
-      },
-      { 
-        es: { q: "¿Qué personaje fue llevado por su madre al santuario de Silo cuando era niño y allí sirvió al Señor bajo el sacerdote Elí?", options: ["Samuel","Eliseo","Josías"] },
-        en: { q: "Which character was taken by his mother to the sanctuary at Shiloh as a child and served the Lord there under the priest Eli?", options: ["Samuel","Elisha","Josiah"] },
-        pt: { q: "Que personagem foi levado por sua mãe ao santuário de Siló quando menino e lá serviu ao Senhor sob o sacerdote Eli?", options: ["Samuel","Eliseu","Josias"] },
-        correct: 0 
-      },
-      { 
-        es: { q: "¿Quién era el padre de Betsabé?", options: ["Eliam","Ahitofel","Urías"] },
-        en: { q: "Who was Bathsheba's father?", options: ["Eliam","Ahithophel","Uriah"] },
-        pt: { q: "Quem era o pai de Bate-Seba?", options: ["Eliã","Aitofel","Urias"] },
-        correct: 0 
-      },
-      { 
-        es: { q: "¿Quién fue el padre de Micaías, el profeta que habló contra Acab y sus profetas?", options: ["Imlá","Hilcías","Azarías"] },
-        en: { q: "Who was the father of Micaiah, the prophet who prophesied against Ahab and his prophets?", options: ["Imlah","Hilkiah","Azariah"] },
-        pt: { q: "Quem foi o pai de Micaías, o profeta que falou contra Acabe e seus profetas?", options: ["Inlá","Hilquias","Azarias"] },
-        correct: 0 
-      }
-    ]
-  },
-
-  ciudades: {
-    title: {
-      es: "Ciudades de la Biblia",
-      en: "Bible Cities",
-      pt: "Cidades da Bíblia"
-    },
-    icon: () => ICON_CIUDADES_URL,
-    type: "choice",
-    questions: [
-      { 
-        es: { q: "¿En qué ciudad fueron llamados “cristianos” por primera vez los discípulos de Jesús?", options: ["Antioquía","Éfeso","Corinto"] },
-        en: { q: "In which city were the disciples of Jesus first called “Christians”?", options: ["Antioch","Ephesus","Corinth"] },
-        pt: { q: "Em qual cidade os discípulos de Jesus foram chamados de “cristãos” pela primeira vez?", options: ["Antioquia","Éfeso","Corinto"] },
-        correct: 0 
-      },
-      { 
-        es: { q: "¿En qué ciudad cayó el muro después de que los israelitas marcharan alrededor de ella durante siete días?", options: ["Hai","Jericó","Hebrón"] },
-        en: { q: "In which city did the walls fall after the Israelites marched around it for seven days?", options: ["Ai","Jericho","Hebron"] },
-        pt: { q: "Em qual cidade as muralhas caíram após os israelitas marcharem ao redor dela durante sete dias?", options: ["Ai","Jericó","Hebrom"] },
-        correct: 1 
-      },
-      { 
-        es: { q: "¿En qué ciudad fue apedreado Esteban?", options: ["Jerusalén","Damasco","Cesarea"] },
-        en: { q: "In which city was Stephen stoned?", options: ["Jerusalem","Damascus","Caesarea"] },
-        pt: { q: "Em qual cidade Estêvão foi apedrejado?", options: ["Jerusalém","Damasco","Cesareia"] },
-        correct: 0 
-      },
-      { 
-        es: { q: "¿En qué ciudad se encontraba el templo de Artemisa, cuyo culto provocó una gran revuelta contra Pablo?", options: ["Éfeso","Filipos","Tesalónica"] },
-        en: { q: "In which city was the temple of Artemis located, whose cult provoked a great riot against Paul?", options: ["Ephesus","Philippi","Thessalonica"] },
-        pt: { q: "Em qual cidade ficava o templo de Ártemis, cujo culto provocou uma grande revolta contra Paulo?", options: ["Éfeso","Filipos","Tessalônica"] },
-        correct: 0 
-      },
-      { 
-        es: { q: "¿En qué ciudad permaneció Pablo durante un año y seis meses, enseñando la palabra de Dios?", options: ["Corinto","Tesalónica","Filipos"] },
-        en: { q: "In which city did Paul stay for a year and six months, teaching the word of God?", options: ["Corinth","Thessalonica","Philippi"] },
-        pt: { q: "Em qual cidade Paulo permaneceu durante um ano e seis meses, ensinando a palavra de Deus?", options: ["Corinto","Tessalônica","Filipos"] },
-        correct: 0 
-      },
-      { 
-        es: { q: "¿Qué ciudad fue reconstruida por Hiel de Betel durante el reinado de Acab, cumpliéndose una antigua profecía de Josué?", options: ["Jericó","Samaria","Hai"] },
-        en: { q: "Which city was rebuilt by Hiel of Bethel during the reign of Ahab, fulfilling an ancient prophecy of Joshua?", options: ["Jericho","Samaria","Ai"] },
-        pt: { q: "Qual cidade foi reconstruída por Hiel de Betel durante o reinado de Acabe, cumprindo uma antiga profecia de Josué?", options: ["Jericó","Samaria","Ai"] },
-        correct: 0 
-      },
-      { 
-        es: { q: "¿Qué ciudad se convirtió en la capital del reino del norte de Israel después de que Omrí comprara el monte de Samaria?", options: ["Siquem","Samaria","Jezreel"] },
-        en: { q: "Which city became the capital of the northern kingdom of Israel after Omri bought the hill of Samaria?", options: ["Shechem","Samaria","Jezreel"] },
-        pt: { q: "Qual cidade se tornou a capital do reino do norte de Israel depois que Onri comprou o monte de Samaria?", options: ["Siquém","Samaria","Jezreel"] },
-        correct: 1 
-      },
-      { 
-        es: { q: "¿En qué ciudad los habitantes fueron considerados “más nobles” porque examinaban cada día las Escrituras para comprobar si lo que decía Pablo era cierto?", options: ["Berea","Derbe","Listra"] },
-        en: { q: "In which city were the inhabitants considered “of more noble character” because they examined the Scriptures every day to see if what Paul said was true?", options: ["Berea","Derbe","Lystra"] },
-        pt: { q: "Em qual cidade os habitantes foram considerados “mais nobres” porque examinavam as Escrituras todos os dias para ver se o que Paulo dizia era verdade?", options: ["Berea","Derbe","Listra"] },
-        correct: 0 
-      },
-      { 
-        es: { q: "¿En qué ciudad Pablo resucitó a Eutico después de que este cayera desde una ventana durante una reunión?", options: ["Troas","Mileto","Tiro"] },
-        en: { q: "In which city did Paul raise Eutychus from the dead after he fell from a window during a meeting?", options: ["Troas","Miletus","Tyre"] },
-        pt: { q: "Em qual cidade Paulo ressuscitou Êutico depois que este caiu de uma janela durante uma reunião?", options: ["Trôade","Mileto","Tiro"] },
-        correct: 0 
-      },
-      { 
-        es: { q: "¿En qué ciudad fueron llamados “dioses” Pablo y Bernabé después de que Pablo sanara a un hombre cojo de nacimiento?", options: ["Listra","Iconio","Derbe"] },
-        en: { q: "In which city were Paul and Barnabas called “gods” after Paul healed a man lame from birth?", options: ["Lystra","Iconium","Derbe"] },
-        pt: { q: "Em qual cidade Paulo e Barnabé foram chamados de “deuses” depois que Paulo curou um homem coxo de nascença?", options: ["Listra","Icônio","Derbe"] },
-        correct: 0 
-      }
-    ]
-  },
-
-  eventos: {
-    title: {
-      es: "Eventos de la Biblia",
-      en: "Bible Events",
-      pt: "Eventos da Bíblia"
-    },
-    icon: () => ICON_EVENTOS_URL,
-    type: "order",
-    questions: [
-      { 
-        es: { order: ["El llamado de Abraham", "El nacimiento de Isaac", "La destrucción de Sodoma y Gomorra"] },
-        en: { order: ["The call of Abraham", "The birth of Isaac", "The destruction of Sodom and Gomorrah"] },
-        pt: { order: ["O chamado de Abraão", "O nascimento de Isaque", "A destruição de Sodoma e Gomorra"] }
-      },
-      { 
-        es: { order: ["Nacimiento de Moisés", "Cruce del Mar Rojo", "Entrega de los Diez Mandamientos"] },
-        en: { order: ["Birth of Moses", "Crossing of the Red Sea", "Giving of the Ten Commandments"] },
-        pt: { order: ["Nascimento de Moisés", "Travessia do Mar Vermelho", "Entrega dos Dez Mandamentos"] }
-      },
-      { 
-        es: { order: ["Saúl se convierte en rey", "David es ungido por Samuel", "David derrota a Goliat"] },
-        en: { order: ["Saul becomes king", "David is anointed by Samuel", "David defeats Goliath"] },
-        pt: { order: ["Saul se torna rei", "Davi é ungido por Samuel", "Davi derrota Golias"] }
-      },
-      { 
-        es: { order: ["David conquista Jerusalén", "Salomón se convierte en rey", "Salomón construye el templo"] },
-        en: { order: ["David conquers Jerusalem", "Solomon becomes king", "Solomon builds the temple"] },
-        pt: { order: ["Davi conquista Jerusalém", "Salomão se torna rei", "Salomão constrói o templo"] }
-      },
-      { 
-        es: { order: ["El reino de Israel se divide después de la muerte de Salomón", "Acab comienza a reinar sobre Israel", "Elías enfrenta a los profetas de Baal en el monte Carmelo"] },
-        en: { order: ["The kingdom of Israel divides after Solomon's death", "Ahab begins to reign over Israel", "Elijah confronts the prophets of Baal on Mount Carmel"] },
-        pt: { order: ["O reino de Israel se divide após a morte de Salomão", "Acabe começa a reinar sobre Israel", "Elias enfrenta os profetas de Baal no monte Carmelo"] }
-      },
-      { 
-        es: { order: ["Ezequías comienza su reinado en Judá", "Josías encuentra el Libro de la Ley durante las reparaciones del templo", "Jerusalén es destruida por Babilonia"] },
-        en: { order: ["Hezekiah begins his reign in Judah", "Josiah finds the Book of the Law during temple repairs", "Jerusalem is destroyed by Babylon"] },
-        pt: { order: ["Ezequias começa seu reinado em Judá", "Josias encontra o Livro da Lei durante os reparos do templo", "Jerusalém é destruída pela Babilônia"] }
-      },
-      { 
-        es: { order: ["Daniel es llevado al exilio en Babilonia", "Ciro permite el regreso de los exiliados", "Nehemías reconstruye las murallas de Jerusalén"] },
-        en: { order: ["Daniel is taken into exile in Babylon", "Cyrus allows the return of the exiles", "Nehemiah rebuilds the walls of Jerusalem"] },
-        pt: { order: ["Daniel é levado para o exílio na Babilônia", "Ciro permite o retorno dos exilados", "Neemias reconstrói as muralhas de Jerusalém"] }
-      },
-      { 
-        es: { order: ["Nace Jesús", "Juan el Bautista comienza su ministerio", "Jesús es bautizado"] },
-        en: { order: ["Jesus is born", "John the Baptist begins his ministry", "Jesus is baptized"] },
-        pt: { order: ["Jesus nasce", "João Batista começa seu ministério", "Jesus é batizado"] }
-      },
-      { 
-        es: { order: ["Pentecostés", "La muerte de Esteban", "La conversión de Pablo"] },
-        en: { order: ["Pentecost", "The death of Stephen", "The conversion of Paul"] },
-        pt: { order: ["Pentecostes", "A morte de Estêvão", "A conversão de Paulo"] }
-      },
-      { 
-        es: { order: ["La conversión de Cornelio", "Pablo y Bernabé comienzan su primer viaje misionero", "El Concilio de Jerusalén"] },
-        en: { order: ["The conversion of Cornelius", "Paul and Barnabas begin their first missionary journey", "The Council of Jerusalem"] },
-        pt: { order: ["A conversão de Cornélio", "Paulo e Barnabé começam sua primeira viagem missionária", "O Concílio de Jerusalém"] }
-      }
-    ]
-  }
-};
-      }
-    };
-
-    // Variable para rastrear el idioma seleccionado (por defecto español)
-    let idiomaActual = 'es';
-
-    // 3. FUNCIÓN PARA CAMBIAR EL IDIOMA (Esta es la que llama tu <select>)
-    function cambiarIdioma(idioma) {
-      idiomaActual = idioma;
-      const textos = traducciones[idioma];
-
-      // Busca todas las etiquetas en tu HTML que tengan 'data-i18n' y les cambia el texto
-      document.querySelectorAll('[data-i18n]').forEach(elemento => {
-        const clave = elemento.getAttribute('data-i18n');
-        if (textos[clave]) {
-          elemento.innerHTML = textos[clave];
-        }
-      });
-    }
-
-    // 4. FUNCIÓN PARA INICIAR EL JUEGO (Llamada por los botones "Comenzar")
-    function startTest(categoria) {
-      // Aquí el juego sabe qué preguntas cargar dependiendo del idioma elegido
-      const preguntasDelJuego = preguntas[idiomaActual][categoria];
-      
-      console.log("Cargando preguntas de: " + categoria + " en el idioma: " + idiomaActual);
-      console.log(preguntasDelJuego);
-      
-      // Aquí iría el código que oculta la pantalla de inicio y muestra las preguntas
-    }
-  </script>
-  <!-- ==================================================================================== -->
-
-</body>
-</html>
 </body>
 </html>
