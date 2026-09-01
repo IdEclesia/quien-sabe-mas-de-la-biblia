@@ -360,6 +360,16 @@
 
 <div class="wrap">
 
+  <!-- ===================== SELECTOR DE IDIOMA (ES por defecto) ===================== -->
+  <div style="display:flex;justify-content:flex-end;padding:10px 2px 0;">
+    <select id="languageSelector" onchange="cambiarIdioma(this.value)"
+      style="padding:6px 10px;border-radius:8px;border:1px solid #cfd8e3;background:#fff;color:var(--text, #16233A);font-family:inherit;font-size:.8rem;">
+      <option value="es">Español</option>
+      <option value="en">English</option>
+      <option value="pt">Português</option>
+    </select>
+  </div>
+
   <!-- ===================== PANTALLA: INICIO ===================== -->
   <section id="screen-home" class="screen active">
     <div class="logo-slot" id="logoSlot"></div>
@@ -368,42 +378,42 @@
     </div>
 
     <div class="hero">
-      <span class="eyebrow">Desafío bíblico</span>
-      <h1>¿Quién sabe más de la Biblia?</h1>
-      <p class="lead"><strong>Poné a prueba cuánto conocés de la Biblia.</strong><br>Elegí uno de los tres desafíos.</p>
+      <span class="eyebrow" data-i18n="hero-eyebrow">Desafío bíblico</span>
+      <h1 data-i18n="hero-title">¿Quién sabe más de la Biblia?</h1>
+      <p class="lead" data-i18n="hero-lead"><strong>Poné a prueba cuánto conocés de la Biblia.</strong><br>Elegí uno de los tres desafíos.</p>
     </div>
 
     <div class="cards">
       <article class="cat-card">
         <div class="cat-icon" id="iconPersonajes"></div>
-        <h2>Personajes de la Biblia</h2>
-        <p>¿Cuánto recordás sobre las personas que aparecen en la Biblia?</p>
-        <button class="btn btn-primary btn-block" onclick="startTest('personajes')" aria-label="Comenzar desafío de personajes de la Biblia">Comenzar</button>
+        <h2 data-i18n="card1-title">Personajes de la Biblia</h2>
+        <p data-i18n="card1-desc">¿Cuánto recordás sobre las personas que aparecen en la Biblia?</p>
+        <button class="btn btn-primary btn-block" onclick="startTest('personajes')" data-i18n="btn-start" data-i18n-aria="card1-aria" aria-label="Comenzar desafío de personajes de la Biblia">Comenzar</button>
       </article>
 
       <article class="cat-card">
         <div class="cat-icon" id="iconEventos"></div>
-        <h2>Eventos de la Biblia</h2>
-        <p>¿Podés ordenar los grandes acontecimientos bíblicos?</p>
-        <button class="btn btn-primary btn-block" onclick="startTest('eventos')" aria-label="Comenzar desafío de eventos de la Biblia">Comenzar</button>
+        <h2 data-i18n="card2-title">Eventos de la Biblia</h2>
+        <p data-i18n="card2-desc">¿Podés ordenar los grandes acontecimientos bíblicos?</p>
+        <button class="btn btn-primary btn-block" onclick="startTest('eventos')" data-i18n="btn-start" data-i18n-aria="card2-aria" aria-label="Comenzar desafío de eventos de la Biblia">Comenzar</button>
       </article>
 
       <article class="cat-card">
         <div class="cat-icon" id="iconCiudades"></div>
-        <h2>Ciudades de la Biblia</h2>
-        <p>¿Recordás dónde ocurrieron las grandes historias bíblicas?</p>
-        <button class="btn btn-primary btn-block" onclick="startTest('ciudades')" aria-label="Comenzar desafío de ciudades de la Biblia">Comenzar</button>
+        <h2 data-i18n="card3-title">Ciudades de la Biblia</h2>
+        <p data-i18n="card3-desc">¿Recordás dónde ocurrieron las grandes historias bíblicas?</p>
+        <button class="btn btn-primary btn-block" onclick="startTest('ciudades')" data-i18n="btn-start" data-i18n-aria="card3-aria" aria-label="Comenzar desafío de ciudades de la Biblia">Comenzar</button>
       </article>
     </div>
 
     <a href="torneos.html?vista=mundial" style="display:block;text-decoration:none;">
       <div class="countdown" id="countdownBox">
-        <div class="label" id="countdownLabel">Para el mes de la Biblia faltan...</div>
+        <div class="label" id="countdownLabel" data-i18n="countdown-label">Para el mes de la Biblia faltan...</div>
         <div class="countdown-grid" id="countdownGrid">
-          <div class="countdown-unit"><span class="num" id="cd-days">--</span><span class="unit">Días</span></div>
-          <div class="countdown-unit"><span class="num" id="cd-hours">--</span><span class="unit">Horas</span></div>
-          <div class="countdown-unit"><span class="num" id="cd-mins">--</span><span class="unit">Min</span></div>
-          <div class="countdown-unit"><span class="num" id="cd-secs">--</span><span class="unit">Seg</span></div>
+          <div class="countdown-unit"><span class="num" id="cd-days">--</span><span class="unit" data-i18n="unit-days">Días</span></div>
+          <div class="countdown-unit"><span class="num" id="cd-hours">--</span><span class="unit" data-i18n="unit-hours">Horas</span></div>
+          <div class="countdown-unit"><span class="num" id="cd-mins">--</span><span class="unit" data-i18n="unit-mins">Min</span></div>
+          <div class="countdown-unit"><span class="num" id="cd-secs">--</span><span class="unit" data-i18n="unit-secs">Seg</span></div>
         </div>
       </div>
     </a>
@@ -413,12 +423,12 @@
     </a>
 
     <div class="banner">
-      <h2>Creá un torneo de conocimiento Bíblico</h2>
-      <p>Con tu familia, amigos, comunidad o Iglesia.<br>O participá del torneo Bíblico internacional.</p>
+      <h2 data-i18n="banner-title">Creá un torneo de conocimiento Bíblico</h2>
+      <p data-i18n="banner-desc">Con tu familia, amigos, comunidad o Iglesia.<br>O participá del torneo Bíblico internacional.</p>
       <div class="banner-actions">
-        <a class="btn btn-accent btn-block" href="torneos.html?vista=registro">Crear</a>
-        <a class="btn btn-outline btn-block" href="torneos.html?vista=login">Ingresar a mi cuenta</a>
-        <button class="btn btn-outline btn-block" onclick="shareInvite()">Invitación para el mes de la Biblia</button>
+        <a class="btn btn-accent btn-block" href="torneos.html?vista=registro" data-i18n="btn-crear">Crear</a>
+        <a class="btn btn-outline btn-block" href="torneos.html?vista=login" data-i18n="btn-ingresar">Ingresar a mi cuenta</a>
+        <button class="btn btn-outline btn-block" onclick="shareInvite()" data-i18n="btn-invitacion">Invitación para el mes de la Biblia</button>
       </div>
     </div>
 
@@ -560,124 +570,60 @@ const CERT_CANVAS_SIZE = { w: 1080, h: 1920 };
 /* =====================================================================
    DATOS DE PREGUNTAS
    ===================================================================== */
-const basePreguntas = {
-  personajes: [
-    {
-      id: "p1",
-      es: {
-        pregunta: "¿Quién construyó el arca por mandato de Dios?",
-        opciones: ["Moisés", "Abraham", "Noé", "David"],
-        respuesta: "Noé"
-      },
-      en: {
-        pregunta: "Who built the ark by God's command?",
-        opciones: ["Moses", "Abraham", "Noah", "David"],
-        respuesta: "Noah"
-      },
-      pt: {
-        pregunta: "Quem construiu a arca por ordem de Deus?",
-        opciones: ["Moisés", "Abraão", "Noé", "Davi"],
-        respuesta: "Noé"
-      }
-    },
-    {
-      id: "p2",
-      es: {
-        pregunta: "¿Qué pastor venció al gigante Goliat?",
-        opciones: ["Saúl", "David", "Salomón", "Josué"],
-        respuesta: "David"
-      },
-      en: {
-        pregunta: "Which shepherd defeated the giant Goliath?",
-        opciones: ["Saul", "David", "Solomon", "Joshua"],
-        respuesta: "David"
-      },
-      pt: {
-        pregunta: "Qual pastor derrotou o gigante Golias?",
-        opciones: ["Saul", "Davi", "Salomão", "Josué"],
-        respuesta: "Davi"
-      }
-    }
-    // Puedes seguir agregando más personajes con esta misma estructura...
-  ],
-  
-  eventos: [
-    {
-      id: "e1",
-      es: {
-        pregunta: "¿Qué evento ocurrió en el Monte Sinaí?",
-        opciones: ["La crucifixión", "La entrega de los 10 Mandamientos", "El diluvio", "La creación"],
-        respuesta: "La entrega de los 10 Mandamientos"
-      },
-      en: {
-        pregunta: "What event occurred on Mount Sinai?",
-        opciones: ["The crucifixion", "The giving of the 10 Commandments", "The flood", "The creation"],
-        respuesta: "The giving of the 10 Commandments"
-      },
-      pt: {
-        pregunta: "Que evento ocorreu no Monte Sinai?",
-        opciones: ["A crucificação", "A entrega dos 10 Mandamentos", "O dilúvio", "A criação"],
-        respuesta: "A entrega dos 10 Mandamentos"
-      }
-    },
-    {
-      id: "e2",
-      es: {
-        pregunta: "¿De qué plaga escaparon los israelitas marcando sus puertas con sangre?",
-        opciones: ["Las ranas", "La oscuridad", "La muerte de los primogénitos", "Las langostas"],
-        respuesta: "La muerte de los primogénitos"
-      },
-      en: {
-        pregunta: "From which plague did the Israelites escape by marking their doors with blood?",
-        opciones: ["Frogs", "Darkness", "Death of the firstborn", "Locusts"],
-        respuesta: "Death of the firstborn"
-      },
-      pt: {
-        pregunta: "De qual praga os israelitas escaparam marcando suas portas com sangue?",
-        opciones: ["Rãs", "Escuridão", "Morte dos primogênitos", "Gafanhotos"],
-        respuesta: "Morte dos primogênitos"
-      }
-    }
-  ],
+const tests = {
+  personajes: {
+    title: "Personajes de la Biblia",
+    icon: () => ICON_PERSONAJES_URL,
+    type: "choice",
+    questions: [
+      { q: "¿Quién fue designado como primer sumo sacerdote de Israel?", options: ["Josué","Aarón","Eleazar"], correct: 1 },
+      { q: "¿Qué juez de Israel hizo un voto que terminó involucrando a su propia hija?", options: ["Jefté","Otoniel","Barac"], correct: 0 },
+      { q: "¿Qué sacerdote y escriba fue enviado por el rey Artajerjes a Jerusalén para enseñar la Ley de Dios al pueblo?", options: ["Esdras","Zorobabel","Malaquías"], correct: 0 },
+      { q: "¿Qué personaje mató a Sísara clavándole una estaca en la cabeza mientras dormía?", options: ["Débora","Jael","Abigail"], correct: 1 },
+      { q: "¿Quién fue el profeta que confrontó al rey David después de su pecado con Betsabé?", options: ["Gad","Natán","Samuel"], correct: 1 },
+      { q: "¿Qué personaje fue descendiente de Moab y terminó formando parte de la genealogía de David?", options: ["Rahab","Rut","Tamar"], correct: 1 },
+      { q: "¿Quién era el hermano de Rebeca y padre de Lea y Raquel?", options: ["Labán","Betuel","Esaú"], correct: 0 },
+      { q: "¿Qué personaje fue llevado por su madre al santuario de Silo cuando era niño y allí sirvió al Señor bajo el sacerdote Elí?", options: ["Samuel","Eliseo","Josías"], correct: 0 },
+      { q: "¿Quién era el padre de Betsabé?", options: ["Eliam","Ahitofel","Urías"], correct: 0 },
+      { q: "¿Quién fue el padre de Micaías, el profeta que habló contra Acab y sus profetas?", options: ["Imlá","Hilcías","Azarías"], correct: 0 }
+    ]
+  },
 
-  ciudades: [
-    {
-      id: "c1",
-      es: {
-        pregunta: "¿En qué ciudad nació Jesús?",
-        opciones: ["Jerusalén", "Nazaret", "Belén", "Jericó"],
-        respuesta: "Belén"
-      },
-      en: {
-        pregunta: "In which city was Jesus born?",
-        opciones: ["Jerusalem", "Nazareth", "Bethlehem", "Jericho"],
-        respuesta: "Bethlehem"
-      },
-      pt: {
-        pregunta: "Em qual cidade Jesus nasceu?",
-        opciones: ["Jerusalém", "Nazaré", "Belém", "Jericó"],
-        respuesta: "Belém"
-      }
-    },
-    {
-      id: "c2",
-      es: {
-        pregunta: "¿De qué ciudad cayeron los muros al sonido de las trompetas?",
-        opciones: ["Jericó", "Sodoma", "Nínive", "Babilonia"],
-        respuesta: "Jericó"
-      },
-      en: {
-        pregunta: "Which city's walls fell at the sound of the trumpets?",
-        opciones: ["Jericho", "Sodom", "Nineveh", "Babylon"],
-        respuesta: "Jericho"
-      },
-      pt: {
-        pregunta: "De qual cidade as muralhas caíram ao som das trombetas?",
-        opciones: ["Jericó", "Sodoma", "Nínive", "Babilônia"],
-        respuesta: "Jericó"
-      }
-    }
-  ]
+  ciudades: {
+    title: "Ciudades de la Biblia",
+    icon: () => ICON_CIUDADES_URL,
+    type: "choice",
+    questions: [
+      { q: "¿En qué ciudad fueron llamados \u201ccristianos\u201d por primera vez los discípulos de Jesús?", options: ["Antioquía","Éfeso","Corinto"], correct: 0 },
+      { q: "¿En qué ciudad cayó el muro después de que los israelitas marcharan alrededor de ella durante siete días?", options: ["Hai","Jericó","Hebrón"], correct: 1 },
+      { q: "¿En qué ciudad fue apedreado Esteban?", options: ["Jerusalén","Damasco","Cesarea"], correct: 0 },
+      { q: "¿En qué ciudad se encontraba el templo de Artemisa, cuyo culto provocó una gran revuelta contra Pablo?", options: ["Éfeso","Filipos","Tesalónica"], correct: 0 },
+      { q: "¿En qué ciudad permaneció Pablo durante un año y seis meses, enseñando la palabra de Dios?", options: ["Corinto","Tesalónica","Filipos"], correct: 0 },
+      { q: "¿Qué ciudad fue reconstruida por Hiel de Betel durante el reinado de Acab, cumpliéndose una antigua profecía de Josué?", options: ["Jericó","Samaria","Hai"], correct: 0 },
+      { q: "¿Qué ciudad se convirtió en la capital del reino del norte de Israel después de que Omrí comprara el monte de Samaria?", options: ["Siquem","Samaria","Jezreel"], correct: 1 },
+      { q: "¿En qué ciudad los habitantes fueron considerados \u201cmás nobles\u201d porque examinaban cada día las Escrituras para comprobar si lo que decía Pablo era cierto?", options: ["Berea","Derbe","Listra"], correct: 0 },
+      { q: "¿En qué ciudad Pablo resucitó a Eutico después de que este cayera desde una ventana durante una reunión?", options: ["Troas","Mileto","Tiro"], correct: 0 },
+      { q: "¿En qué ciudad fueron llamados \u201cdioses\u201d Pablo y Bernabé después de que Pablo sanara a un hombre cojo de nacimiento?", options: ["Listra","Iconio","Derbe"], correct: 0 }
+    ]
+  },
+
+  eventos: {
+    title: "Eventos de la Biblia",
+    icon: () => ICON_EVENTOS_URL,
+    type: "order",
+    questions: [
+      { order: ["El llamado de Abraham", "El nacimiento de Isaac", "La destrucción de Sodoma y Gomorra"] },
+      { order: ["Nacimiento de Moisés", "Cruce del Mar Rojo", "Entrega de los Diez Mandamientos"] },
+      { order: ["Saúl se convierte en rey", "David es ungido por Samuel", "David derrota a Goliat"] },
+      { order: ["David conquista Jerusalén", "Salomón se convierte en rey", "Salomón construye el templo"] },
+      { order: ["El reino de Israel se divide después de la muerte de Salomón", "Acab comienza a reinar sobre Israel", "Elías enfrenta a los profetas de Baal en el monte Carmelo"] },
+      { order: ["Ezequías comienza su reinado en Judá", "Josías encuentra el Libro de la Ley durante las reparaciones del templo", "Jerusalén es destruida por Babilonia"] },
+      { order: ["Daniel es llevado al exilio en Babilonia", "Ciro permite el regreso de los exiliados", "Nehemías reconstruye las murallas de Jerusalén"] },
+      { order: ["Nace Jesús", "Juan el Bautista comienza su ministerio", "Jesús es bautizado"] },
+      { order: ["Pentecostés", "La muerte de Esteban", "La conversión de Pablo"] },
+      { order: ["La conversión de Cornelio", "Pablo y Bernabé comienzan su primer viaje misionero", "El Concilio de Jerusalén"] }
+    ]
+  }
 };
 
 /* =====================================================================
@@ -1414,6 +1360,112 @@ function downloadCertificate(){
 }
 
 initConfig();
+</script>
+
+<!-- ===================== MULTI-IDIOMA (ES por defecto / EN / PT) ===================== -->
+<script>
+  const traducciones = {
+    es: {
+      "hero-eyebrow": "Desafío bíblico",
+      "hero-title": "¿Quién sabe más de la Biblia?",
+      "hero-lead": "<strong>Poné a prueba cuánto conocés de la Biblia.</strong><br>Elegí uno de los tres desafíos.",
+      "card1-title": "Personajes de la Biblia",
+      "card1-desc": "¿Cuánto recordás sobre las personas que aparecen en la Biblia?",
+      "card2-title": "Eventos de la Biblia",
+      "card2-desc": "¿Podés ordenar los grandes acontecimientos bíblicos?",
+      "card3-title": "Ciudades de la Biblia",
+      "card3-desc": "¿Recordás dónde ocurrieron las grandes historias bíblicas?",
+      "btn-start": "Comenzar",
+      "card1-aria": "Comenzar desafío de personajes de la Biblia",
+      "card2-aria": "Comenzar desafío de eventos de la Biblia",
+      "card3-aria": "Comenzar desafío de ciudades de la Biblia",
+      "countdown-label": "Para el mes de la Biblia faltan...",
+      "unit-days": "Días",
+      "unit-hours": "Horas",
+      "unit-mins": "Min",
+      "unit-secs": "Seg",
+      "banner-title": "Creá un torneo de conocimiento Bíblico",
+      "banner-desc": "Con tu familia, amigos, comunidad o Iglesia.<br>O participá del torneo Bíblico internacional.",
+      "btn-crear": "Crear",
+      "btn-ingresar": "Ingresar a mi cuenta",
+      "btn-invitacion": "Invitación para el mes de la Biblia"
+    },
+    en: {
+      "hero-eyebrow": "Bible Challenge",
+      "hero-title": "Who knows more about the Bible?",
+      "hero-lead": "<strong>Test how much you know about the Bible.</strong><br>Choose one of the three challenges.",
+      "card1-title": "Bible Characters",
+      "card1-desc": "How much do you remember about the people in the Bible?",
+      "card2-title": "Bible Events",
+      "card2-desc": "Can you put the great biblical events in order?",
+      "card3-title": "Bible Cities",
+      "card3-desc": "Do you remember where the great Bible stories took place?",
+      "btn-start": "Start",
+      "card1-aria": "Start the Bible characters challenge",
+      "card2-aria": "Start the Bible events challenge",
+      "card3-aria": "Start the Bible cities challenge",
+      "countdown-label": "Time left until Bible Month...",
+      "unit-days": "Days",
+      "unit-hours": "Hours",
+      "unit-mins": "Min",
+      "unit-secs": "Sec",
+      "banner-title": "Create a Bible knowledge tournament",
+      "banner-desc": "With your family, friends, community or church.<br>Or join the international Bible tournament.",
+      "btn-crear": "Create",
+      "btn-ingresar": "Log in to my account",
+      "btn-invitacion": "Invitation for Bible Month"
+    },
+    pt: {
+      "hero-eyebrow": "Desafio Bíblico",
+      "hero-title": "Quem sabe mais da Bíblia?",
+      "hero-lead": "<strong>Teste o quanto você conhece da Bíblia.</strong><br>Escolha um dos três desafios.",
+      "card1-title": "Personagens da Bíblia",
+      "card1-desc": "O quanto você lembra sobre as pessoas que aparecem na Bíblia?",
+      "card2-title": "Eventos da Bíblia",
+      "card2-desc": "Você consegue ordenar os grandes acontecimentos bíblicos?",
+      "card3-title": "Cidades da Bíblia",
+      "card3-desc": "Você lembra onde ocorreram as grandes histórias bíblicas?",
+      "btn-start": "Começar",
+      "card1-aria": "Começar desafio de personagens da Bíblia",
+      "card2-aria": "Começar desafio de eventos da Bíblia",
+      "card3-aria": "Começar desafio de cidades da Bíblia",
+      "countdown-label": "Faltam para o mês da Bíblia...",
+      "unit-days": "Dias",
+      "unit-hours": "Horas",
+      "unit-mins": "Min",
+      "unit-secs": "Seg",
+      "banner-title": "Crie um torneio de conhecimento bíblico",
+      "banner-desc": "Com sua família, amigos, comunidade ou Igreja.<br>Ou participe do torneio bíblico internacional.",
+      "btn-crear": "Criar",
+      "btn-ingresar": "Entrar na minha conta",
+      "btn-invitacion": "Convite para o mês da Bíblia"
+    }
+  };
+
+  function cambiarIdioma(idioma) {
+    document.documentElement.lang = idioma;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const clave = el.getAttribute('data-i18n');
+      if (traducciones[idioma] && traducciones[idioma][clave]) {
+        el.innerHTML = traducciones[idioma][clave];
+      }
+    });
+    document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+      const clave = el.getAttribute('data-i18n-aria');
+      if (traducciones[idioma] && traducciones[idioma][clave]) {
+        el.setAttribute('aria-label', traducciones[idioma][clave]);
+      }
+    });
+    try { localStorage.setItem('idiomaPreferido', idioma); } catch (e) {}
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    let idiomaGuardado = 'es';
+    try { idiomaGuardado = localStorage.getItem('idiomaPreferido') || 'es'; } catch (e) {}
+    const selector = document.getElementById('languageSelector');
+    if (selector) selector.value = idiomaGuardado;
+    if (idiomaGuardado !== 'es') cambiarIdioma(idiomaGuardado);
+  });
 </script>
 </body>
 </html>
