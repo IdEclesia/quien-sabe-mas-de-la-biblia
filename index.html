@@ -560,60 +560,124 @@ const CERT_CANVAS_SIZE = { w: 1080, h: 1920 };
 /* =====================================================================
    DATOS DE PREGUNTAS
    ===================================================================== */
-const tests = {
-  personajes: {
-    title: "Personajes de la Biblia",
-    icon: () => ICON_PERSONAJES_URL,
-    type: "choice",
-    questions: [
-      { q: "¿Quién fue designado como primer sumo sacerdote de Israel?", options: ["Josué","Aarón","Eleazar"], correct: 1 },
-      { q: "¿Qué juez de Israel hizo un voto que terminó involucrando a su propia hija?", options: ["Jefté","Otoniel","Barac"], correct: 0 },
-      { q: "¿Qué sacerdote y escriba fue enviado por el rey Artajerjes a Jerusalén para enseñar la Ley de Dios al pueblo?", options: ["Esdras","Zorobabel","Malaquías"], correct: 0 },
-      { q: "¿Qué personaje mató a Sísara clavándole una estaca en la cabeza mientras dormía?", options: ["Débora","Jael","Abigail"], correct: 1 },
-      { q: "¿Quién fue el profeta que confrontó al rey David después de su pecado con Betsabé?", options: ["Gad","Natán","Samuel"], correct: 1 },
-      { q: "¿Qué personaje fue descendiente de Moab y terminó formando parte de la genealogía de David?", options: ["Rahab","Rut","Tamar"], correct: 1 },
-      { q: "¿Quién era el hermano de Rebeca y padre de Lea y Raquel?", options: ["Labán","Betuel","Esaú"], correct: 0 },
-      { q: "¿Qué personaje fue llevado por su madre al santuario de Silo cuando era niño y allí sirvió al Señor bajo el sacerdote Elí?", options: ["Samuel","Eliseo","Josías"], correct: 0 },
-      { q: "¿Quién era el padre de Betsabé?", options: ["Eliam","Ahitofel","Urías"], correct: 0 },
-      { q: "¿Quién fue el padre de Micaías, el profeta que habló contra Acab y sus profetas?", options: ["Imlá","Hilcías","Azarías"], correct: 0 }
-    ]
-  },
+const basePreguntas = {
+  personajes: [
+    {
+      id: "p1",
+      es: {
+        pregunta: "¿Quién construyó el arca por mandato de Dios?",
+        opciones: ["Moisés", "Abraham", "Noé", "David"],
+        respuesta: "Noé"
+      },
+      en: {
+        pregunta: "Who built the ark by God's command?",
+        opciones: ["Moses", "Abraham", "Noah", "David"],
+        respuesta: "Noah"
+      },
+      pt: {
+        pregunta: "Quem construiu a arca por ordem de Deus?",
+        opciones: ["Moisés", "Abraão", "Noé", "Davi"],
+        respuesta: "Noé"
+      }
+    },
+    {
+      id: "p2",
+      es: {
+        pregunta: "¿Qué pastor venció al gigante Goliat?",
+        opciones: ["Saúl", "David", "Salomón", "Josué"],
+        respuesta: "David"
+      },
+      en: {
+        pregunta: "Which shepherd defeated the giant Goliath?",
+        opciones: ["Saul", "David", "Solomon", "Joshua"],
+        respuesta: "David"
+      },
+      pt: {
+        pregunta: "Qual pastor derrotou o gigante Golias?",
+        opciones: ["Saul", "Davi", "Salomão", "Josué"],
+        respuesta: "Davi"
+      }
+    }
+    // Puedes seguir agregando más personajes con esta misma estructura...
+  ],
+  
+  eventos: [
+    {
+      id: "e1",
+      es: {
+        pregunta: "¿Qué evento ocurrió en el Monte Sinaí?",
+        opciones: ["La crucifixión", "La entrega de los 10 Mandamientos", "El diluvio", "La creación"],
+        respuesta: "La entrega de los 10 Mandamientos"
+      },
+      en: {
+        pregunta: "What event occurred on Mount Sinai?",
+        opciones: ["The crucifixion", "The giving of the 10 Commandments", "The flood", "The creation"],
+        respuesta: "The giving of the 10 Commandments"
+      },
+      pt: {
+        pregunta: "Que evento ocorreu no Monte Sinai?",
+        opciones: ["A crucificação", "A entrega dos 10 Mandamentos", "O dilúvio", "A criação"],
+        respuesta: "A entrega dos 10 Mandamentos"
+      }
+    },
+    {
+      id: "e2",
+      es: {
+        pregunta: "¿De qué plaga escaparon los israelitas marcando sus puertas con sangre?",
+        opciones: ["Las ranas", "La oscuridad", "La muerte de los primogénitos", "Las langostas"],
+        respuesta: "La muerte de los primogénitos"
+      },
+      en: {
+        pregunta: "From which plague did the Israelites escape by marking their doors with blood?",
+        opciones: ["Frogs", "Darkness", "Death of the firstborn", "Locusts"],
+        respuesta: "Death of the firstborn"
+      },
+      pt: {
+        pregunta: "De qual praga os israelitas escaparam marcando suas portas com sangue?",
+        opciones: ["Rãs", "Escuridão", "Morte dos primogênitos", "Gafanhotos"],
+        respuesta: "Morte dos primogênitos"
+      }
+    }
+  ],
 
-  ciudades: {
-    title: "Ciudades de la Biblia",
-    icon: () => ICON_CIUDADES_URL,
-    type: "choice",
-    questions: [
-      { q: "¿En qué ciudad fueron llamados \u201ccristianos\u201d por primera vez los discípulos de Jesús?", options: ["Antioquía","Éfeso","Corinto"], correct: 0 },
-      { q: "¿En qué ciudad cayó el muro después de que los israelitas marcharan alrededor de ella durante siete días?", options: ["Hai","Jericó","Hebrón"], correct: 1 },
-      { q: "¿En qué ciudad fue apedreado Esteban?", options: ["Jerusalén","Damasco","Cesarea"], correct: 0 },
-      { q: "¿En qué ciudad se encontraba el templo de Artemisa, cuyo culto provocó una gran revuelta contra Pablo?", options: ["Éfeso","Filipos","Tesalónica"], correct: 0 },
-      { q: "¿En qué ciudad permaneció Pablo durante un año y seis meses, enseñando la palabra de Dios?", options: ["Corinto","Tesalónica","Filipos"], correct: 0 },
-      { q: "¿Qué ciudad fue reconstruida por Hiel de Betel durante el reinado de Acab, cumpliéndose una antigua profecía de Josué?", options: ["Jericó","Samaria","Hai"], correct: 0 },
-      { q: "¿Qué ciudad se convirtió en la capital del reino del norte de Israel después de que Omrí comprara el monte de Samaria?", options: ["Siquem","Samaria","Jezreel"], correct: 1 },
-      { q: "¿En qué ciudad los habitantes fueron considerados \u201cmás nobles\u201d porque examinaban cada día las Escrituras para comprobar si lo que decía Pablo era cierto?", options: ["Berea","Derbe","Listra"], correct: 0 },
-      { q: "¿En qué ciudad Pablo resucitó a Eutico después de que este cayera desde una ventana durante una reunión?", options: ["Troas","Mileto","Tiro"], correct: 0 },
-      { q: "¿En qué ciudad fueron llamados \u201cdioses\u201d Pablo y Bernabé después de que Pablo sanara a un hombre cojo de nacimiento?", options: ["Listra","Iconio","Derbe"], correct: 0 }
-    ]
-  },
-
-  eventos: {
-    title: "Eventos de la Biblia",
-    icon: () => ICON_EVENTOS_URL,
-    type: "order",
-    questions: [
-      { order: ["El llamado de Abraham", "El nacimiento de Isaac", "La destrucción de Sodoma y Gomorra"] },
-      { order: ["Nacimiento de Moisés", "Cruce del Mar Rojo", "Entrega de los Diez Mandamientos"] },
-      { order: ["Saúl se convierte en rey", "David es ungido por Samuel", "David derrota a Goliat"] },
-      { order: ["David conquista Jerusalén", "Salomón se convierte en rey", "Salomón construye el templo"] },
-      { order: ["El reino de Israel se divide después de la muerte de Salomón", "Acab comienza a reinar sobre Israel", "Elías enfrenta a los profetas de Baal en el monte Carmelo"] },
-      { order: ["Ezequías comienza su reinado en Judá", "Josías encuentra el Libro de la Ley durante las reparaciones del templo", "Jerusalén es destruida por Babilonia"] },
-      { order: ["Daniel es llevado al exilio en Babilonia", "Ciro permite el regreso de los exiliados", "Nehemías reconstruye las murallas de Jerusalén"] },
-      { order: ["Nace Jesús", "Juan el Bautista comienza su ministerio", "Jesús es bautizado"] },
-      { order: ["Pentecostés", "La muerte de Esteban", "La conversión de Pablo"] },
-      { order: ["La conversión de Cornelio", "Pablo y Bernabé comienzan su primer viaje misionero", "El Concilio de Jerusalén"] }
-    ]
-  }
+  ciudades: [
+    {
+      id: "c1",
+      es: {
+        pregunta: "¿En qué ciudad nació Jesús?",
+        opciones: ["Jerusalén", "Nazaret", "Belén", "Jericó"],
+        respuesta: "Belén"
+      },
+      en: {
+        pregunta: "In which city was Jesus born?",
+        opciones: ["Jerusalem", "Nazareth", "Bethlehem", "Jericho"],
+        respuesta: "Bethlehem"
+      },
+      pt: {
+        pregunta: "Em qual cidade Jesus nasceu?",
+        opciones: ["Jerusalém", "Nazaré", "Belém", "Jericó"],
+        respuesta: "Belém"
+      }
+    },
+    {
+      id: "c2",
+      es: {
+        pregunta: "¿De qué ciudad cayeron los muros al sonido de las trompetas?",
+        opciones: ["Jericó", "Sodoma", "Nínive", "Babilonia"],
+        respuesta: "Jericó"
+      },
+      en: {
+        pregunta: "Which city's walls fell at the sound of the trumpets?",
+        opciones: ["Jericho", "Sodom", "Nineveh", "Babylon"],
+        respuesta: "Jericho"
+      },
+      pt: {
+        pregunta: "De qual cidade as muralhas caíram ao som das trombetas?",
+        opciones: ["Jericó", "Sodoma", "Nínive", "Babilônia"],
+        respuesta: "Jericó"
+      }
+    }
+  ]
 };
 
 /* =====================================================================
