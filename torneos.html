@@ -547,6 +547,19 @@
       tvCargarPreguntasTorneo(1); // Fecha 1 por defecto: ajustar cuando se defina cómo mapear "código" -> fecha_torneo
     }
 
+    // El creador del torneo también puede participar de su propio torneo
+    // desde "Mis Torneos Activos", sin pasar por el formulario de invitado
+    // (reutiliza la misma lógica y el mismo motor de juego que ingresarAlJuego).
+    function jugarMiTorneo(codigo) {
+      const nombre = currentPerfil ? currentPerfil.nombre_apellido : 'Organizador';
+
+      tvJugadorNombre = nombre;
+      tvCodigoTorneo = codigo;
+
+      mostrarVista('view-juego');
+      tvCargarPreguntasTorneo(1); // Fecha 1 por defecto: mismo criterio que ingresarAlJuego()
+    }
+
     // --- MOTOR DE JUEGO: preguntas_torneo (adaptado de mundial.html) ---
     let tvBaseDeDatosPreguntas = [];
     let tvIndicePregunta = 0;
@@ -991,6 +1004,9 @@
                 <p class="text-xs" style="color:var(--primary);font-weight:600;">${estadoTorneoTexto(t)}</p>
               </div>
               <div class="flex space-x-2">
+                <button onclick="jugarMiTorneo('${t.codigo}')" class="btn btn-sm btn-primary">
+                  🎮 Jugar
+                </button>
                 <button onclick='invitar(${JSON.stringify(mensajeWpp)})' class="btn btn-sm btn-accent">
                   📲 Invitar
                 </button>
