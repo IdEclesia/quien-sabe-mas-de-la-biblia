@@ -45,6 +45,19 @@
   .logo-slot img{width:100%;display:block;}
   .logo-slot.small{max-width:44px;margin:0;}
   .logo-placeholder{width:100%;aspect-ratio:1/1;border:2px dashed rgba(255,255,255,.5);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#fff;text-align:center;overflow:hidden;}
+
+  .banner-carrusel{position:relative;width:100%;aspect-ratio:3/1;border-radius:var(--radius-md);overflow:hidden;box-shadow:var(--shadow-sm);background:var(--secondary);}
+  .banner-carrusel .banner-track{display:flex;height:100%;transition:transform .5s ease;}
+  .banner-carrusel .banner-slide{flex:0 0 100%;height:100%;}
+  .banner-carrusel .banner-slide a, .banner-carrusel .banner-slide .banner-img-wrap{display:block;width:100%;height:100%;}
+  .banner-carrusel img{width:100%;height:100%;object-fit:cover;display:block;}
+  .banner-carrusel .banner-titulo{position:absolute;left:0;right:0;bottom:0;padding:10px 16px;background:linear-gradient(transparent, rgba(0,0,0,.55));color:#fff;font-weight:700;font-size:.85rem;pointer-events:none;}
+  .banner-carrusel .banner-dots{position:absolute;bottom:8px;right:12px;display:flex;gap:6px;}
+  .banner-carrusel .banner-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.55);cursor:pointer;border:none;padding:0;}
+  .banner-carrusel .banner-dot.activo{background:#fff;}
+  .banner-carrusel .banner-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.35);color:#fff;border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;line-height:1;display:flex;align-items:center;justify-content:center;}
+  .banner-carrusel .banner-nav.prev{left:10px;}
+  .banner-carrusel .banner-nav.next{right:10px;}
   .logo-placeholder img{width:100%;height:100%;object-fit:cover;display:block;}
 
   .btn{appearance:none;border:none;cursor:pointer;font-weight:700;font-size:1rem;padding:14px 20px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .15s ease, opacity .15s ease;min-height:48px;font-family:inherit;}
@@ -407,6 +420,8 @@
       </div>
 
       <div class="logo-placeholder" id="bannerInternacionalSlotDashboard" style="aspect-ratio:3/1;margin-bottom:22px;"></div>
+
+      <div id="carruselAuspiciantes" style="display:none;margin-bottom:22px;"></div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="col-span-1 tv-card p-6 h-fit">
@@ -815,6 +830,85 @@
       contenedor.innerHTML = '<div class="ranking-panel">' + filas + '</div>' + tvBotonFinal();
     }
 
+    // Carrusel de banners de auspiciantes/marcas/eventos (estilo Netflix), visible en el dashboard.
+    // Solo se muestra si hay banners activos cargados desde el admin.
+    let bannerCarruselIntervalo = null;
+    let bannerCarruselIndice = 0;
+
+    async function cargarCarruselAuspiciantes(){
+      const contenedor = document.getElementById('carruselAuspiciantes');
+      if (bannerCarruselIntervalo) { clearInterval(bannerCarruselIntervalo); bannerCarruselIntervalo = null; }
+
+      const { data, error } = await supabaseClient
+        .from('banners')
+        .select('*')
+        .eq('activo', true)
+        .order('orden', { ascending: true });
+
+      if (error || !data || data.length === 0) {
+        contenedor.style.display = 'none';
+        contenedor.innerHTML = '';
+        return;
+      }
+
+      bannerCarruselIndice = 0;
+      contenedor.style.display = '';
+
+      const slides = data.map(b => {
+        const img = `<img src="${b.imagen_url}" alt="${b.titulo || 'Auspiciante'}">`;
+        const contenido = b.link_url
+          ? `<a href="${b.link_url}" target="_blank" rel="noopener">${img}</a>`
+          : `<div class="banner-img-wrap">${img}</div>`;
+        const titulo = b.titulo ? `<div class="banner-titulo">${b.titulo}</div>` : '';
+        return `<div class="banner-slide">${contenido}${titulo}</div>`;
+      }).join('');
+
+      const dots = data.map((_, i) =>
+        `<button class="banner-dot${i === 0 ? ' activo' : ''}" onclick="irASlideBanner(${i})"></button>`
+      ).join('');
+
+      contenedor.innerHTML = `
+        <div class="banner-carrusel">
+          <div class="banner-track" id="bannerTrack">${slides}</div>
+          ${data.length > 1 ? `
+            <button class="banner-nav prev" onclick="moverBanner(-1)">‹</button>
+            <button class="banner-nav next" onclick="moverBanner(1)">›</button>
+            <div class="banner-dots">${dots}</div>
+          ` : ''}
+        </div>`;
+
+      if (data.length > 1) {
+        bannerCarruselIntervalo = setInterval(() => moverBanner(1), 5000);
+      }
+    }
+
+    function moverBanner(direccion){
+      const track = document.getElementById('bannerTrack');
+      if (!track) return;
+      const totalSlides = track.children.length;
+      bannerCarruselIndice = (bannerCarruselIndice + direccion + totalSlides) % totalSlides;
+      aplicarSlideBanner();
+    }
+
+    function irASlideBanner(indice){
+      bannerCarruselIndice = indice;
+      aplicarSlideBanner();
+      // Reinicia el autoplay para que no cambie justo después de una interacción manual.
+      if (bannerCarruselIntervalo) {
+        clearInterval(bannerCarruselIntervalo);
+        bannerCarruselIntervalo = setInterval(() => moverBanner(1), 5000);
+      }
+    }
+
+    function aplicarSlideBanner(){
+      const track = document.getElementById('bannerTrack');
+      if (!track) return;
+      track.style.transform = `translateX(-${bannerCarruselIndice * 100}%)`;
+      document.querySelectorAll('.banner-dot').forEach((dot, i) => {
+        dot.classList.toggle('activo', i === bannerCarruselIndice);
+      });
+    }
+
     // 4. AUTENTICACIÓN REAL CON SUPABASE
     async function cargarPerfil(userId){
       const { data, error } = await supabaseClient
@@ -835,6 +929,7 @@
       await cargarMisTorneos();
       await cargarRankingPerfil();
       await cargarResumenMundialDashboard();
+      await cargarCarruselAuspiciantes();
     }
 
     document.getElementById('form-login').addEventListener('submit', async (e) => {
