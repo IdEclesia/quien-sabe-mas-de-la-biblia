@@ -568,6 +568,7 @@
     let tvTemporizadorIntervalo;
     let tvIdiomaActual = 'ES';
     let tvFechaActiva = 1;
+    let tvResultadoGuardado = false;
 
     async function tvCargarPreguntasTorneo(numeroFecha) {
       tvFechaActiva = numeroFecha;
@@ -617,6 +618,7 @@
       }
       tvIndicePregunta = 0;
       tvPuntosTotales = 0;
+      tvResultadoGuardado = false;
       tvActualizarPuntaje();
       document.getElementById('tv-totalPreguntas').innerText = tvBaseDeDatosPreguntas.length;
       tvCargarPreguntaActual();
@@ -631,13 +633,31 @@
       tvCargarPreguntaActual();
     }
 
-    function tvCargarPreguntaActual() {
+    async function tvCargarPreguntaActual() {
       clearInterval(tvTemporizadorIntervalo);
 
       if (tvIndicePregunta >= tvBaseDeDatosPreguntas.length) {
         document.getElementById('tv-txtPregunta').innerText = `¡Fecha completada! Sumaste ${tvPuntosTotales} puntos.`;
-        document.getElementById('tv-contenedorOpciones').innerHTML = '';
+        document.getElementById('tv-contenedorOpciones').innerHTML =
+          '<button onclick="mostrarVista(\'view-menu\')" class="btn btn-primary btn-block" style="margin-top:10px;">Volver al inicio</button>';
         document.getElementById('tv-anilloTiempo').style.background = `conic-gradient(#38a169 100%, #e0e0e0 0)`;
+
+        // Se guarda una sola vez por partida jugada (protegido con tvResultadoGuardado
+        // para que cambiar de idioma en esta pantalla final no vuelva a insertar).
+        if (!tvResultadoGuardado) {
+          tvResultadoGuardado = true;
+          const { error } = await supabaseClient.from('torneo_resultados').insert({
+            torneo_codigo: tvCodigoTorneo,
+            jugador_nombre: tvJugadorNombre,
+            puntaje_total: tvPuntosTotales
+          });
+          if (error) {
+            console.error('No se pudo guardar el resultado del torneo:', error);
+            document.getElementById('tv-contenedorOpciones').innerHTML =
+              `<p class="tv-msg error">No se pudo guardar tu puntaje: ${error.message}</p>` +
+              document.getElementById('tv-contenedorOpciones').innerHTML;
+          }
+        }
         return;
       }
 
