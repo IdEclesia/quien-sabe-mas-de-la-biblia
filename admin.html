@@ -291,6 +291,7 @@
       <button class="tab-btn" data-tab="conocimiento" onclick="switchAdminTab('conocimiento')">Conocimiento</button>
       <button class="tab-btn" data-tab="torneos" onclick="switchAdminTab('torneos')">Torneo Bíblico</button>
       <button class="tab-btn" data-tab="mundial" onclick="switchAdminTab('mundial')">Mundial de la Biblia</button>
+      <button class="tab-btn" data-tab="banners" onclick="switchAdminTab('banners')">Banners</button>
     </div>
 
     <!-- ============ TAB: GENERAL ============ -->
@@ -584,6 +585,35 @@
             <tbody id="tablaMundiales"><tr><td colspan="4"><div class="empty-state">Cargando...</div></td></tr></tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <!-- ============ TAB: BANNERS Y AUSPICIANTES ============ -->
+    <div id="panelBanners" class="tab-panel" style="display:none">
+      <div class="panel">
+        <div class="section-title"><h2>Subir nuevo banner</h2></div>
+        <p class="section-sub">Se muestra en el carrusel del dashboard de los usuarios. Tamaño recomendado: 1200x400px.</p>
+        <form id="formBanner" style="display:flex;flex-direction:column;gap:4px;max-width:480px;">
+          <div class="field">
+            <label>Título / auspiciante</label>
+            <input type="text" id="bannerTitulo" placeholder="Ej: Librería Cristiana Emanuel">
+          </div>
+          <div class="field">
+            <label>Imagen del banner</label>
+            <input type="file" id="bannerArchivo" accept="image/*">
+          </div>
+          <div class="field">
+            <label>Link al tocar el banner (opcional)</label>
+            <input type="text" id="bannerLink" placeholder="https://...">
+          </div>
+          <button type="submit" class="btn" style="background:var(--primary);color:#fff;margin-top:10px;">Subir banner</button>
+          <p id="bannerMsg" class="section-sub"></p>
+        </form>
+      </div>
+
+      <div class="panel">
+        <div class="section-title"><h2>Banners cargados</h2></div>
+        <div id="listaBanners"><div class="loading-msg">Cargando...</div></div>
       </div>
     </div>
 
@@ -963,6 +993,7 @@ async function loadTabData(tab){
   else if (tab === 'conocimiento') await renderConocimiento();
   else if (tab === 'torneos') await loadTorneos();
   else if (tab === 'mundial') await renderMundial();
+  else if (tab === 'banners') await renderBanners();
 }
 
 /* =====================================================================
@@ -1377,6 +1408,109 @@ async function onCambiarMundialSeleccionado(){
 document.getElementById('loginPassword').addEventListener('keydown', (e)=>{
   if (e.key === 'Enter') doLogin();
 });
+
+/* =====================================================================
+   TAB: BANNERS Y AUSPICIANTES
+   ===================================================================== */
+async function renderBanners(){
+  const cont = document.getElementById('listaBanners');
+  cont.innerHTML = '<div class="loading-msg">Cargando...</div>';
+
+  const { data, error } = await supabaseClient
+    .from('banners')
+    .select('*')
+    .order('orden', { ascending: true });
+
+  if (error) {
+    cont.innerHTML = `<div class="empty-state">No se pudieron cargar los banners: ${error.message}</div>`;
+    return;
+  }
+  if (!data || data.length === 0) {
+    cont.innerHTML = '<div class="empty-state">Todavía no hay banners cargados.</div>';
+    return;
+  }
+
+  cont.innerHTML = data.map(b => `
+    <div class="torneo-card">
+      <div class="info" style="display:flex;align-items:center;gap:12px;">
+        <img src="${b.imagen_url}" alt="${b.titulo || ''}" style="width:140px;height:46px;object-fit:cover;border-radius:8px;">
+        <div>
+          <h3>${b.titulo || '(sin título)'}</h3>
+          <div class="meta">${b.link_url ? b.link_url : 'Sin link'} · ${b.activo ? 'Activo' : 'Desactivado'}</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="tab-btn" onclick="toggleBanner('${b.id}', ${!b.activo})">${b.activo ? 'Desactivar' : 'Activar'}</button>
+        <button class="tab-btn" onclick="borrarBanner('${b.id}', '${b.imagen_url}')">Borrar</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function toggleBanner(id, nuevoEstado){
+  const { error } = await supabaseClient.from('banners').update({ activo: nuevoEstado }).eq('id', id);
+  if (error) { alert('No se pudo actualizar: ' + error.message); return; }
+  await renderBanners();
+}
+
+async function borrarBanner(id, imagenUrl){
+  if (!confirm('¿Borrar este banner? Esta acción no se puede deshacer.')) return;
+
+  // Se borra primero el archivo del bucket (si se puede identificar su ruta), luego la fila.
+  try {
+    const partes = imagenUrl.split('/banners/');
+    if (partes[1]) {
+      await supabaseClient.storage.from('banners').remove([decodeURIComponent(partes[1])]);
+    }
+  } catch (e) {
+    console.error('No se pudo borrar el archivo del storage:', e);
+  }
+
+  const { error } = await supabaseClient.from('banners').delete().eq('id', id);
+  if (error) { alert('No se pudo borrar: ' + error.message); return; }
+  await renderBanners();
+}
+
+document.getElementById('formBanner').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('bannerMsg');
+  const archivo = document.getElementById('bannerArchivo').files[0];
+  const titulo = document.getElementById('bannerTitulo').value.trim();
+  const link = document.getElementById('bannerLink').value.trim();
+
+  if (!archivo) { msg.textContent = 'Elegí una imagen primero.'; return; }
+
+  msg.textContent = 'Subiendo...';
+  const nombreArchivo = `${Date.now()}_${archivo.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+
+  const { error: errorSubida } = await supabaseClient.storage
+    .from('banners')
+    .upload(nombreArchivo, archivo);
+
+  if (errorSubida) {
+    msg.textContent = 'No se pudo subir la imagen: ' + errorSubida.message;
+    return;
+  }
+
+  const { data: urlData } = supabaseClient.storage.from('banners').getPublicUrl(nombreArchivo);
+
+  const { error: errorInsert } = await supabaseClient.from('banners').insert({
+    titulo: titulo || null,
+    imagen_url: urlData.publicUrl,
+    link_url: link || null,
+    activo: true
+  });
+
+  if (errorInsert) {
+    msg.textContent = 'No se pudo guardar el banner: ' + errorInsert.message;
+    return;
+  }
+
+  msg.textContent = '¡Banner subido correctamente!';
+  document.getElementById('formBanner').reset();
+  await renderBanners();
+});
 </script>
+
 </body>
 </html>
