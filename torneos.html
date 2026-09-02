@@ -415,7 +415,7 @@
           <label class="tv-label" for="nuevo-torneo-fecha-inicio">Fecha de inicio</label>
           <input type="date" id="nuevo-torneo-fecha-inicio" class="tv-input mb-3">
           <label class="tv-label" for="nuevo-torneo-cantidad-fechas">Cantidad de fechas (cada una dura 2 días)</label>
-          <input type="number" id="nuevo-torneo-cantidad-fechas" class="tv-input mb-3" min="1" max="15" value="15">
+          <input type="number" id="nuevo-torneo-cantidad-fechas" class="tv-input mb-3" min="1" max="30" value="30">
           <button onclick="crearTorneo()" id="btn-crear-torneo" class="btn btn-accent btn-block">
             Generar Torneo
           </button>
@@ -877,7 +877,7 @@
 
       if(!nombreTorneo) { msg.textContent = 'Escribí un nombre para el torneo'; msg.className = 'tv-msg error'; return; }
       if(!fechaInicio) { msg.textContent = 'Elegí la fecha de inicio del torneo'; msg.className = 'tv-msg error'; return; }
-      if(!cantidadFechas || cantidadFechas < 1 || cantidadFechas > 15) { msg.textContent = 'La cantidad de fechas tiene que ser entre 1 y 15'; msg.className = 'tv-msg error'; return; }
+      if(!cantidadFechas || cantidadFechas < 1 || cantidadFechas > 30) { msg.textContent = 'La cantidad de fechas tiene que ser entre 1 y 30'; msg.className = 'tv-msg error'; return; }
 
       btn.disabled = true;
       let intentos = 0;
