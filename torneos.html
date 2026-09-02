@@ -638,8 +638,6 @@
 
       if (tvIndicePregunta >= tvBaseDeDatosPreguntas.length) {
         document.getElementById('tv-txtPregunta').innerText = `¡Fecha completada! Sumaste ${tvPuntosTotales} puntos.`;
-        document.getElementById('tv-contenedorOpciones').innerHTML =
-          '<button onclick="mostrarVista(\'view-menu\')" class="btn btn-primary btn-block" style="margin-top:10px;">Volver al inicio</button>';
         document.getElementById('tv-anilloTiempo').style.background = `conic-gradient(#38a169 100%, #e0e0e0 0)`;
 
         // Se guarda una sola vez por partida jugada (protegido con tvResultadoGuardado
@@ -654,10 +652,12 @@
           if (error) {
             console.error('No se pudo guardar el resultado del torneo:', error);
             document.getElementById('tv-contenedorOpciones').innerHTML =
-              `<p class="tv-msg error">No se pudo guardar tu puntaje: ${error.message}</p>` +
-              document.getElementById('tv-contenedorOpciones').innerHTML;
+              `<p class="tv-msg error">No se pudo guardar tu puntaje: ${error.message}</p>` + tvBotonFinal();
+            return;
           }
         }
+
+        await tvMostrarRankingFinal(tvCodigoTorneo);
         return;
       }
 
@@ -767,6 +767,52 @@
 
     function tvActualizarPuntaje() {
       document.getElementById('tv-txtPuntos').innerText = tvPuntosTotales;
+    }
+
+    // El creador (con sesión) vuelve a su perfil; el invitado sin cuenta vuelve al menú.
+    function tvBotonFinal() {
+      if (currentUser) {
+        return '<button onclick="irADashboard()" class="btn btn-primary btn-block" style="margin-top:10px;">Volver a mi perfil</button>';
+      }
+      return '<button onclick="mostrarVista(\'view-menu\')" class="btn btn-primary btn-block" style="margin-top:10px;">Volver al inicio</button>';
+    }
+
+    // Ranking del torneo al terminar de jugar, visible para cualquiera que juegue
+    // (no solo para el creador) — reutiliza la misma lógica de acumulado que verRanking().
+    async function tvMostrarRankingFinal(codigo) {
+      const contenedor = document.getElementById('tv-contenedorOpciones');
+      contenedor.innerHTML = '<p class="tv-msg">Cargando ranking...</p>';
+
+      const { data, error } = await supabaseClient
+        .from('torneo_resultados')
+        .select('jugador_nombre, puntaje_total')
+        .eq('torneo_codigo', codigo);
+
+      if (error || !data || data.length === 0) {
+        contenedor.innerHTML = tvBotonFinal();
+        return;
+      }
+
+      const acumulado = new Map();
+      data.forEach(fila => {
+        const nombre = (fila.jugador_nombre || 'Anónimo').trim();
+        const clave = nombre.toLowerCase();
+        const previo = acumulado.get(clave) || { nombre, total: 0 };
+        previo.total += (fila.puntaje_total || 0);
+        acumulado.set(clave, previo);
+      });
+
+      const ranking = Array.from(acumulado.values())
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 20);
+
+      const filas = ranking.map((p, i) => `
+        <div class="ranking-row">
+          <span>${i + 1}. ${p.nombre}</span>
+          <span><strong>${p.total} pts</strong></span>
+        </div>`).join('');
+
+      contenedor.innerHTML = '<div class="ranking-panel">' + filas + '</div>' + tvBotonFinal();
     }
 
     // 4. AUTENTICACIÓN REAL CON SUPABASE
