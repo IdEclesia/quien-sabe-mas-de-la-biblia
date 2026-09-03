@@ -1070,20 +1070,23 @@
       await cargarMisTorneos();
     }
 
-  function calcularFechaActual(fechaInicioStr, cantidadFechas){
-  if (!fechaInicioStr) return null;
+function calcularFechaActual(fechaInicioStr, cantidadFechas){
   const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  const partes = fechaInicioStr.split('-');
-  const inicio = new Date(partes[0], partes[1] - 1, partes[2]);
-  const msPorDia = 24 * 60 * 60 * 1000;
-  const diasTranscurridos = Math.round((hoy - inicio) / msPorDia);
+  // Obtenemos qué día del mes es hoy (ej: hoy es 3)
+  const diaDelMes = hoy.getDate(); 
   
-  if (diasTranscurridos < 0) return { estado: 'no-empezo' };
-  const fecha = diasTranscurridos + 1; 
+  // Le restamos 1 para que el día 1 del mes sea "0 días transcurridos"
+  const diasTranscurridos = diaDelMes - 1; 
+
+  // Calculamos la fecha dividiendo por 2 (cada fecha dura 2 días del mes)
+  const fecha = Math.floor(diasTranscurridos / 2) + 1; 
+  
+  // Determinamos si es la primera o segunda mitad de esa fecha
+  const subDia = (diasTranscurridos % 2) + 1; 
+
   if (fecha > cantidadFechas) return { estado: 'termino' };
   
-  return { estado: 'en-curso', fecha, cantidadFechas };
+  return { estado: 'en-curso', fecha, cantidadFechas, subDia };
 }
 
 function estadoTorneoTexto(t){
