@@ -1070,7 +1070,7 @@
       await cargarMisTorneos();
     }
 
-    // Fecha 1 = fecha_inicio (00:01) hasta el día siguiente (23:59), fecha 2 = los 2 días
+    // Fecha 1 = fecha_inicio (00:01) hasta el final del día (23:59), fecha 2 = el día
     // siguientes, y así hasta cantidad_fechas. Devuelve null si todavía no empezó o si ya terminó.
     function calcularFechaActual(fechaInicioStr, cantidadFechas){
       if (!fechaInicioStr) return null;
@@ -1079,7 +1079,7 @@
       const msPorDia = 24 * 60 * 60 * 1000;
       const diasTranscurridos = Math.floor((ahora - inicio) / msPorDia);
       if (diasTranscurridos < 0) return { estado: 'no-empezo' };
-      const fecha = Math.floor(diasTranscurridos / 2) + 1;
+      const fecha = diasTranscurridos + 1;
       if (fecha > cantidadFechas) return { estado: 'termino' };
       return { estado: 'en-curso', fecha, cantidadFechas };
     }
