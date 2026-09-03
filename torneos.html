@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>IdEclesia | Torneo Bíblico</title>
+
+<!-- Meta Tags PWA -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="logo-192.png">
+<link rel="apple-touch-icon" href="logo-512.png">
+<meta name="theme-color" content="#312e81">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -1915,5 +1924,19 @@ function estadoTorneoTexto(t){
       mostrarVista('view-menu');
     })();
   </script>
+<!-- SDK Oficial de OneSignal (notificaciones push) -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "135934c4-a3f9-4ef6-b54e-7912fce14e51",
+      notifyButton: {
+        enable: true, // Muestra la campana flotante para suscribirse/desuscribirse
+      },
+      allowLocalhostAsSecureOrigin: true
+    });
+  });
+</script>
 </body>
 </html>
