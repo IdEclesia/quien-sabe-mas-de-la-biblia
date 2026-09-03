@@ -2,7 +2,7 @@
   "name": "¿Quién sabe más de la Biblia?",
   "short_name": "Biblia Quiz",
   "description": "Plataforma de Desafíos Bíblicos de IdEclesia",
-  "start_url": "./index.html",
+  "start_url": "./torneos.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#312e81",
