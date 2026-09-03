@@ -1070,27 +1070,29 @@
       await cargarMisTorneos();
     }
 
-    // Fecha 1 = fecha_inicio (00:01) hasta el final del día (23:59), fecha 2 = el día
-    // siguientes, y así hasta cantidad_fechas. Devuelve null si todavía no empezó o si ya terminó.
-    function calcularFechaActual(fechaInicioStr, cantidadFechas){
-      if (!fechaInicioStr) return null;
-      const inicio = new Date(fechaInicioStr + 'T00:00:00');
-      const ahora = new Date();
-      const msPorDia = 24 * 60 * 60 * 1000;
-      const diasTranscurridos = Math.floor((ahora - inicio) / msPorDia);
-      if (diasTranscurridos < 0) return { estado: 'no-empezo' };
-      const fecha = diasTranscurridos + 1;
-      if (fecha > cantidadFechas) return { estado: 'termino' };
-      return { estado: 'en-curso', fecha, cantidadFechas };
-    }
+  function calcularFechaActual(fechaInicioStr, cantidadFechas){
+  if (!fechaInicioStr) return null;
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const partes = fechaInicioStr.split('-');
+  const inicio = new Date(partes[0], partes[1] - 1, partes[2]);
+  const msPorDia = 24 * 60 * 60 * 1000;
+  const diasTranscurridos = Math.round((hoy - inicio) / msPorDia);
+  
+  if (diasTranscurridos < 0) return { estado: 'no-empezo' };
+  const fecha = diasTranscurridos + 1; 
+  if (fecha > cantidadFechas) return { estado: 'termino' };
+  
+  return { estado: 'en-curso', fecha, cantidadFechas };
+}
 
-    function estadoTorneoTexto(t){
-      const r = calcularFechaActual(t.fecha_inicio, t.cantidad_fechas);
-      if (!r) return 'Sin fecha de inicio configurada';
-      if (r.estado === 'no-empezo') return `Empieza el ${t.fecha_inicio}`;
-      if (r.estado === 'termino') return `Finalizado (duró ${t.cantidad_fechas} fechas)`;
-      return `Fecha ${r.fecha} de ${r.cantidadFechas} en curso`;
-    }
+function estadoTorneoTexto(t){
+  const r = calcularFechaActual(t.fecha_inicio, t.cantidad_fechas);
+  if (!r) return 'Sin fecha de inicio configurada';
+  if (r.estado === 'no-empezo') return `Empieza el ${t.fecha_inicio}`;
+  if (r.estado === 'termino') return `Finalizado (duró ${t.cantidad_fechas} fechas)`;
+  return `Fecha ${r.fecha} de ${r.cantidadFechas} en curso`;
+}
 
     async function cargarRankingPerfil(){
       const body = document.getElementById('dash-ranking-body');
