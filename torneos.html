@@ -595,7 +595,30 @@
     let tvJugadorNombre = '';
     let tvCodigoTorneo = '';
 
-    function ingresarAlJuego() {
+    // Evita que el mismo jugador sume puntos dos veces en la misma jornada.
+    // Si tiene cuenta (perfilId), identificamos por perfil_id (más confiable);
+    // si es invitado sin cuenta, identificamos por nombre (sin mayúsculas/espacios).
+    async function tvYaJugoEstaJornada(codigo, jornada, nombre, perfilId) {
+      let query = supabaseClient
+        .from('torneo_resultados')
+        .select('id')
+        .eq('torneo_codigo', codigo)
+        .eq('jornada', jornada)
+        .limit(1);
+
+      query = perfilId
+        ? query.eq('perfil_id', perfilId)
+        : query.ilike('jugador_nombre', nombre.trim());
+
+      const { data, error } = await query;
+      if (error) {
+        console.error('No se pudo verificar si ya jugaste esta fecha:', error);
+        return false; // si falla la verificación, no bloqueamos: mejor dejar intentar
+      }
+      return !!(data && data.length > 0);
+    }
+
+    async function ingresarAlJuego() {
       const nombre = document.getElementById('invitado-nombre').value.trim();
       const codigo = document.getElementById('invitado-codigo').value.trim().toUpperCase();
 
@@ -604,25 +627,38 @@
         return;
       }
 
+      const { jornada } = tvCalcularJornadaActual();
+
+      const yaJugo = await tvYaJugoEstaJornada(codigo, jornada, nombre, null);
+      if (yaJugo) {
+        alert(`${nombre}, ya jugaste la Fecha ${jornada} de este torneo. Volvé a intentarlo cuando se habilite la próxima fecha.`);
+        return;
+      }
+
       tvJugadorNombre = nombre;
       tvCodigoTorneo = codigo;
 
       mostrarVista('view-juego');
-      const { jornada } = tvCalcularJornadaActual();
       tvCargarPreguntasTorneo(jornada);
     }
 
     // El creador del torneo también puede participar de su propio torneo
     // desde "Mis Torneos Activos", sin pasar por el formulario de invitado
     // (reutiliza la misma lógica y el mismo motor de juego que ingresarAlJuego).
-    function jugarMiTorneo(codigo) {
+    async function jugarMiTorneo(codigo) {
       const nombre = currentPerfil ? currentPerfil.nombre_apellido : 'Organizador';
+      const { jornada } = tvCalcularJornadaActual();
+
+      const yaJugo = await tvYaJugoEstaJornada(codigo, jornada, nombre, currentUser ? currentUser.id : null);
+      if (yaJugo) {
+        alert(`Ya jugaste la Fecha ${jornada} de este torneo. Volvé a intentarlo cuando se habilite la próxima fecha.`);
+        return;
+      }
 
       tvJugadorNombre = nombre;
       tvCodigoTorneo = codigo;
 
       mostrarVista('view-juego');
-      const { jornada } = tvCalcularJornadaActual();
       tvCargarPreguntasTorneo(jornada);
     }
 
@@ -725,6 +761,10 @@
             torneo_codigo: tvCodigoTorneo,
             jugador_nombre: tvJugadorNombre,
             puntaje_total: tvPuntosTotales,
+            // Qué jornada (1 a 30, calendario real) corresponde a este resultado.
+            // Junto con el índice único en la base, evita que el mismo jugador
+            // sume puntos dos veces en la misma fecha.
+            jornada: tvFechaActiva,
             // Si quien juega tiene una cuenta logueada, guardamos su perfil_id
             // para que el "Puesto mundial" (ranking_perfil) pueda encontrar sus
             // resultados. Los invitados sin cuenta quedan con perfil_id null
@@ -733,8 +773,13 @@
           });
           if (error) {
             console.error('No se pudo guardar el resultado del torneo:', error);
+            // 23505 = violación de índice único: alguien (o dos pestañas del
+            // mismo jugador) ya había guardado un resultado para esta jornada.
+            const mensaje = error.code === '23505'
+              ? 'Ya hay un puntaje guardado para vos en esta fecha del torneo.'
+              : `No se pudo guardar tu puntaje: ${error.message}`;
             document.getElementById('tv-contenedorOpciones').innerHTML =
-              `<p class="tv-msg error">No se pudo guardar tu puntaje: ${error.message}</p>` + tvBotonFinal();
+              `<p class="tv-msg error">${mensaje}</p>` + tvBotonFinal();
             return;
           }
         }
