@@ -782,6 +782,19 @@
               `<p class="tv-msg error">${mensaje}</p>` + tvBotonFinal();
             return;
           }
+
+          // Avisamos al organizador que alguien jugó su torneo. Es "mejor esfuerzo":
+          // si falla (o el organizador no tiene notificaciones activadas), no
+          // interrumpe el juego ni el ranking del jugador.
+          supabaseClient.functions.invoke('enviar-notificacion', {
+            body: {
+              codigo: tvCodigoTorneo,
+              jugador_nombre: tvJugadorNombre,
+              puntaje: tvPuntosTotales,
+              jornada: tvFechaActiva,
+              jugador_perfil_id: currentUser ? currentUser.id : null
+            }
+          }).catch(err => console.error('No se pudo notificar al organizador:', err));
         }
 
         await tvMostrarRankingFinal(tvCodigoTorneo);
@@ -1044,6 +1057,18 @@
       await cargarCarruselAuspiciantes();
     }
 
+    // Vincula este dispositivo con la cuenta del usuario en OneSignal, para poder
+    // mandarle avisos puntuales (ej: "alguien jugó tu torneo") a ÉL específicamente,
+    // sin depender del orden de carga del SDK (usa la misma cola que el init).
+    function tvVincularOneSignal(perfilId) {
+      if (!perfilId) return;
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(async function(OneSignal) {
+        try { await OneSignal.login(String(perfilId)); }
+        catch (e) { console.error('No se pudo vincular OneSignal con el perfil:', e); }
+      });
+    }
+
     document.getElementById('form-login').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('btn-login-submit');
@@ -1065,6 +1090,7 @@
 
       currentUser = data.user;
       currentPerfil = await cargarPerfil(currentUser.id);
+      tvVincularOneSignal(currentUser.id);
       if (pendingInviteCode) {
         mostrarVista('view-unirse-mundial');
         await cargarVistaUnirseMundial(pendingInviteCode);
@@ -1115,6 +1141,7 @@
 
       currentUser = data.user;
       currentPerfil = { id: data.user.id, correo: email, nombre_apellido: nombre, pais, ciudad, iglesia };
+      tvVincularOneSignal(currentUser.id);
       if (pendingInviteCode) {
         mostrarVista('view-unirse-mundial');
         await cargarVistaUnirseMundial(pendingInviteCode);
@@ -2000,6 +2027,7 @@ function estadoTorneoTexto(t){
       if (session) {
         currentUser = session.user;
         currentPerfil = await cargarPerfil(currentUser.id);
+        tvVincularOneSignal(currentUser.id);
       }
 
       // La invitación al Mundial se resuelve primero, haya o no sesión activa:
