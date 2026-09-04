@@ -136,8 +136,11 @@
         <span class="text-xl font-bold tracking-wide" style="font-family:'Fraunces',serif;">IdEclesia</span>
         <span class="text-xs px-2 py-1 rounded font-bold" style="background:var(--accent);color:var(--primary-dark);">TORNEOS</span>
       </div>
-      <button id="btn-home" onclick="mostrarVista('view-menu')" class="hidden-view text-sm text-blue-100 hover:text-white transition">Volver al Inicio</button>
-      <button id="btn-logout" onclick="cerrarSesion()" class="hidden-view text-sm px-3 py-1.5 rounded transition" style="background:rgba(255,255,255,.15);">Cerrar Sesión</button>
+      <div class="flex items-center space-x-2">
+        <button id="btn-instalar-app" onclick="instalarPWA()" class="hidden-view text-sm px-3 py-1.5 rounded font-semibold transition" style="background:var(--accent);color:var(--primary-dark);">📲 Instalar App</button>
+        <button id="btn-home" onclick="mostrarVista('view-menu')" class="hidden-view text-sm text-blue-100 hover:text-white transition">Volver al Inicio</button>
+        <button id="btn-logout" onclick="cerrarSesion()" class="hidden-view text-sm px-3 py-1.5 rounded transition" style="background:rgba(255,255,255,.15);">Cerrar Sesión</button>
+      </div>
     </div>
   </header>
 
@@ -1924,6 +1927,62 @@ function estadoTorneoTexto(t){
       mostrarVista('view-menu');
     })();
   </script>
+<!-- Instalación de la PWA (botón "Instalar App") -->
+<script>
+  let deferredPromptPWA = null;
+  const btnInstalarApp = () => document.getElementById('btn-instalar-app');
+
+  function appYaInstalada() {
+    return window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true; // iOS
+  }
+
+  function esIOS() {
+    return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+  }
+
+  // Android / Chrome / Edge: el navegador dispara este evento cuando la app
+  // cumple los requisitos de instalación (manifest + service worker + https).
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPromptPWA = e;
+    if (!appYaInstalada() && btnInstalarApp()) {
+      btnInstalarApp().classList.remove('hidden-view');
+    }
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredPromptPWA = null;
+    if (btnInstalarApp()) btnInstalarApp().classList.add('hidden-view');
+  });
+
+  async function instalarPWA() {
+    if (deferredPromptPWA) {
+      deferredPromptPWA.prompt();
+      const { outcome } = await deferredPromptPWA.userChoice;
+      deferredPromptPWA = null;
+      if (outcome === 'accepted' && btnInstalarApp()) {
+        btnInstalarApp().classList.add('hidden-view');
+      }
+      return;
+    }
+    // iOS Safari no soporta el prompt automático: mostramos instrucciones.
+    if (esIOS()) {
+      alert('Para instalar la app en tu iPhone:\n\n1. Tocá el botón Compartir (el cuadrado con la flecha hacia arriba)\n2. Elegí "Agregar a pantalla de inicio"\n3. Tocá "Agregar"');
+    } else {
+      alert('Para instalar la app, abrí el menú de tu navegador (⋮) y elegí "Instalar aplicación" o "Agregar a pantalla de inicio".');
+    }
+  }
+
+  // Si ya está instalada (o es iOS, donde no hay evento beforeinstallprompt),
+  // mostramos el botón igual para que el usuario tenga las instrucciones a mano.
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!appYaInstalada() && esIOS() && btnInstalarApp()) {
+      btnInstalarApp().classList.remove('hidden-view');
+    }
+  });
+</script>
+
 <!-- SDK Oficial de OneSignal (notificaciones push) -->
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <script>
