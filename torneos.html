@@ -549,6 +549,45 @@
       }
     }
 
+    // ===================== CALENDARIO FIJO DEL TORNEO BÍBLICO =====================
+    // Igual criterio que el Mundial: qué preguntas tocan HOY depende del calendario
+    // real, no de cuándo cada organizador creó su propio torneo. Así todos los
+    // torneos activos el mismo día real juegan las mismas preguntas, y el ranking
+    // mundial (puesto por perfil) es comparable entre todos los jugadores.
+    //
+    // Cada "fecha_torneo" en la base tiene 30 preguntas. Como ahora cada jornada
+    // real usa solo 15, partimos cada fecha_torneo en 2 jornadas:
+    //   Jornada 1 (1/9) -> fecha_torneo 1, preguntas 1 a 15
+    //   Jornada 2 (2/9) -> fecha_torneo 1, preguntas 16 a 30
+    //   Jornada 3 (3/9) -> fecha_torneo 2, preguntas 1 a 15
+    //   Jornada 4 (4/9) -> fecha_torneo 2, preguntas 16 a 30  ... y así.
+    // Ajustar TV_CALENDARIO_ANIO/MES/DIA si cambia la edición del torneo.
+    const TV_CALENDARIO_ANIO = 2026;
+    const TV_CALENDARIO_MES = 8; // 8 = septiembre (0 = enero) -> jornada 1 = 1/9
+    const TV_CALENDARIO_DIA = 1;
+    const TV_TOTAL_JORNADAS = 30; // 15 fecha_torneo x 2 mitades
+
+    // Devuelve la jornada (1 a 30) que corresponde jugar hoy según el calendario real.
+    function tvCalcularJornadaActual(ahora = new Date()) {
+      const anchor = new Date(TV_CALENDARIO_ANIO, TV_CALENDARIO_MES, TV_CALENDARIO_DIA);
+      const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+      const diasTranscurridos = Math.round((hoy - anchor) / 86400000);
+      const jornada = diasTranscurridos + 1;
+
+      if (jornada < 1) return { jornada: 1, estado: 'no_empezo' };
+      if (jornada > TV_TOTAL_JORNADAS) return { jornada: TV_TOTAL_JORNADAS, estado: 'finalizado' };
+      return { jornada, estado: 'en_curso' };
+    }
+
+    // Convierte la jornada real (1 a 30) en la fecha_torneo de la base (1 a 15)
+    // y en qué mitad de sus 30 preguntas corresponde (1ra o 2da mitad de 15).
+    function tvMapearJornada(jornada) {
+      return {
+        dbFecha: Math.ceil(jornada / 2),
+        mitad: (jornada % 2 === 1) ? 1 : 2
+      };
+    }
+
     // 3. LÓGICA DE INVITADOS (JUGAR)
     // NOTA: preguntas_torneo no tiene columna "torneo", solo fecha_torneo.
     // Por eso el motor de juego reemplaza el redirect a JUEGO_URL (index.html, no compartido)
@@ -569,7 +608,8 @@
       tvCodigoTorneo = codigo;
 
       mostrarVista('view-juego');
-      tvCargarPreguntasTorneo(1); // Fecha 1 por defecto: ajustar cuando se defina cómo mapear "código" -> fecha_torneo
+      const { jornada } = tvCalcularJornadaActual();
+      tvCargarPreguntasTorneo(jornada);
     }
 
     // El creador del torneo también puede participar de su propio torneo
@@ -582,7 +622,8 @@
       tvCodigoTorneo = codigo;
 
       mostrarVista('view-juego');
-      tvCargarPreguntasTorneo(1); // Fecha 1 por defecto: mismo criterio que ingresarAlJuego()
+      const { jornada } = tvCalcularJornadaActual();
+      tvCargarPreguntasTorneo(jornada);
     }
 
     // --- MOTOR DE JUEGO: preguntas_torneo (adaptado de mundial.html) ---
@@ -595,23 +636,34 @@
     let tvFechaActiva = 1;
     let tvResultadoGuardado = false;
 
-    async function tvCargarPreguntasTorneo(numeroFecha) {
-      tvFechaActiva = numeroFecha;
+    async function tvCargarPreguntasTorneo(numeroJornada) {
+      tvFechaActiva = numeroJornada; // se muestra al jugador como "Fecha N" (N = jornada real, 1 a 30)
+      const { dbFecha, mitad } = tvMapearJornada(numeroJornada);
 
       try {
         // Nunca seleccionamos respuesta_correcta ni es_ordenamiento: la validación
         // se hace en el servidor vía RPC para no exponer la respuesta al cliente.
+        // order('id') es clave: así la "1ra mitad" y "2da mitad" son siempre
+        // las mismas 15 preguntas para todo el mundo.
         const { data, error } = await supabaseClient
           .from('preguntas_torneo')
           .select('id, categoria, pregunta_es, opcion_1_es, opcion_2_es, opcion_3_es, pregunta_pt, opcion_1_pt, opcion_2_pt, opcion_3_pt, pregunta_en, opcion_1_en, opcion_2_en, opcion_3_en, es_ordenamiento')
-          .eq('fecha_torneo', tvFechaActiva);
+          .eq('fecha_torneo', dbFecha)
+          .order('id', { ascending: true });
 
         if (error) throw error;
 
         // Por ahora dejamos afuera las preguntas de "ordenar" (es_ordenamiento = true);
         // este motor solo maneja opción múltiple.
-        tvBaseDeDatosPreguntas = data
-          .filter(row => !row.es_ordenamiento)
+        const preguntasDeLaFecha = data.filter(row => !row.es_ordenamiento);
+
+        // Cada fecha_torneo trae 30 preguntas: la jornada impar usa la 1ra mitad
+        // (posiciones 0-14), la jornada par usa la 2da mitad (posiciones 15-29).
+        const preguntasDeHoy = mitad === 1
+          ? preguntasDeLaFecha.slice(0, 15)
+          : preguntasDeLaFecha.slice(15, 30);
+
+        tvBaseDeDatosPreguntas = preguntasDeHoy
           .map(row => ({
             id: row.id,
             categoria: row.categoria,
@@ -672,7 +724,12 @@
           const { error } = await supabaseClient.from('torneo_resultados').insert({
             torneo_codigo: tvCodigoTorneo,
             jugador_nombre: tvJugadorNombre,
-            puntaje_total: tvPuntosTotales
+            puntaje_total: tvPuntosTotales,
+            // Si quien juega tiene una cuenta logueada, guardamos su perfil_id
+            // para que el "Puesto mundial" (ranking_perfil) pueda encontrar sus
+            // resultados. Los invitados sin cuenta quedan con perfil_id null
+            // (siguen sumando al ranking del torneo, pero no al puesto mundial).
+            perfil_id: currentUser ? currentUser.id : null
           });
           if (error) {
             console.error('No se pudo guardar el resultado del torneo:', error);
@@ -1082,23 +1139,17 @@
       await cargarMisTorneos();
     }
 
+// Usa el mismo calendario global que el motor de juego (tvCalcularJornadaActual):
+// la "fecha" que ve el organizador es la jornada real de hoy, no algo calculado
+// a partir de cuándo creó su propio torneo. "cantidadFechas" solo define cuántas
+// jornadas dura ESTE torneo en particular antes de darse por finalizado.
 function calcularFechaActual(fechaInicioStr, cantidadFechas){
-  const hoy = new Date();
-  // Obtenemos qué día del mes es hoy (ej: hoy es 3)
-  const diaDelMes = hoy.getDate(); 
-  
-  // Le restamos 1 para que el día 1 del mes sea "0 días transcurridos"
-  const diasTranscurridos = diaDelMes - 1; 
+  const { jornada, estado } = tvCalcularJornadaActual();
 
-  // Calculamos la fecha dividiendo por 2 (cada fecha dura 2 días del mes)
-  const fecha = Math.floor(diasTranscurridos / 2) + 1; 
-  
-  // Determinamos si es la primera o segunda mitad de esa fecha
-  const subDia = (diasTranscurridos % 2) + 1; 
+  if (estado === 'no_empezo') return { estado: 'no-empezo' };
+  if (jornada > cantidadFechas) return { estado: 'termino' };
 
-  if (fecha > cantidadFechas) return { estado: 'termino' };
-  
-  return { estado: 'en-curso', fecha, cantidadFechas, subDia };
+  return { estado: 'en-curso', fecha: jornada, cantidadFechas };
 }
 
 function estadoTorneoTexto(t){
