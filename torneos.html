@@ -137,7 +137,7 @@
         <span class="text-xs px-2 py-1 rounded font-bold" style="background:var(--accent);color:var(--primary-dark);">TORNEOS</span>
       </div>
       <div class="flex items-center space-x-2">
-        <button id="btn-instalar-app" onclick="instalarPWA()" class="hidden-view text-sm px-3 py-1.5 rounded font-semibold transition" style="background:var(--accent);color:var(--primary-dark);">📲 Instalar App</button>
+        <button id="btn-instalar-app" onclick="instalarPWA()" class="hidden-view text-sm px-3 py-1.5 rounded font-semibold transition" style="background:var(--accent);color:var(--primary-dark);">📲 Instalar acceso</button>
         <button id="btn-home" onclick="mostrarVista('view-menu')" class="hidden-view text-sm text-blue-100 hover:text-white transition">Volver al Inicio</button>
         <button id="btn-logout" onclick="cerrarSesion()" class="hidden-view text-sm px-3 py-1.5 rounded transition" style="background:rgba(255,255,255,.15);">Cerrar Sesión</button>
       </div>
@@ -1968,9 +1968,9 @@ function estadoTorneoTexto(t){
     }
     // iOS Safari no soporta el prompt automático: mostramos instrucciones.
     if (esIOS()) {
-      alert('Para instalar la app en tu iPhone:\n\n1. Tocá el botón Compartir (el cuadrado con la flecha hacia arriba)\n2. Elegí "Agregar a pantalla de inicio"\n3. Tocá "Agregar"');
+      alert('Para agregar el acceso directo en tu iPhone:\n\n1. Tocá el botón Compartir (el cuadrado con la flecha hacia arriba)\n2. Elegí "Agregar a pantalla de inicio"\n3. Tocá "Agregar"');
     } else {
-      alert('Para instalar la app, abrí el menú de tu navegador (⋮) y elegí "Instalar aplicación" o "Agregar a pantalla de inicio".');
+      alert('Para agregar el acceso directo, abrí el menú de tu navegador (⋮) y elegí "Instalar aplicación" o "Agregar a pantalla de inicio".');
     }
   }
 
