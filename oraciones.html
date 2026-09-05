@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>IdEclesia | Rincón de Oración</title>
+
+<meta name="theme-color" content="#1B4E82">
+<link rel="manifest" href="manifest.json">
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --primary:#1B4E82;
+    --primary-dark:#123457;
+    --secondary:#EAF3FA;
+    --accent:#D9995C;
+    --accent-soft:#F7E2B8;
+    --background:#F4F8FB;
+    --surface:#FFFFFF;
+    --text:#16233A;
+    --text-soft:#4C5C72;
+    --danger:#B4543A;
+    --sage:#3F7A4E;
+    --sage-soft:#DCEEDF;
+    --radius-lg:26px;
+    --radius-md:18px;
+    --shadow-sm:0 4px 14px -6px rgba(18,52,87,.22);
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:"Plus Jakarta Sans",system-ui,sans-serif;
+    background:
+      radial-gradient(80% 60% at 15% -10%, #DCEBF6 0%, transparent 60%),
+      radial-gradient(70% 50% at 110% 10%, #F7E2B8 0%, transparent 55%),
+      var(--background);
+    color:var(--text);
+  }
+  h1,h2,h3{font-family:"Fraunces",serif;font-weight:700;color:var(--primary-dark);letter-spacing:-.01em;}
+
+  .tv-card{background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border:1px solid #DCE9F5;}
+
+  .logo-slot{width:100%;max-width:220px;margin:4px auto 14px;display:flex;align-items:center;justify-content:center;}
+  .logo-slot img{width:100%;display:block;}
+  .logo-slot.small{max-width:44px;margin:0;}
+
+  .btn{appearance:none;border:none;cursor:pointer;font-weight:700;font-size:1rem;padding:14px 20px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .15s ease, opacity .15s ease, background .15s ease;min-height:48px;font-family:inherit;}
+  .btn:active{transform:scale(.97);}
+  .btn-primary{background:var(--primary);color:#fff;box-shadow:var(--shadow-sm);}
+  .btn-primary:hover{background:var(--primary-dark);}
+  .btn-accent{background:var(--accent);color:#3B2B08;box-shadow:var(--shadow-sm);}
+  .btn-outline{background:transparent;color:var(--primary);border:2px solid var(--primary);}
+  .btn-outline:hover{background:var(--secondary);}
+  .btn-block{width:100%;}
+  .btn-sm{padding:9px 14px;min-height:auto;font-size:.82rem;border-radius:999px;}
+  .btn[disabled]{opacity:.5;cursor:not-allowed;}
+
+  .tv-input{width:100%;padding:13px 14px;border-radius:var(--radius-md);border:2px solid #DCE9F5;background:var(--secondary);font-size:.98rem;font-family:inherit;color:var(--text);resize:vertical;}
+  .tv-input:focus{border-color:var(--accent);outline:none;}
+  .tv-label{display:block;font-size:.82rem;font-weight:700;color:var(--text-soft);margin-bottom:8px;}
+
+  /* Selector de alcance: mismo lenguaje visual que tv-btn-lang */
+  .scope-btn{background:#fff;border:2px solid #DCE9F5;padding:8px 14px;border-radius:999px;cursor:pointer;font-weight:700;font-size:.8rem;color:var(--primary);font-family:inherit;transition:all .15s;}
+  .scope-btn.activo{background:var(--primary);color:#fff;border-color:var(--primary);}
+
+  .filter-btn{background:#fff;border:2px solid #DCE9F5;padding:6px 12px;border-radius:999px;cursor:pointer;font-weight:700;font-size:.75rem;color:var(--text-soft);font-family:inherit;}
+  .filter-btn.activo{background:var(--secondary);color:var(--primary-dark);border-color:var(--primary);}
+
+  .oracion-item{padding:16px 0;border-bottom:1px solid #DCE9F5;}
+  .oracion-item:last-child{border-bottom:none;}
+  .oracion-texto{font-family:"Fraunces",serif;font-style:italic;font-size:1rem;line-height:1.5;color:var(--text);margin-bottom:8px;}
+  .oracion-meta{display:flex;align-items:center;gap:8px;font-size:.75rem;color:var(--text-soft);margin-bottom:10px;}
+  .tag{font-size:.68rem;font-weight:800;padding:3px 10px;border-radius:999px;background:var(--secondary);color:var(--primary-dark);letter-spacing:.02em;}
+  .oracion-footer{display:flex;align-items:center;justify-content:space-between;}
+  .pray-count{font-size:.78rem;color:var(--text-soft);font-weight:600;}
+
+  .action-btn{font-family:inherit;font-size:.8rem;font-weight:800;padding:8px 16px;border-radius:999px;cursor:pointer;border:2px solid var(--accent);background:transparent;color:#8A5A22;transition:background .15s;}
+  .action-btn:hover{background:var(--accent-soft);}
+  .action-btn.hecho{border-color:var(--sage);color:var(--sage);background:var(--sage-soft);cursor:default;}
+
+  .empty{color:var(--text-soft);font-size:.85rem;font-style:italic;padding:10px 0;}
+
+  footer.credit{text-align:center;font-size:.72rem;color:#8FA0B6;margin-top:34px;padding-bottom:24px;}
+
+  #toast{
+    position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+    background:var(--primary-dark);color:#fff;font-size:.85rem;font-weight:600;
+    padding:12px 20px;border-radius:14px;box-shadow:0 10px 26px rgba(18,52,87,.35);
+    opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;max-width:90vw;text-align:center;z-index:50;
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <header style="background:var(--primary);" class="text-white shadow-md">
+    <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <div class="logo-slot small">
+          <img src="logo-oracion.png" alt="Rincón de Oración">
+        </div>
+        <span class="text-xl font-bold tracking-wide" style="font-family:'Fraunces',serif;">IdEclesia</span>
+        <span class="text-xs px-2 py-1 rounded font-bold" style="background:var(--accent);color:var(--primary-dark);">ORACIÓN</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button onclick="history.back()" class="text-sm text-blue-100 hover:text-white transition">← Volver al perfil</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 w-full max-w-2xl mx-auto px-4 py-8">
+
+    <div class="text-center mb-8">
+      <div class="logo-slot">
+        <img src="logo-oracion.png" alt="Rincón de Oración">
+      </div>
+      <h1 class="text-2xl mb-1">Rincón de Oración</h1>
+      <p class="text-sm" style="color:var(--text-soft);">Compartí lo que llevás en el corazón, y acompañá en oración a otros de tu comunidad.</p>
+    </div>
+
+    <!-- Compose -->
+    <div class="tv-card p-6 mb-10">
+      <textarea id="prayerInput" class="tv-input" rows="3" placeholder="Escribí tu motivo de oración..."></textarea>
+
+      <div class="mt-4">
+        <span class="tv-label">¿Con quién lo compartís?</span>
+        <div class="flex flex-wrap gap-2 mb-4" id="scopeRow">
+          <button class="scope-btn activo" data-scope="comunidad">Mi comunidad</button>
+          <button class="scope-btn" data-scope="ciudad">Mi ciudad</button>
+          <button class="scope-btn" data-scope="pais">Mi país</button>
+          <button class="scope-btn" data-scope="todos">Todos</button>
+        </div>
+      </div>
+
+      <div class="flex justify-end">
+        <button class="btn btn-accent" id="sendBtn">Enviar motivo</button>
+      </div>
+    </div>
+
+    <!-- Sección: tus motivos -->
+    <section class="mb-10">
+      <h2 class="text-lg mb-1">Tus motivos enviados</h2>
+      <p class="text-sm mb-4" style="color:var(--text-soft);">Marcá "Oración contestada" cuando Dios responda — así festejan junto a vos.</p>
+      <div class="tv-card p-6">
+        <div id="sentList"></div>
+        <p class="empty" id="sentEmpty" style="display:none;">Todavía no enviaste ningún motivo.</p>
+      </div>
+    </section>
+
+    <!-- Sección: ora por otros -->
+    <section>
+      <h2 class="text-lg mb-1">Ora por otros</h2>
+      <p class="text-sm mb-4" style="color:var(--text-soft);">Pedidos según tu alcance: Iglesia Evangelio &amp; Vida · Asunción · Paraguay</p>
+      <div class="flex flex-wrap gap-2 mb-4" id="filterRow">
+        <button class="filter-btn activo" data-filter="todos">Todos</button>
+        <button class="filter-btn" data-filter="comunidad">Comunidad</button>
+        <button class="filter-btn" data-filter="ciudad">Ciudad</button>
+        <button class="filter-btn" data-filter="pais">País</button>
+      </div>
+      <div class="tv-card p-6">
+        <div id="othersList"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="credit">IdEclesia · Rincón de Oración</footer>
+
+<div id="toast"></div>
+
+<script>
+const scopeLabels = { comunidad:'Comunidad', ciudad:'Ciudad', pais:'País', todos:'Todos' };
+const scopeReachText = {
+  comunidad: 'tu comunidad',
+  ciudad: 'tu ciudad',
+  pais: 'tu país',
+  todos: 'todos los usuarios'
+};
+
+let selectedScope = 'comunidad';
+let sentPrayers = [];
+
+// Motivo de ejemplo, solo para mostrar cómo se ve un pedido cargado.
+// Se reemplaza por los pedidos reales en cuanto haya datos de la base.
+let othersPrayers = [
+  { id: 1, name:'Ejemplo', scope:'comunidad', text:'Así se ve un motivo de oración: escribí el tuyo arriba 🙏', time:'ejemplo', praying:false, count: 0 },
+];
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=> t.classList.remove('show'), 3200);
+}
+
+document.getElementById('scopeRow').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.scope-btn');
+  if(!btn) return;
+  document.querySelectorAll('.scope-btn').forEach(b=>b.classList.remove('activo'));
+  btn.classList.add('activo');
+  selectedScope = btn.dataset.scope;
+});
+
+document.getElementById('sendBtn').addEventListener('click', ()=>{
+  const input = document.getElementById('prayerInput');
+  const text = input.value.trim();
+  if(!text) return;
+  sentPrayers.unshift({
+    id: Date.now(), text, scope: selectedScope, answered:false, count: 0, time:'recién'
+  });
+  input.value = '';
+  renderSent();
+  showToast(`Notificamos por push a ${scopeReachText[selectedScope]} 🙏`);
+});
+
+function markAnswered(id){
+  const p = sentPrayers.find(x=>x.id===id);
+  if(!p || p.answered) return;
+  p.answered = true;
+  renderSent();
+  showToast(`Avisamos a ${p.count} persona${p.count===1?'':'s'} que oró que tu oración fue contestada 🎉`);
+}
+
+function toggleFilter(filter){
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('activo', b.dataset.filter===filter));
+  renderOthers(filter);
+}
+document.getElementById('filterRow').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.filter-btn');
+  if(!btn) return;
+  toggleFilter(btn.dataset.filter);
+});
+
+function markPraying(id){
+  const p = othersPrayers.find(x=>x.id===id);
+  if(!p || p.praying) return;
+  p.praying = true;
+  p.count += 1;
+  const currentFilter = document.querySelector('.filter-btn.activo').dataset.filter;
+  renderOthers(currentFilter);
+  showToast(`Le avisamos a ${p.name} que estás orando por su pedido`);
+}
+
+function renderSent(){
+  const list = document.getElementById('sentList');
+  const empty = document.getElementById('sentEmpty');
+  list.innerHTML = '';
+  empty.style.display = sentPrayers.length ? 'none' : 'block';
+  sentPrayers.forEach(p=>{
+    const div = document.createElement('div');
+    div.className = 'oracion-item';
+    div.innerHTML = `
+      <div class="oracion-texto">${escapeHtml(p.text)}</div>
+      <div class="oracion-meta">
+        <span class="tag">${scopeLabels[p.scope]}</span>
+        <span>${p.time}</span>
+      </div>
+      <div class="oracion-footer">
+        <span class="pray-count">${p.count} orando</span>
+        <button class="action-btn ${p.answered ? 'hecho':''}" ${p.answered ? 'disabled':''} onclick="markAnswered(${p.id})">
+          ${p.answered ? 'Respondida ✓' : 'Oración contestada'}
+        </button>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+function renderOthers(filter='todos'){
+  const list = document.getElementById('othersList');
+  list.innerHTML = '';
+  const filtered = othersPrayers.filter(p => filter==='todos' ? true : p.scope===filter);
+  if(!filtered.length){
+    list.innerHTML = '<p class="empty">No hay pedidos en este alcance por ahora.</p>';
+    return;
+  }
+  filtered.forEach(p=>{
+    const div = document.createElement('div');
+    div.className = 'oracion-item';
+    div.innerHTML = `
+      <div class="oracion-texto">${escapeHtml(p.text)}</div>
+      <div class="oracion-meta">
+        <span>${p.name}</span>
+        <span class="tag">${scopeLabels[p.scope]}</span>
+        <span>${p.time}</span>
+      </div>
+      <div class="oracion-footer">
+        <span class="pray-count">${p.count} orando</span>
+        <button class="action-btn ${p.praying ? 'hecho':''}" ${p.praying ? 'disabled':''} onclick="markPraying(${p.id})">
+          ${p.praying ? 'Orando ✓' : '🙏 Orando'}
+        </button>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+renderSent();
+renderOthers('todos');
+</script>
+
+<!-- SDK Oficial de OneSignal (notificaciones push) - mismo appId que el resto de la app -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "135934c4-a3f9-4ef6-b54e-7912fce14e51",
+      notifyButton: { enable: true },
+      allowLocalhostAsSecureOrigin: true
+    });
+  });
+</script>
+</body>
+</html>
