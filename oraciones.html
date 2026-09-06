@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#1B4E82">
 <link rel="manifest" href="manifest.json">
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -155,7 +156,7 @@
     <!-- Sección: ora por otros -->
     <section>
       <h2 class="text-lg mb-1">Ora por otros</h2>
-      <p class="text-sm mb-4" style="color:var(--text-soft);">Pedidos según tu alcance: Iglesia Evangelio &amp; Vida · Asunción · Paraguay</p>
+      <p class="text-sm mb-4" id="reachText" style="color:var(--text-soft);">Cargando tu alcance...</p>
       <div class="flex flex-wrap gap-2 mb-4" id="filterRow">
         <button class="filter-btn activo" data-filter="todos">Todos</button>
         <button class="filter-btn" data-filter="comunidad">Comunidad</button>
@@ -174,6 +175,11 @@
 <div id="toast"></div>
 
 <script>
+// 1. CONEXIÓN SUPABASE (mismas credenciales que torneos.html / index.html)
+const SUPABASE_URL = "https://wfwmyuuxceyulmkhogqr.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_hrR11nillC0GtzH50LqQfQ_qEqX9FX6";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 const scopeLabels = { comunidad:'Comunidad', ciudad:'Ciudad', pais:'País', todos:'Todos' };
 const scopeReachText = {
   comunidad: 'tu comunidad',
@@ -183,13 +189,11 @@ const scopeReachText = {
 };
 
 let selectedScope = 'comunidad';
+let currentUser = null;
+let miPerfil = null;
 let sentPrayers = [];
-
-// Motivo de ejemplo, solo para mostrar cómo se ve un pedido cargado.
-// Se reemplaza por los pedidos reales en cuanto haya datos de la base.
-let othersPrayers = [
-  { id: 1, name:'Ejemplo', scope:'comunidad', text:'Así se ve un motivo de oración: escribí el tuyo arriba 🙏', time:'ejemplo', praying:false, count: 0 },
-];
+let othersPrayers = [];
+let misInteracciones = new Set(); // ids de motivos por los que ya oré
 
 function showToast(msg){
   const t = document.getElementById('toast');
@@ -197,6 +201,18 @@ function showToast(msg){
   t.classList.add('show');
   clearTimeout(t._timer);
   t._timer = setTimeout(()=> t.classList.remove('show'), 3200);
+}
+
+function tiempoRelativo(fechaISO){
+  const diffMs = Date.now() - new Date(fechaISO).getTime();
+  const min = Math.floor(diffMs/60000);
+  if(min < 1) return 'recién';
+  if(min < 60) return `hace ${min} min`;
+  const horas = Math.floor(min/60);
+  if(horas < 24) return `hace ${horas} h`;
+  const dias = Math.floor(horas/24);
+  if(dias === 1) return 'ayer';
+  return `hace ${dias} días`;
 }
 
 document.getElementById('scopeRow').addEventListener('click', (e)=>{
@@ -207,24 +223,66 @@ document.getElementById('scopeRow').addEventListener('click', (e)=>{
   selectedScope = btn.dataset.scope;
 });
 
-document.getElementById('sendBtn').addEventListener('click', ()=>{
+document.getElementById('sendBtn').addEventListener('click', async ()=>{
   const input = document.getElementById('prayerInput');
   const text = input.value.trim();
-  if(!text) return;
-  sentPrayers.unshift({
-    id: Date.now(), text, scope: selectedScope, answered:false, count: 0, time:'recién'
-  });
+  if(!text || !miPerfil) return;
+  const sendBtn = document.getElementById('sendBtn');
+  sendBtn.disabled = true;
+
+  const { data, error } = await supabaseClient
+    .from('motivos_oracion')
+    .insert({
+      autor_id: currentUser.id,
+      autor_nombre: miPerfil.nombre_apellido,
+      texto: text,
+      alcance: selectedScope,
+      iglesia: miPerfil.iglesia,
+      ciudad: miPerfil.ciudad,
+      pais: miPerfil.pais
+    })
+    .select()
+    .single();
+
+  sendBtn.disabled = false;
+
+  if(error){
+    console.error(error);
+    showToast('No se pudo enviar el motivo, intentá de nuevo');
+    return;
+  }
+
+  sentPrayers.unshift(data);
   input.value = '';
   renderSent();
   showToast(`Notificamos por push a ${scopeReachText[selectedScope]} 🙏`);
+
+  // TODO paso 3: invocar la Edge Function que envía el push real por alcance
+  // supabaseClient.functions.invoke('notificar-oracion', { body: { tipo:'nuevo_motivo', motivo_id: data.id } });
 });
 
-function markAnswered(id){
+async function markAnswered(id){
   const p = sentPrayers.find(x=>x.id===id);
-  if(!p || p.answered) return;
-  p.answered = true;
+  if(!p || p.respondida) return;
+
+  const { error } = await supabaseClient
+    .from('motivos_oracion')
+    .update({ respondida:true, respondida_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('autor_id', currentUser.id);
+
+  if(error){
+    console.error(error);
+    showToast('No se pudo marcar como respondida');
+    return;
+  }
+
+  p.respondida = true;
   renderSent();
-  showToast(`Avisamos a ${p.count} persona${p.count===1?'':'s'} que oró que tu oración fue contestada 🎉`);
+  showToast(`Avisamos a ${p.cantidad_orando} persona${p.cantidad_orando===1?'':'s'} que oró que tu oración fue contestada 🎉`);
+
+  // TODO paso 3: invocar la Edge Function que avisa a quienes oraron
+  // supabaseClient.functions.invoke('notificar-oracion', { body: { tipo:'respondida', motivo_id: id } });
 }
 
 function toggleFilter(filter){
@@ -237,14 +295,25 @@ document.getElementById('filterRow').addEventListener('click', (e)=>{
   toggleFilter(btn.dataset.filter);
 });
 
-function markPraying(id){
+async function markPraying(id){
   const p = othersPrayers.find(x=>x.id===id);
-  if(!p || p.praying) return;
-  p.praying = true;
-  p.count += 1;
+  if(!p || misInteracciones.has(id)) return;
+
+  const { error } = await supabaseClient.rpc('orar_por_motivo', { p_motivo_id: id });
+  if(error){
+    console.error(error);
+    showToast('No se pudo registrar que estás orando');
+    return;
+  }
+
+  misInteracciones.add(id);
+  p.cantidad_orando += 1;
   const currentFilter = document.querySelector('.filter-btn.activo').dataset.filter;
   renderOthers(currentFilter);
-  showToast(`Le avisamos a ${p.name} que estás orando por su pedido`);
+  showToast(`Le avisamos a ${p.autor_nombre} que estás orando por su pedido`);
+
+  // TODO paso 3: invocar la Edge Function que avisa al autor del motivo
+  // supabaseClient.functions.invoke('notificar-oracion', { body: { tipo:'alguien_oro', motivo_id: id } });
 }
 
 function renderSent(){
@@ -256,15 +325,15 @@ function renderSent(){
     const div = document.createElement('div');
     div.className = 'oracion-item';
     div.innerHTML = `
-      <div class="oracion-texto">${escapeHtml(p.text)}</div>
+      <div class="oracion-texto">${escapeHtml(p.texto)}</div>
       <div class="oracion-meta">
-        <span class="tag">${scopeLabels[p.scope]}</span>
-        <span>${p.time}</span>
+        <span class="tag">${scopeLabels[p.alcance]}</span>
+        <span>${tiempoRelativo(p.created_at)}</span>
       </div>
       <div class="oracion-footer">
-        <span class="pray-count">${p.count} orando</span>
-        <button class="action-btn ${p.answered ? 'hecho':''}" ${p.answered ? 'disabled':''} onclick="markAnswered(${p.id})">
-          ${p.answered ? 'Respondida ✓' : 'Oración contestada'}
+        <span class="pray-count">${p.cantidad_orando} orando</span>
+        <button class="action-btn ${p.respondida ? 'hecho':''}" ${p.respondida ? 'disabled':''} onclick="markAnswered('${p.id}')">
+          ${p.respondida ? 'Respondida ✓' : 'Oración contestada'}
         </button>
       </div>`;
     list.appendChild(div);
@@ -274,25 +343,26 @@ function renderSent(){
 function renderOthers(filter='todos'){
   const list = document.getElementById('othersList');
   list.innerHTML = '';
-  const filtered = othersPrayers.filter(p => filter==='todos' ? true : p.scope===filter);
+  const filtered = othersPrayers.filter(p => filter==='todos' ? true : p.alcance===filter);
   if(!filtered.length){
     list.innerHTML = '<p class="empty">No hay pedidos en este alcance por ahora.</p>';
     return;
   }
   filtered.forEach(p=>{
+    const yaOro = misInteracciones.has(p.id);
     const div = document.createElement('div');
     div.className = 'oracion-item';
     div.innerHTML = `
-      <div class="oracion-texto">${escapeHtml(p.text)}</div>
+      <div class="oracion-texto">${escapeHtml(p.texto)}</div>
       <div class="oracion-meta">
-        <span>${p.name}</span>
-        <span class="tag">${scopeLabels[p.scope]}</span>
-        <span>${p.time}</span>
+        <span>${escapeHtml(p.autor_nombre)}</span>
+        <span class="tag">${scopeLabels[p.alcance]}</span>
+        <span>${tiempoRelativo(p.created_at)}</span>
       </div>
       <div class="oracion-footer">
-        <span class="pray-count">${p.count} orando</span>
-        <button class="action-btn ${p.praying ? 'hecho':''}" ${p.praying ? 'disabled':''} onclick="markPraying(${p.id})">
-          ${p.praying ? 'Orando ✓' : '🙏 Orando'}
+        <span class="pray-count">${p.cantidad_orando} orando</span>
+        <button class="action-btn ${yaOro ? 'hecho':''}" ${yaOro ? 'disabled':''} onclick="markPraying('${p.id}')">
+          ${yaOro ? 'Orando ✓' : '🙏 Orando'}
         </button>
       </div>`;
     list.appendChild(div);
@@ -305,8 +375,62 @@ function escapeHtml(str){
   return d.innerHTML;
 }
 
-renderSent();
-renderOthers('todos');
+async function cargarDatos(){
+  // Mis motivos
+  const { data: mios } = await supabaseClient
+    .from('motivos_oracion')
+    .select('*')
+    .eq('autor_id', currentUser.id)
+    .order('created_at', { ascending:false });
+  sentPrayers = mios || [];
+  renderSent();
+
+  // Motivos de otros (RLS ya filtra según alcance vs. mi perfil)
+  const { data: otros } = await supabaseClient
+    .from('motivos_oracion')
+    .select('*')
+    .neq('autor_id', currentUser.id)
+    .order('created_at', { ascending:false });
+  othersPrayers = otros || [];
+
+  // Cuáles ya oré
+  const { data: misOraciones } = await supabaseClient
+    .from('oraciones_interacciones')
+    .select('motivo_id')
+    .eq('usuario_id', currentUser.id);
+  misInteracciones = new Set((misOraciones || []).map(r => r.motivo_id));
+
+  renderOthers('todos');
+}
+
+async function iniciar(){
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if(!session){
+    // No hay sesión activa: volvemos al login principal
+    location.href = 'index.html';
+    return;
+  }
+  currentUser = session.user;
+
+  const { data: perfil, error } = await supabaseClient
+    .from('perfiles')
+    .select('nombre_apellido, iglesia, ciudad, pais')
+    .eq('id', currentUser.id)
+    .single();
+
+  if(error || !perfil){
+    console.error(error);
+    showToast('No se pudo cargar tu perfil');
+    return;
+  }
+  miPerfil = perfil;
+  document.getElementById('reachText').textContent =
+    `Pedidos según tu alcance: Iglesia ${perfil.iglesia} · ${perfil.ciudad} · ${perfil.pais}`;
+
+  await cargarDatos();
+}
+
+iniciar();
 </script>
 
 <!-- SDK Oficial de OneSignal (notificaciones push) - mismo appId que el resto de la app -->
