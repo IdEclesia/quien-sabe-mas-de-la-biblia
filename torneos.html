@@ -2125,7 +2125,11 @@ function estadoTorneoTexto(t){
       notifyButton: {
         enable: true, // Muestra la campana flotante para suscribirse/desuscribirse
       },
-      allowLocalhostAsSecureOrigin: true
+      allowLocalhostAsSecureOrigin: true,
+      // El sitio vive en una subcarpeta (no en la raíz del dominio), así que
+      // hay que decirle a OneSignal dónde está realmente el service worker.
+      serviceWorkerPath: "/quien-sabe-mas-de-la-biblia/OneSignalSDKWorker.js",
+      serviceWorkerParam: { scope: "/quien-sabe-mas-de-la-biblia/" }
     });
   });
 </script>
