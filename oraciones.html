@@ -441,7 +441,11 @@ iniciar();
     await OneSignal.init({
       appId: "135934c4-a3f9-4ef6-b54e-7912fce14e51",
       notifyButton: { enable: true },
-      allowLocalhostAsSecureOrigin: true
+      allowLocalhostAsSecureOrigin: true,
+      // El sitio vive en una subcarpeta (no en la raíz del dominio), así que
+      // hay que decirle a OneSignal dónde está realmente el service worker.
+      serviceWorkerPath: "/quien-sabe-mas-de-la-biblia/OneSignalSDKWorker.js",
+      serviceWorkerParam: { scope: "/quien-sabe-mas-de-la-biblia/" }
     });
   });
 </script>
