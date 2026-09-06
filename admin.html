@@ -152,6 +152,15 @@
   }
   .tab-btn.active{background:var(--primary);border-color:var(--primary);color:#fff;}
 
+  /* ---------- Selector de alcance de banners ---------- */
+  .scope-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+  .scope-btn{
+    appearance:none;border:2px solid #DCE9F5;background:var(--surface);color:var(--primary);
+    font-weight:700;font-size:.8rem;padding:8px 14px;border-radius:999px;cursor:pointer;font-family:inherit;
+  }
+  .scope-btn.activo{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .tag-scope{background:var(--secondary);color:var(--primary-dark);}
+
   /* ---------- Torneos ---------- */
   .torneo-form{display:grid;gap:12px;margin-bottom:20px;}
   .torneo-form .field input{
@@ -605,6 +614,20 @@
           <div class="field">
             <label>Link al tocar el banner (opcional)</label>
             <input type="text" id="bannerLink" placeholder="https://...">
+          </div>
+          <div class="field">
+            <label>¿A quién se le muestra?</label>
+            <div class="scope-row" id="bannerScopeRow">
+              <button type="button" class="scope-btn activo" data-alcance="todos">Todos</button>
+              <button type="button" class="scope-btn" data-alcance="pais">Por país</button>
+              <button type="button" class="scope-btn" data-alcance="ciudad">Por ciudad</button>
+              <button type="button" class="scope-btn" data-alcance="comunidad">Por comunidad (iglesia)</button>
+            </div>
+          </div>
+          <div class="field" id="bannerValorField" style="display:none;">
+            <label id="bannerValorLabel">Valor</label>
+            <input type="text" id="bannerValor" list="bannerValorOpciones" placeholder="Escribí o elegí de la lista">
+            <datalist id="bannerValorOpciones"></datalist>
           </div>
           <button type="submit" class="btn" style="background:var(--primary);color:#fff;margin-top:10px;">Subir banner</button>
           <p id="bannerMsg" class="section-sub"></p>
@@ -1412,6 +1435,23 @@ document.getElementById('loginPassword').addEventListener('keydown', (e)=>{
 /* =====================================================================
    TAB: BANNERS Y AUSPICIANTES
    ===================================================================== */
+
+// Etiquetas legibles para cada tipo de alcance, usadas tanto en el badge
+// de la lista como en el label del campo "valor" del formulario.
+const ALCANCE_LABELS = {
+  todos: 'Todos',
+  pais: 'País',
+  ciudad: 'Ciudad',
+  comunidad: 'Comunidad (iglesia)'
+};
+
+function badgeAlcanceBanner(b){
+  const alcance = b.alcance || 'todos';
+  if (alcance === 'todos') return 'Todos';
+  const etiqueta = ALCANCE_LABELS[alcance] || alcance;
+  return `${etiqueta}: ${b.valor || '(sin definir)'}`;
+}
+
 async function renderBanners(){
   const cont = document.getElementById('listaBanners');
   cont.innerHTML = '<div class="loading-msg">Cargando...</div>';
@@ -1436,7 +1476,10 @@ async function renderBanners(){
         <img src="${b.imagen_url}" alt="${b.titulo || ''}" style="width:140px;height:46px;object-fit:cover;border-radius:8px;">
         <div>
           <h3>${b.titulo || '(sin título)'}</h3>
-          <div class="meta">${b.link_url ? b.link_url : 'Sin link'} · ${b.activo ? 'Activo' : 'Desactivado'}</div>
+          <div class="meta">
+            <span class="tag tag-scope">${badgeAlcanceBanner(b)}</span>
+            · ${b.link_url ? b.link_url : 'Sin link'} · ${b.activo ? 'Activo' : 'Desactivado'}
+          </div>
         </div>
       </div>
       <div class="actions">
@@ -1446,6 +1489,47 @@ async function renderBanners(){
     </div>
   `).join('');
 }
+
+// ---- Selector de alcance dentro del formulario de carga ----
+let bannerAlcanceSeleccionado = 'todos';
+
+document.getElementById('bannerScopeRow').addEventListener('click', async (e) => {
+  const btn = e.target.closest('.scope-btn');
+  if (!btn) return;
+  document.querySelectorAll('#bannerScopeRow .scope-btn').forEach(b => b.classList.remove('activo'));
+  btn.classList.add('activo');
+  bannerAlcanceSeleccionado = btn.dataset.alcance;
+
+  const campoValor = document.getElementById('bannerValorField');
+  const labelValor = document.getElementById('bannerValorLabel');
+  const inputValor = document.getElementById('bannerValor');
+  const opciones = document.getElementById('bannerValorOpciones');
+
+  if (bannerAlcanceSeleccionado === 'todos') {
+    campoValor.style.display = 'none';
+    inputValor.value = '';
+    return;
+  }
+
+  campoValor.style.display = '';
+  labelValor.textContent = bannerAlcanceSeleccionado === 'pais' ? 'País'
+    : bannerAlcanceSeleccionado === 'ciudad' ? 'Ciudad'
+    : 'Nombre de la iglesia / comunidad';
+
+  // Sugerencias tomadas de los perfiles reales, para evitar errores de tipeo
+  // (el filtro en el dashboard compara texto exacto contra el perfil del usuario).
+  const perfiles = await getPerfiles();
+  let valores;
+  if (bannerAlcanceSeleccionado === 'pais') {
+    valores = perfiles.map(p => (p.pais || '').trim());
+  } else if (bannerAlcanceSeleccionado === 'ciudad') {
+    valores = perfiles.map(p => (p.ciudad || '').trim());
+  } else {
+    valores = perfiles.map(p => (p.iglesia || '').trim());
+  }
+  const unicos = [...new Set(valores.filter(Boolean))].sort();
+  opciones.innerHTML = unicos.map(v => `<option value="${v}"></option>`).join('');
+});
 
 async function toggleBanner(id, nuevoEstado){
   const { error } = await supabaseClient.from('banners').update({ activo: nuevoEstado }).eq('id', id);
@@ -1477,8 +1561,14 @@ document.getElementById('formBanner').addEventListener('submit', async (e) => {
   const archivo = document.getElementById('bannerArchivo').files[0];
   const titulo = document.getElementById('bannerTitulo').value.trim();
   const link = document.getElementById('bannerLink').value.trim();
+  const alcance = bannerAlcanceSeleccionado;
+  const valor = document.getElementById('bannerValor').value.trim();
 
   if (!archivo) { msg.textContent = 'Elegí una imagen primero.'; return; }
+  if (alcance !== 'todos' && !valor) {
+    msg.textContent = `Completá el campo "${document.getElementById('bannerValorLabel').textContent}" o elegí "Todos".`;
+    return;
+  }
 
   msg.textContent = 'Subiendo...';
   const nombreArchivo = `${Date.now()}_${archivo.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
@@ -1498,7 +1588,9 @@ document.getElementById('formBanner').addEventListener('submit', async (e) => {
     titulo: titulo || null,
     imagen_url: urlData.publicUrl,
     link_url: link || null,
-    activo: true
+    activo: true,
+    alcance: alcance,
+    valor: alcance === 'todos' ? null : valor
   });
 
   if (errorInsert) {
@@ -1508,6 +1600,10 @@ document.getElementById('formBanner').addEventListener('submit', async (e) => {
 
   msg.textContent = '¡Banner subido correctamente!';
   document.getElementById('formBanner').reset();
+  document.querySelectorAll('#bannerScopeRow .scope-btn').forEach(b => b.classList.remove('activo'));
+  document.querySelector('#bannerScopeRow .scope-btn[data-alcance="todos"]').classList.add('activo');
+  bannerAlcanceSeleccionado = 'todos';
+  document.getElementById('bannerValorField').style.display = 'none';
   await renderBanners();
 });
 </script>
