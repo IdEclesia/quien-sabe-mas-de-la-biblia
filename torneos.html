@@ -186,6 +186,10 @@
         <button type="button" onclick="ingresarAlJuego()" class="btn btn-primary btn-block" style="margin-top:8px;">
           Comenzar Juego
         </button>
+        <button type="button" onclick="verRankingPublico()" class="btn btn-outline btn-block" style="margin-top:8px;">
+          🏆 Ver Ranking de este Torneo
+        </button>
+        <div id="ranking-publico-slot" class="mt-2"></div>
       </form>
     </div>
 
@@ -624,6 +628,60 @@
         return false; // si falla la verificación, no bloqueamos: mejor dejar intentar
       }
       return !!(data && data.length > 0);
+    }
+
+    // Trae y arma el HTML del ranking acumulado de un torneo por su código.
+    // La usan tanto verRankingPublico() (cualquiera, sin login ni haber jugado)
+    // como verRanking() (el organizador, desde su dashboard) para no duplicar la consulta.
+    async function obtenerRankingHTML(codigo){
+      const { data, error } = await supabaseClient
+        .from('torneo_resultados')
+        .select('jugador_nombre, puntaje_total')
+        .eq('torneo_codigo', codigo);
+
+      if (error) {
+        return `<div class="ranking-panel">No se pudo cargar el ranking: ${error.message}</div>`;
+      }
+      if (!data || data.length === 0) {
+        return '<div class="ranking-panel">Todavía nadie jugó con este código.</div>';
+      }
+
+      const acumulado = new Map(); // clave normalizada -> { nombre, total }
+      data.forEach(fila => {
+        const nombre = (fila.jugador_nombre || 'Anónimo').trim();
+        const clave = nombre.toLowerCase();
+        const previo = acumulado.get(clave) || { nombre, total: 0 };
+        previo.total += (fila.puntaje_total || 0);
+        acumulado.set(clave, previo);
+      });
+
+      const ranking = Array.from(acumulado.values())
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 20);
+
+      return '<div class="ranking-panel">' +
+        ranking.map((p, i) => `
+          <div class="ranking-row">
+            <span>${i+1}. ${p.nombre}</span>
+            <span><strong>${p.total} pts</strong></span>
+          </div>`).join('') +
+        '</div>';
+    }
+
+    // Ver el ranking de un torneo por código desde la pantalla pública de "Unirse a
+    // un Torneo" — a diferencia de ingresarAlJuego(), NO pide nombre y NO se fija si
+    // ya jugaste hoy: es solo para consultar, así que nunca bloquea a nadie.
+    async function verRankingPublico(){
+      const codigo = document.getElementById('invitado-codigo').value.trim().toUpperCase();
+      const slot = document.getElementById('ranking-publico-slot');
+
+      if (!codigo) {
+        alert("Ingresá el código del torneo para ver su ranking");
+        return;
+      }
+
+      slot.innerHTML = '<div class="ranking-panel">Cargando ranking...</div>';
+      slot.innerHTML = await obtenerRankingHTML(codigo);
     }
 
     async function ingresarAlJuego() {
@@ -1342,44 +1400,7 @@ function estadoTorneoTexto(t){
       if (slot.innerHTML) { slot.innerHTML = ''; return; } // toggle
 
       slot.innerHTML = '<div class="ranking-panel">Cargando ranking...</div>';
-
-      // Cada fila es un intento (fecha + categoría); acá sumamos el puntaje
-      // acumulado de todo el torneo por jugador.
-      const { data, error } = await supabaseClient
-        .from('torneo_resultados')
-        .select('jugador_nombre, puntaje_total')
-        .eq('torneo_codigo', codigo);
-
-      if (error) {
-        slot.innerHTML = `<div class="ranking-panel">No se pudo cargar el ranking: ${error.message}</div>`;
-        return;
-      }
-
-      if (!data || data.length === 0) {
-        slot.innerHTML = '<div class="ranking-panel">Todavía nadie jugó con este código.</div>';
-        return;
-      }
-
-      const acumulado = new Map(); // clave normalizada -> { nombre, total }
-      data.forEach(fila => {
-        const nombre = (fila.jugador_nombre || 'Anónimo').trim();
-        const clave = nombre.toLowerCase();
-        const previo = acumulado.get(clave) || { nombre, total: 0 };
-        previo.total += (fila.puntaje_total || 0);
-        acumulado.set(clave, previo);
-      });
-
-      const ranking = Array.from(acumulado.values())
-        .sort((a, b) => b.total - a.total)
-        .slice(0, 20);
-
-      slot.innerHTML = '<div class="ranking-panel">' +
-        ranking.map((p, i) => `
-          <div class="ranking-row">
-            <span>${i+1}. ${p.nombre}</span>
-            <span><strong>${p.total} pts</strong></span>
-          </div>`).join('') +
-        '</div>';
+      slot.innerHTML = await obtenerRankingHTML(codigo);
     }
 
     // ===================== MUNDIAL DE LA BIBLIA =====================
