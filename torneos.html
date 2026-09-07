@@ -138,6 +138,7 @@
       </div>
       <div class="flex items-center space-x-2">
         <button id="btn-instalar-app" onclick="instalarPWA()" class="hidden-view text-sm px-3 py-1.5 rounded font-semibold transition" style="background:var(--accent);color:var(--primary-dark);">📲 Instalar acceso</button>
+        <button id="btn-activar-push" onclick="activarNotificaciones()" class="hidden-view text-sm px-3 py-1.5 rounded font-semibold transition" style="background:var(--accent);color:var(--primary-dark);">🔔 Activar notificaciones</button>
         <button id="btn-home" onclick="mostrarVista('view-menu')" class="hidden-view text-sm text-blue-100 hover:text-white transition">Volver al Inicio</button>
         <button id="btn-logout" onclick="cerrarSesion()" class="hidden-view text-sm px-3 py-1.5 rounded transition" style="background:rgba(255,255,255,.15);">Cerrar Sesión</button>
       </div>
@@ -548,16 +549,23 @@
 
       const btnHome = document.getElementById('btn-home');
       const btnLogout = document.getElementById('btn-logout');
+      const btnPush = document.getElementById('btn-activar-push');
 
       if (vistaId === 'view-menu') {
         btnHome.classList.add('hidden-view');
         btnLogout.classList.add('hidden-view');
+        btnPush.classList.add('hidden-view');
       } else if (vistaId === 'view-dashboard') {
         btnHome.classList.add('hidden-view');
         btnLogout.classList.remove('hidden-view');
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        window.OneSignalDeferred.push(async function(OneSignal) {
+          actualizarBotonNotificaciones(OneSignal);
+        });
       } else {
         btnHome.classList.remove('hidden-view');
         btnLogout.classList.add('hidden-view');
+        btnPush.classList.add('hidden-view');
       }
     }
 
@@ -1133,6 +1141,38 @@
         try { await OneSignal.login(String(perfilId)); }
         catch (e) { console.error('No se pudo vincular OneSignal con el perfil:', e); }
       });
+    }
+
+    // OneSignal.login() sólo vincula el dispositivo a la cuenta — NO pide permiso de
+    // notificaciones por sí solo. Este botón lo pide explícitamente con un clic real
+    // del usuario (necesario en varios navegadores), en vez de depender únicamente de
+    // la campanita flotante de OneSignal.
+    function activarNotificaciones() {
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(async function(OneSignal) {
+        try {
+          if (OneSignal.Notifications.permission) {
+            alert('Las notificaciones ya están activadas en este navegador. 🔔');
+            actualizarBotonNotificaciones(OneSignal);
+            return;
+          }
+          await OneSignal.Notifications.requestPermission();
+          actualizarBotonNotificaciones(OneSignal);
+          if (!OneSignal.Notifications.permission) {
+            alert('No se activaron las notificaciones. Si tocaste "Bloquear" antes, tenés que ir a la configuración del sitio en el navegador (ícono de candado, al lado de la URL) y volver a habilitarlas ahí.');
+          }
+        } catch (e) {
+          console.error('No se pudo pedir el permiso de notificaciones:', e);
+          alert('Hubo un problema al intentar activar las notificaciones.');
+        }
+      });
+    }
+
+    // Oculta el botón si el permiso ya está concedido (no hace falta pedirlo de nuevo).
+    function actualizarBotonNotificaciones(OneSignal) {
+      const btn = document.getElementById('btn-activar-push');
+      if (!btn) return;
+      btn.classList.toggle('hidden-view', !!OneSignal.Notifications.permission);
     }
 
     document.getElementById('form-login').addEventListener('submit', async (e) => {
