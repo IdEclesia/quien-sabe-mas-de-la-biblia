@@ -15,6 +15,7 @@
 
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -642,16 +643,35 @@
     // La usan tanto verRankingPublico() (cualquiera, sin login ni haber jugado)
     // como verRanking() (el organizador, desde su dashboard) para no duplicar la consulta.
     async function obtenerRankingHTML(codigo){
+      // Se fija si ESTE torneo (según su propia fecha de inicio y cantidad de
+      // fechas) ya finalizó, para mostrar el festejo con confetis a quien sea
+      // que entre a consultar el ranking (organizador o invitado).
+      const { data: torneoInfo } = await supabaseClient
+        .from('torneos')
+        .select('fecha_inicio, cantidad_fechas')
+        .eq('codigo', codigo)
+        .maybeSingle();
+
+      const estadoPropio = torneoInfo
+        ? tvEstadoTorneoPropio(torneoInfo.fecha_inicio, torneoInfo.cantidad_fechas)
+        : null;
+      const finalizado = !!(estadoPropio && estadoPropio.estado === 'termino');
+      const banner = finalizado
+        ? `<div class="ranking-panel" style="text-align:center;font-weight:800;color:var(--primary-dark);">🎉 ¡Torneo finalizado${estadoPropio.fin ? ' el ' + tvFormatoFecha(estadoPropio.fin) : ''}! Felicitaciones a todos los que jugaron 🎉</div>`
+        : '';
+
+      if (finalizado) tvFestejoConfeti();
+
       const { data, error } = await supabaseClient
         .from('torneo_resultados')
         .select('jugador_nombre, puntaje_total')
         .eq('torneo_codigo', codigo);
 
       if (error) {
-        return `<div class="ranking-panel">No se pudo cargar el ranking: ${error.message}</div>`;
+        return banner + `<div class="ranking-panel">No se pudo cargar el ranking: ${error.message}</div>`;
       }
       if (!data || data.length === 0) {
-        return '<div class="ranking-panel">Todavía nadie jugó con este código.</div>';
+        return banner + '<div class="ranking-panel">Todavía nadie jugó con este código.</div>';
       }
 
       const acumulado = new Map(); // clave normalizada -> { nombre, total }
@@ -667,7 +687,7 @@
         .sort((a, b) => b.total - a.total)
         .slice(0, 20);
 
-      return '<div class="ranking-panel">' +
+      return banner + '<div class="ranking-panel">' +
         ranking.map((p, i) => `
           <div class="ranking-row">
             <span>${i+1}. ${p.nombre}</span>
@@ -701,6 +721,28 @@
         return;
       }
 
+      const { data: torneo, error: errorTorneo } = await supabaseClient
+        .from('torneos')
+        .select('fecha_inicio, cantidad_fechas')
+        .eq('codigo', codigo)
+        .maybeSingle();
+
+      if (errorTorneo || !torneo) {
+        alert('No se encontró un torneo con ese código.');
+        return;
+      }
+
+      const estadoPropio = tvEstadoTorneoPropio(torneo.fecha_inicio, torneo.cantidad_fechas);
+      if (estadoPropio.estado === 'termino') {
+        alert(`Este torneo ya finalizó (terminó el ${tvFormatoFecha(estadoPropio.fin)}). Podés consultar el ranking, pero ya no se puede jugar.`);
+        return;
+      }
+      if (estadoPropio.estado === 'no-empezo') {
+        alert(`Este torneo todavía no empieza. Arranca el ${tvFormatoFecha(estadoPropio.inicio)}.`);
+        return;
+      }
+
+      // tvCalcularJornadaActual sigue siendo el motor global de preguntas (sin tocar).
       const { jornada } = tvCalcularJornadaActual();
 
       const yaJugo = await tvYaJugoEstaJornada(codigo, jornada, nombre, null);
@@ -719,8 +761,20 @@
     // El creador del torneo también puede participar de su propio torneo
     // desde "Mis Torneos Activos", sin pasar por el formulario de invitado
     // (reutiliza la misma lógica y el mismo motor de juego que ingresarAlJuego).
-    async function jugarMiTorneo(codigo) {
+    async function jugarMiTorneo(codigo, fechaInicioTorneo, cantidadFechasTorneo) {
+      const estadoPropio = tvEstadoTorneoPropio(fechaInicioTorneo, cantidadFechasTorneo);
+      if (estadoPropio.estado === 'termino') {
+        alert(`Este torneo ya finalizó (terminó el ${tvFormatoFecha(estadoPropio.fin)}). Podés consultar el ranking, pero ya no se puede jugar.`);
+        return;
+      }
+      if (estadoPropio.estado === 'no-empezo') {
+        alert(`Este torneo todavía no empieza. Arranca el ${tvFormatoFecha(estadoPropio.inicio)}.`);
+        return;
+      }
+
       const nombre = currentPerfil ? currentPerfil.nombre_apellido : 'Organizador';
+      // tvCalcularJornadaActual sigue siendo el motor global de preguntas (sin tocar):
+      // decide QUÉ preguntas tocan hoy, no si este torneo en particular sigue activo.
       const { jornada } = tvCalcularJornadaActual();
 
       const yaJugo = await tvYaJugoEstaJornada(codigo, jornada, nombre, currentUser ? currentUser.id : null);
@@ -922,7 +976,7 @@
     }
 
     function tvIniciarReloj() {
-      tvTiempoRestante = 15;
+      tvTiempoRestante = 10;
       tvActualizarRelojVisual();
 
       tvTemporizadorIntervalo = setInterval(() => {
@@ -939,7 +993,7 @@
 
     function tvActualizarRelojVisual() {
       document.getElementById('tv-txtTiempo').innerText = tvTiempoRestante;
-      let porcentaje = (tvTiempoRestante / 15) * 100;
+      let porcentaje = (tvTiempoRestante / 10) * 100;
       let colorAnillo = tvTiempoRestante <= 3 ? '#dc3545' : 'var(--accent)';
       document.getElementById('tv-anilloTiempo').style.background = `conic-gradient(${colorAnillo} ${porcentaje}%, #e0e0e0 0)`;
     }
@@ -1317,25 +1371,49 @@
       await cargarMisTorneos();
     }
 
-// Usa el mismo calendario global que el motor de juego (tvCalcularJornadaActual):
-// la "fecha" que ve el organizador es la jornada real de hoy, no algo calculado
-// a partir de cuándo creó su propio torneo. "cantidadFechas" solo define cuántas
-// jornadas dura ESTE torneo en particular antes de darse por finalizado.
-function calcularFechaActual(fechaInicioStr, cantidadFechas){
-  const { jornada, estado } = tvCalcularJornadaActual();
+// IMPORTANTE: esto NO toca el motor que trae las preguntas (tvCalcularJornadaActual /
+// tvMapearJornada / tvCargarPreguntasTorneo), que sigue usando el calendario global
+// compartido para decidir QUÉ preguntas tocan hoy (eso tiene su propia lógica especial
+// y es igual para todos los torneos).
+//
+// Esto es otra cosa: define si CADA torneo, según SU PROPIA fecha de inicio y su
+// cantidad de fechas, ya empezó / está en curso / ya terminó. El torneo dura
+// "cantidadFechas" días corridos a partir de su fecha_inicio (día 1 = fecha_inicio),
+// y termina al cerrar el último de esos días.
+function tvEstadoTorneoPropio(fechaInicioStr, cantidadFechas, ahora = new Date()){
+  if (!fechaInicioStr || !cantidadFechas) return { estado: 'no-empezo' };
 
-  if (estado === 'no_empezo') return { estado: 'no-empezo' };
-  if (jornada > cantidadFechas) return { estado: 'termino' };
+  // fechaInicioStr llega como 'YYYY-MM-DD' (input type="date"): la parseamos
+  // como fecha local para no correrla un día por husos horarios.
+  const [anio, mes, dia] = fechaInicioStr.split('-').map(Number);
+  const inicio = new Date(anio, mes - 1, dia);
+  const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+  const diasTranscurridos = Math.round((hoy - inicio) / 86400000);
 
-  return { estado: 'en-curso', fecha: jornada, cantidadFechas };
+  const fin = new Date(inicio);
+  fin.setDate(fin.getDate() + cantidadFechas - 1); // último día que cuenta como "en curso"
+
+  if (diasTranscurridos < 0) return { estado: 'no-empezo', inicio, fin };
+  if (diasTranscurridos >= cantidadFechas) return { estado: 'termino', inicio, fin };
+  return { estado: 'en-curso', diaTorneo: diasTranscurridos + 1, inicio, fin };
+}
+
+function tvFormatoFecha(d){
+  return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 function estadoTorneoTexto(t){
-  const r = calcularFechaActual(t.fecha_inicio, t.cantidad_fechas);
-  if (!r) return 'Sin fecha de inicio configurada';
-  if (r.estado === 'no-empezo') return `Empieza el ${t.fecha_inicio}`;
-  if (r.estado === 'termino') return `Finalizado (duró ${t.cantidad_fechas} fechas)`;
-  return `Fecha ${r.fecha} de ${r.cantidadFechas} en curso`;
+  const r = tvEstadoTorneoPropio(t.fecha_inicio, t.cantidad_fechas);
+  if (r.estado === 'no-empezo') return `Empieza el ${tvFormatoFecha(r.inicio)}`;
+  if (r.estado === 'termino') return `Finalizado (terminó el ${tvFormatoFecha(r.fin)})`;
+  return `Fecha ${r.diaTorneo} de ${t.cantidad_fechas} en curso · termina el ${tvFormatoFecha(r.fin)}`;
+}
+
+// Lanza el festejo visual cuando corresponde (torneo recién visto como finalizado).
+function tvFestejoConfeti(){
+  if (typeof confetti !== 'function') return;
+  confetti({ particleCount: 140, spread: 100, origin: { y: 0.6 } });
+  setTimeout(() => confetti({ particleCount: 90, spread: 130, origin: { y: 0.4 } }), 250);
 }
 
     async function cargarRankingPerfil(){
@@ -1400,6 +1478,11 @@ function estadoTorneoTexto(t){
 
       lista.innerHTML = data.map(t => {
         const mensajeWpp = `¡Hola! Te invité a participar de mi torneo bíblico "${t.nombre_torneo}". Ingresá con el código *${t.codigo}*: ${TORNEOS_URL}`;
+        const estado = tvEstadoTorneoPropio(t.fecha_inicio, t.cantidad_fechas);
+        const finalizado = estado.estado === 'termino';
+        const botonJugar = finalizado
+          ? `<button class="btn btn-sm btn-primary" disabled title="Este torneo ya finalizó, solo se puede consultar el ranking">🔒 Jugar</button>`
+          : `<button onclick="jugarMiTorneo('${t.codigo}', '${t.fecha_inicio}', ${t.cantidad_fechas})" class="btn btn-sm btn-primary">🎮 Jugar</button>`;
         return `
           <li class="p-4" style="border-color:#DCE9F5;">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
@@ -1409,9 +1492,7 @@ function estadoTorneoTexto(t){
                 <p class="text-xs" style="color:var(--primary);font-weight:600;">${estadoTorneoTexto(t)}</p>
               </div>
               <div class="flex space-x-2">
-                <button onclick="jugarMiTorneo('${t.codigo}')" class="btn btn-sm btn-primary">
-                  🎮 Jugar
-                </button>
+                ${botonJugar}
                 <button onclick='invitar(${JSON.stringify(mensajeWpp)})' class="btn btn-sm btn-accent">
                   📲 Invitar
                 </button>
