@@ -639,11 +639,21 @@
     async function tvObtenerTorneoPorCodigo(codigo){
       const { data, error } = await supabaseClient
         .from('torneos')
-        .select('fecha_inicio, cantidad_fechas, sponsor_nombre, sponsor_imagen_url, sponsor_link_url')
+        .select('fecha_inicio, cantidad_fechas, estado, sponsor_nombre, sponsor_imagen_url, sponsor_link_url')
         .eq('codigo', codigo)
         .maybeSingle();
       if (error || !data) return null;
       return data;
+    }
+
+    // Combina las dos formas en que un torneo puede quedar bloqueado para jugar:
+    // (a) automática, porque ya pasaron sus "cantidad_fechas" días desde el inicio, o
+    // (b) manual, porque el administrador lo cerró desde el Panel Pro (columna "estado").
+    function tvTorneoBloqueado(t){
+      if (t.estado === 'cerrado') return { bloqueado: true, motivo: 'cerrado' };
+      const r = tvEstadoTorneoPropio(t.fecha_inicio, t.cantidad_fechas);
+      if (r.estado === 'termino') return { bloqueado: true, motivo: 'finalizado', fin: r.fin };
+      return { bloqueado: false };
     }
 
     // Arma el HTML del banner de sponsor de un torneo puntual. Vacío si el
@@ -707,9 +717,12 @@
         ? tvEstadoTorneoPropio(torneoInfo.fecha_inicio, torneoInfo.cantidad_fechas)
         : null;
       const finalizado = !!(estadoPropio && estadoPropio.estado === 'termino');
+      const cerradoManual = !!(torneoInfo && torneoInfo.estado === 'cerrado' && !finalizado);
       const banner = finalizado
         ? `<div class="ranking-panel" style="text-align:center;font-weight:800;color:var(--primary-dark);">🎉 ¡Torneo finalizado${estadoPropio.fin ? ' el ' + tvFormatoFecha(estadoPropio.fin) : ''}! Felicitaciones a todos los que jugaron 🎉</div>`
-        : '';
+        : cerradoManual
+          ? `<div class="ranking-panel" style="text-align:center;font-weight:700;color:var(--text-soft);">Este torneo fue cerrado. Ya no se puede jugar, pero podés seguir consultando el ranking.</div>`
+          : '';
 
       if (finalizado) tvFestejoConfeti();
 
@@ -782,12 +795,15 @@
       }
 
       const estadoPropio = tvEstadoTorneoPropio(torneo.fecha_inicio, torneo.cantidad_fechas);
-      if (estadoPropio.estado === 'termino') {
-        alert(`Este torneo ya finalizó (terminó el ${tvFormatoFecha(estadoPropio.fin)}). Podés consultar el ranking, pero ya no se puede jugar.`);
-        return;
-      }
       if (estadoPropio.estado === 'no-empezo') {
         alert(`Este torneo todavía no empieza. Arranca el ${tvFormatoFecha(estadoPropio.inicio)}.`);
+        return;
+      }
+      const bloqueo = tvTorneoBloqueado(torneo);
+      if (bloqueo.bloqueado) {
+        alert(bloqueo.motivo === 'cerrado'
+          ? 'Este torneo fue cerrado y ya no se puede jugar. Podés consultar el ranking.'
+          : `Este torneo ya finalizó (terminó el ${tvFormatoFecha(bloqueo.fin)}). Podés consultar el ranking, pero ya no se puede jugar.`);
         return;
       }
 
@@ -820,12 +836,15 @@
       }
 
       const estadoPropio = tvEstadoTorneoPropio(torneo.fecha_inicio, torneo.cantidad_fechas);
-      if (estadoPropio.estado === 'termino') {
-        alert(`Este torneo ya finalizó (terminó el ${tvFormatoFecha(estadoPropio.fin)}). Podés consultar el ranking, pero ya no se puede jugar.`);
-        return;
-      }
       if (estadoPropio.estado === 'no-empezo') {
         alert(`Este torneo todavía no empieza. Arranca el ${tvFormatoFecha(estadoPropio.inicio)}.`);
+        return;
+      }
+      const bloqueo = tvTorneoBloqueado(torneo);
+      if (bloqueo.bloqueado) {
+        alert(bloqueo.motivo === 'cerrado'
+          ? 'Este torneo fue cerrado y ya no se puede jugar. Podés consultar el ranking.'
+          : `Este torneo ya finalizó (terminó el ${tvFormatoFecha(bloqueo.fin)}). Podés consultar el ranking, pero ya no se puede jugar.`);
         return;
       }
 
@@ -1478,6 +1497,7 @@ function tvFormatoFecha(d){
 }
 
 function estadoTorneoTexto(t){
+  if (t.estado === 'cerrado') return 'Cerrado por el administrador';
   const r = tvEstadoTorneoPropio(t.fecha_inicio, t.cantidad_fechas);
   if (r.estado === 'no-empezo') return `Empieza el ${tvFormatoFecha(r.inicio)}`;
   if (r.estado === 'termino') return `Finalizado (terminó el ${tvFormatoFecha(r.fin)})`;
@@ -1553,8 +1573,7 @@ function tvFestejoConfeti(){
 
       lista.innerHTML = data.map(t => {
         const mensajeWpp = `¡Hola! Te invité a participar de mi torneo bíblico "${t.nombre_torneo}". Ingresá con el código *${t.codigo}*: ${TORNEOS_URL}`;
-        const estado = tvEstadoTorneoPropio(t.fecha_inicio, t.cantidad_fechas);
-        const finalizado = estado.estado === 'termino';
+        const finalizado = tvTorneoBloqueado(t).bloqueado;
         const botonJugar = finalizado
           ? `<button class="btn btn-sm btn-primary" disabled title="Este torneo ya finalizó, solo se puede consultar el ranking">🔒 Jugar</button>`
           : `<button onclick="jugarMiTorneo('${t.codigo}')" class="btn btn-sm btn-primary">🎮 Jugar</button>`;
