@@ -507,6 +507,34 @@
             <label for="torneoEmailInput">Email del organizador</label>
             <input type="email" id="torneoEmailInput" placeholder="organizador@correo.com" maxlength="80">
           </div>
+          <div class="field">
+            <label for="torneoFechaInicioInput">Fecha de inicio</label>
+            <input type="date" id="torneoFechaInicioInput">
+          </div>
+          <div class="field">
+            <label for="torneoCantidadFechasInput">Cantidad de fechas (cada una dura 1 día)</label>
+            <input type="number" id="torneoCantidadFechasInput" min="1" max="30" value="30">
+          </div>
+
+          <details style="margin-top:2px;">
+            <summary style="cursor:pointer;font-weight:700;font-size:.85rem;color:var(--text-soft);">¿Este torneo tiene un auspiciante? (opcional)</summary>
+            <div style="margin-top:12px;display:grid;gap:12px;">
+              <div class="field">
+                <label for="torneoSponsorNombreInput">Nombre del auspiciante</label>
+                <input type="text" id="torneoSponsorNombreInput" placeholder="Ej: Radio Vida" maxlength="80">
+              </div>
+              <div class="field">
+                <label for="torneoSponsorArchivoInput">Imagen del banner</label>
+                <input type="file" id="torneoSponsorArchivoInput" accept="image/*">
+              </div>
+              <div class="field">
+                <label for="torneoSponsorLinkInput">Link del banner (redes, web)</label>
+                <input type="url" id="torneoSponsorLinkInput" placeholder="https://instagram.com/...">
+              </div>
+              <p style="font-size:.75rem;color:var(--text-soft);margin:-6px 0 0;">Este banner se muestra a todos los que jueguen este torneo con el código, tengan o no cuenta.</p>
+            </div>
+          </details>
+
           <button class="btn btn-primary" style="margin-top:0" onclick="crearTorneo()">Crear torneo</button>
           <div class="login-error" id="torneoCreateError" role="alert"></div>
         </div>
@@ -1179,15 +1207,54 @@ function generarCodigoTorneo(){
 async function crearTorneo(){
   const nombreInput = document.getElementById('torneoNombreInput');
   const emailInput = document.getElementById('torneoEmailInput');
+  const fechaInicioInput = document.getElementById('torneoFechaInicioInput');
+  const cantidadFechasInput = document.getElementById('torneoCantidadFechasInput');
+  const sponsorNombreInput = document.getElementById('torneoSponsorNombreInput');
+  const sponsorArchivoInput = document.getElementById('torneoSponsorArchivoInput');
+  const sponsorLinkInput = document.getElementById('torneoSponsorLinkInput');
   const errBox = document.getElementById('torneoCreateError');
   errBox.classList.remove('show');
 
   const nombre = nombreInput.value.trim();
   const email = emailInput.value.trim();
+  const fechaInicio = fechaInicioInput.value;
+  const cantidadFechas = parseInt(cantidadFechasInput.value, 10);
+  const sponsorNombre = sponsorNombreInput.value.trim();
+  const sponsorArchivo = sponsorArchivoInput.files[0];
+  const sponsorLink = sponsorLinkInput.value.trim();
+
   if (!nombre){
     errBox.textContent = 'Ingresá un nombre para el torneo.';
     errBox.classList.add('show');
     return;
+  }
+  if (!fechaInicio){
+    errBox.textContent = 'Elegí la fecha de inicio del torneo.';
+    errBox.classList.add('show');
+    return;
+  }
+  if (!cantidadFechas || cantidadFechas < 1 || cantidadFechas > 30){
+    errBox.textContent = 'La cantidad de fechas tiene que ser entre 1 y 30.';
+    errBox.classList.add('show');
+    return;
+  }
+  if (sponsorArchivo && !sponsorNombre){
+    errBox.textContent = 'Ponele un nombre al auspiciante.';
+    errBox.classList.add('show');
+    return;
+  }
+
+  let sponsorImagenUrl = null;
+  if (sponsorArchivo){
+    const nombreArchivo = `torneo_${Date.now()}_${sponsorArchivo.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const { error: errorSubida } = await supabaseClient.storage.from('banners').upload(nombreArchivo, sponsorArchivo);
+    if (errorSubida){
+      errBox.textContent = 'No se pudo subir la imagen del auspiciante: ' + errorSubida.message;
+      errBox.classList.add('show');
+      return;
+    }
+    const { data: urlData } = supabaseClient.storage.from('banners').getPublicUrl(nombreArchivo);
+    sponsorImagenUrl = urlData.publicUrl;
   }
 
   const codigo = generarCodigoTorneo();
@@ -1195,9 +1262,15 @@ async function crearTorneo(){
     .from('torneos')
     .insert({
       id: codigo,
+      codigo: codigo, // clave por la que el frontend (torneos.html) busca el torneo: sin esto quedaría inaccesible por código
       nombre_torneo: nombre,
       organizador_email: email || null,
-      estado: 'activo'
+      estado: 'activo',
+      fecha_inicio: fechaInicio,
+      cantidad_fechas: cantidadFechas,
+      sponsor_nombre: sponsorNombre || null,
+      sponsor_imagen_url: sponsorImagenUrl,
+      sponsor_link_url: sponsorLink || null
     });
 
   if (error){
@@ -1209,6 +1282,11 @@ async function crearTorneo(){
 
   nombreInput.value = '';
   emailInput.value = '';
+  fechaInicioInput.value = '';
+  cantidadFechasInput.value = '30';
+  sponsorNombreInput.value = '';
+  sponsorArchivoInput.value = '';
+  sponsorLinkInput.value = '';
   delete cache.torneos;
   loadTorneos(true);
 }
@@ -1228,6 +1306,33 @@ async function loadTorneos(force){
   renderTorneos(torneos);
 }
 
+// Mismo cálculo que usa torneos.html (el front-end): el torneo dura
+// "cantidad_fechas" días corridos a partir de su propia fecha_inicio
+// (día 1 = fecha_inicio), y termina al cerrar el último de esos días.
+function tvEstadoTorneoPropio(fechaInicioStr, cantidadFechas, ahora = new Date()){
+  if (!fechaInicioStr || !cantidadFechas) return { estado: 'sin-datos' };
+  const [anio, mes, dia] = fechaInicioStr.split('-').map(Number);
+  const inicio = new Date(anio, mes - 1, dia);
+  const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+  const diasTranscurridos = Math.round((hoy - inicio) / 86400000);
+  const fin = new Date(inicio);
+  fin.setDate(fin.getDate() + cantidadFechas - 1);
+  if (diasTranscurridos < 0) return { estado: 'no-empezo', inicio, fin };
+  if (diasTranscurridos >= cantidadFechas) return { estado: 'termino', inicio, fin };
+  return { estado: 'en-curso', diaTorneo: diasTranscurridos + 1, inicio, fin };
+}
+function tvFormatoFecha(d){
+  return d.toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+function tvInfoFechasTexto(t){
+  const r = tvEstadoTorneoPropio(t.fecha_inicio, t.cantidad_fechas);
+  const dur = `${t.cantidad_fechas} fecha${t.cantidad_fechas === 1 ? '' : 's'}`;
+  if (r.estado === 'sin-datos') return 'Sin fecha de inicio configurada';
+  if (r.estado === 'no-empezo') return `Empieza el ${tvFormatoFecha(r.inicio)} · dura ${dur} · termina el ${tvFormatoFecha(r.fin)}`;
+  if (r.estado === 'termino') return `Terminó el ${tvFormatoFecha(r.fin)} (empezó el ${tvFormatoFecha(r.inicio)}, duró ${dur})`;
+  return `Fecha ${r.diaTorneo} de ${t.cantidad_fechas} en curso · empezó el ${tvFormatoFecha(r.inicio)} · termina el ${tvFormatoFecha(r.fin)}`;
+}
+
 function renderTorneos(torneos){
   const list = document.getElementById('torneosList');
   if (!torneos.length){
@@ -1240,19 +1345,120 @@ function renderTorneos(torneos){
     const activo = (t.estado || 'activo') === 'activo';
     const tagClass = activo ? 'tag tag-activo' : 'tag tag-cerrado';
     const tagLabel = activo ? 'Activo' : 'Cerrado';
+    const sponsorResumen = t.sponsor_imagen_url
+      ? `<div class="meta" style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+           <img src="${t.sponsor_imagen_url}" alt="${t.sponsor_nombre || 'Auspiciante'}" style="width:60px;height:20px;object-fit:cover;border-radius:4px;">
+           <span>Auspicia: ${t.sponsor_nombre || '(sin nombre)'}</span>
+         </div>`
+      : '';
     return `
       <div class="torneo-card">
         <div class="info">
           <h3>${t.nombre_torneo || 'Torneo sin nombre'} <span class="${tagClass}">${tagLabel}</span></h3>
           <div class="code">Código: ${codigo}</div>
           <div class="meta">Creado ${date}${t.organizador_email ? ' · ' + t.organizador_email : ''}</div>
+          <div class="meta">${tvInfoFechasTexto(t)}</div>
+          ${sponsorResumen}
         </div>
         <div class="actions">
           <button class="btn btn-ghost" onclick="viewTorneoRanking('${codigo}', '${(t.nombre_torneo || '').replace(/'/g, "\\'")}')">Ver ranking</button>
           <button class="btn btn-ghost" onclick="toggleTorneoEstado('${t.id}', '${activo ? 'cerrado' : 'activo'}')">${activo ? 'Cerrar' : 'Reabrir'}</button>
+          <button class="btn btn-ghost" onclick="toggleEditarTorneo('${t.id}')">Editar</button>
+        </div>
+        <div id="editar-${t.id}" style="display:none;width:100%;margin-top:10px;border-top:1px solid var(--secondary);padding-top:12px;">
+          <div class="torneo-form" style="margin-bottom:0;">
+            <div class="field">
+              <label>Fecha de inicio</label>
+              <input type="date" id="editFecha-${t.id}" value="${t.fecha_inicio || ''}">
+            </div>
+            <div class="field">
+              <label>Cantidad de fechas</label>
+              <input type="number" id="editCantidad-${t.id}" min="1" max="30" value="${t.cantidad_fechas || 30}">
+            </div>
+            <div class="field">
+              <label>Nombre del auspiciante</label>
+              <input type="text" id="editSponsorNombre-${t.id}" value="${(t.sponsor_nombre || '').replace(/"/g, '&quot;')}">
+            </div>
+            <div class="field">
+              <label>Reemplazar imagen del banner (opcional)</label>
+              <input type="file" id="editSponsorArchivo-${t.id}" accept="image/*">
+              ${t.sponsor_imagen_url ? `<p style="font-size:.75rem;color:var(--text-soft);margin-top:4px;">Actual: <a href="${t.sponsor_imagen_url}" target="_blank" rel="noopener">ver imagen</a></p>` : ''}
+            </div>
+            <div class="field">
+              <label>Link del banner</label>
+              <input type="url" id="editSponsorLink-${t.id}" value="${t.sponsor_link_url || ''}">
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-primary" style="margin-top:0" onclick="guardarEdicionTorneo('${t.id}')">Guardar cambios</button>
+              <button class="btn btn-ghost" onclick="toggleEditarTorneo('${t.id}')">Cancelar</button>
+            </div>
+            <div class="login-error" id="editError-${t.id}" role="alert"></div>
+          </div>
         </div>
       </div>`;
   }).join('');
+}
+
+function toggleEditarTorneo(id){
+  const panel = document.getElementById('editar-' + id);
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'none' ? '' : 'none';
+}
+
+async function guardarEdicionTorneo(id){
+  const errBox = document.getElementById('editError-' + id);
+  errBox.classList.remove('show');
+
+  const fechaInicio = document.getElementById('editFecha-' + id).value;
+  const cantidadFechas = parseInt(document.getElementById('editCantidad-' + id).value, 10);
+  const sponsorNombre = document.getElementById('editSponsorNombre-' + id).value.trim();
+  const sponsorArchivo = document.getElementById('editSponsorArchivo-' + id).files[0];
+  const sponsorLink = document.getElementById('editSponsorLink-' + id).value.trim();
+
+  if (!fechaInicio){
+    errBox.textContent = 'Elegí la fecha de inicio.';
+    errBox.classList.add('show');
+    return;
+  }
+  if (!cantidadFechas || cantidadFechas < 1 || cantidadFechas > 30){
+    errBox.textContent = 'La cantidad de fechas tiene que ser entre 1 y 30.';
+    errBox.classList.add('show');
+    return;
+  }
+  if (sponsorArchivo && !sponsorNombre){
+    errBox.textContent = 'Ponele un nombre al auspiciante.';
+    errBox.classList.add('show');
+    return;
+  }
+
+  const cambios = {
+    fecha_inicio: fechaInicio,
+    cantidad_fechas: cantidadFechas,
+    sponsor_nombre: sponsorNombre || null,
+    sponsor_link_url: sponsorLink || null
+  };
+
+  if (sponsorArchivo){
+    const nombreArchivo = `torneo_${Date.now()}_${sponsorArchivo.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const { error: errorSubida } = await supabaseClient.storage.from('banners').upload(nombreArchivo, sponsorArchivo);
+    if (errorSubida){
+      errBox.textContent = 'No se pudo subir la nueva imagen: ' + errorSubida.message;
+      errBox.classList.add('show');
+      return;
+    }
+    const { data: urlData } = supabaseClient.storage.from('banners').getPublicUrl(nombreArchivo);
+    cambios.sponsor_imagen_url = urlData.publicUrl;
+  }
+
+  const { error } = await supabaseClient.from('torneos').update(cambios).eq('id', id);
+  if (error){
+    errBox.textContent = 'No se pudo guardar: ' + error.message;
+    errBox.classList.add('show');
+    return;
+  }
+
+  delete cache.torneos;
+  loadTorneos(true);
 }
 
 async function toggleTorneoEstado(id, nuevoEstado){
