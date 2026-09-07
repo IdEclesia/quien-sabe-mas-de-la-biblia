@@ -922,7 +922,7 @@
     }
 
     function tvIniciarReloj() {
-      tvTiempoRestante = 10;
+      tvTiempoRestante = 15;
       tvActualizarRelojVisual();
 
       tvTemporizadorIntervalo = setInterval(() => {
@@ -939,7 +939,7 @@
 
     function tvActualizarRelojVisual() {
       document.getElementById('tv-txtTiempo').innerText = tvTiempoRestante;
-      let porcentaje = (tvTiempoRestante / 10) * 100;
+      let porcentaje = (tvTiempoRestante / 15) * 100;
       let colorAnillo = tvTiempoRestante <= 3 ? '#dc3545' : 'var(--accent)';
       document.getElementById('tv-anilloTiempo').style.background = `conic-gradient(${colorAnillo} ${porcentaje}%, #e0e0e0 0)`;
     }
