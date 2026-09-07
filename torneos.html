@@ -222,6 +222,8 @@
       <div style="text-align:center;margin-top:14px;font-weight:800;color:var(--primary-dark);">
         Puntaje: <span id="tv-txtPuntos">0</span> pts
       </div>
+
+      <div id="tv-sponsor-torneo" class="hidden-view"></div>
     </div>
 
     <div id="view-mundial" class="hidden-view w-full max-w-lg tv-card p-8">
@@ -447,6 +449,20 @@
           <input type="date" id="nuevo-torneo-fecha-inicio" class="tv-input mb-3">
           <label class="tv-label" for="nuevo-torneo-cantidad-fechas">Cantidad de fechas (cada una dura 1 día)</label>
           <input type="number" id="nuevo-torneo-cantidad-fechas" class="tv-input mb-3" min="1" max="30" value="30">
+
+          <details style="margin-bottom:12px;">
+            <summary class="tv-label" style="cursor:pointer;">¿Este torneo tiene un auspiciante? (opcional)</summary>
+            <div style="margin-top:8px;">
+              <label class="tv-label" for="nuevo-torneo-sponsor-nombre">Nombre del auspiciante</label>
+              <input type="text" id="nuevo-torneo-sponsor-nombre" placeholder="Ej: Radio Vida" class="tv-input mb-3">
+              <label class="tv-label" for="nuevo-torneo-sponsor-imagen">URL de la imagen del banner</label>
+              <input type="url" id="nuevo-torneo-sponsor-imagen" placeholder="https://..." class="tv-input mb-3">
+              <label class="tv-label" for="nuevo-torneo-sponsor-link">Link a donde va el banner (redes, web)</label>
+              <input type="url" id="nuevo-torneo-sponsor-link" placeholder="https://instagram.com/..." class="tv-input mb-3">
+              <p class="text-xs" style="color:var(--text-soft);margin-top:-6px;margin-bottom:8px;">Este banner se muestra a TODOS los que jueguen este torneo con el código, tengan o no cuenta.</p>
+            </div>
+          </details>
+
           <button onclick="crearTorneo()" id="btn-crear-torneo" class="btn btn-accent btn-block">
             Generar Torneo
           </button>
@@ -615,6 +631,44 @@
     // y muestra las preguntas directamente acá, dentro de torneos.html.
     let tvJugadorNombre = '';
     let tvCodigoTorneo = '';
+    let tvTorneoActual = null; // fila de "torneos" (fecha_inicio, cantidad_fechas, sponsor_*) del torneo que se está jugando/consultando
+
+    // Busca una fila de "torneos" por código, trayendo también los datos del
+    // sponsor vinculado a ESE torneo en particular (no al perfil del organizador,
+    // así también lo ve cualquier invitado sin cuenta que entre con el código).
+    async function tvObtenerTorneoPorCodigo(codigo){
+      const { data, error } = await supabaseClient
+        .from('torneos')
+        .select('fecha_inicio, cantidad_fechas, sponsor_nombre, sponsor_imagen_url, sponsor_link_url')
+        .eq('codigo', codigo)
+        .maybeSingle();
+      if (error || !data) return null;
+      return data;
+    }
+
+    // Arma el HTML del banner de sponsor de un torneo puntual. Vacío si el
+    // torneo no tiene sponsor cargado (no rompe nada, simplemente no se ve nada).
+    function tvRenderSponsorBannerHTML(t){
+      if (!t || !t.sponsor_imagen_url) return '';
+      const img = `<img src="${t.sponsor_imagen_url}" alt="${t.sponsor_nombre || 'Auspiciante'}" style="width:100%;display:block;">`;
+      const contenido = t.sponsor_link_url
+        ? `<a href="${t.sponsor_link_url}" target="_blank" rel="noopener">${img}</a>`
+        : img;
+      const etiqueta = t.sponsor_nombre
+        ? `<p style="text-align:center;font-size:.72rem;color:var(--text-soft);margin-top:6px;">Este torneo es presentado por ${t.sponsor_nombre}</p>`
+        : '';
+      return `<div class="tv-card" style="margin-top:16px;padding:10px;overflow:hidden;">${contenido}${etiqueta}</div>`;
+    }
+
+    // Pinta (o esconde) el banner de sponsor en la pantalla de juego, según
+    // el torneo actualmente cargado en tvTorneoActual.
+    function tvMostrarSponsorBanner(){
+      const slot = document.getElementById('tv-sponsor-torneo');
+      if (!slot) return;
+      const html = tvRenderSponsorBannerHTML(tvTorneoActual);
+      slot.innerHTML = html;
+      slot.classList.toggle('hidden-view', !html);
+    }
 
     // Evita que el mismo jugador sume puntos dos veces en la misma jornada.
     // Si tiene cuenta (perfilId), identificamos por perfil_id (más confiable);
@@ -645,12 +699,9 @@
     async function obtenerRankingHTML(codigo){
       // Se fija si ESTE torneo (según su propia fecha de inicio y cantidad de
       // fechas) ya finalizó, para mostrar el festejo con confetis a quien sea
-      // que entre a consultar el ranking (organizador o invitado).
-      const { data: torneoInfo } = await supabaseClient
-        .from('torneos')
-        .select('fecha_inicio, cantidad_fechas')
-        .eq('codigo', codigo)
-        .maybeSingle();
+      // que entre a consultar el ranking (organizador o invitado). De paso trae
+      // los datos del sponsor de este torneo puntual, si tiene.
+      const torneoInfo = await tvObtenerTorneoPorCodigo(codigo);
 
       const estadoPropio = torneoInfo
         ? tvEstadoTorneoPropio(torneoInfo.fecha_inicio, torneoInfo.cantidad_fechas)
@@ -662,16 +713,18 @@
 
       if (finalizado) tvFestejoConfeti();
 
+      const sponsorHTML = tvRenderSponsorBannerHTML(torneoInfo);
+
       const { data, error } = await supabaseClient
         .from('torneo_resultados')
         .select('jugador_nombre, puntaje_total')
         .eq('torneo_codigo', codigo);
 
       if (error) {
-        return banner + `<div class="ranking-panel">No se pudo cargar el ranking: ${error.message}</div>`;
+        return banner + `<div class="ranking-panel">No se pudo cargar el ranking: ${error.message}</div>` + sponsorHTML;
       }
       if (!data || data.length === 0) {
-        return banner + '<div class="ranking-panel">Todavía nadie jugó con este código.</div>';
+        return banner + '<div class="ranking-panel">Todavía nadie jugó con este código.</div>' + sponsorHTML;
       }
 
       const acumulado = new Map(); // clave normalizada -> { nombre, total }
@@ -693,7 +746,7 @@
             <span>${i+1}. ${p.nombre}</span>
             <span><strong>${p.total} pts</strong></span>
           </div>`).join('') +
-        '</div>';
+        '</div>' + sponsorHTML;
     }
 
     // Ver el ranking de un torneo por código desde la pantalla pública de "Unirse a
@@ -721,13 +774,9 @@
         return;
       }
 
-      const { data: torneo, error: errorTorneo } = await supabaseClient
-        .from('torneos')
-        .select('fecha_inicio, cantidad_fechas')
-        .eq('codigo', codigo)
-        .maybeSingle();
+      const torneo = await tvObtenerTorneoPorCodigo(codigo);
 
-      if (errorTorneo || !torneo) {
+      if (!torneo) {
         alert('No se encontró un torneo con ese código.');
         return;
       }
@@ -753,16 +802,24 @@
 
       tvJugadorNombre = nombre;
       tvCodigoTorneo = codigo;
+      tvTorneoActual = torneo;
 
       mostrarVista('view-juego');
+      tvMostrarSponsorBanner();
       tvCargarPreguntasTorneo(jornada);
     }
 
     // El creador del torneo también puede participar de su propio torneo
     // desde "Mis Torneos Activos", sin pasar por el formulario de invitado
     // (reutiliza la misma lógica y el mismo motor de juego que ingresarAlJuego).
-    async function jugarMiTorneo(codigo, fechaInicioTorneo, cantidadFechasTorneo) {
-      const estadoPropio = tvEstadoTorneoPropio(fechaInicioTorneo, cantidadFechasTorneo);
+    async function jugarMiTorneo(codigo) {
+      const torneo = await tvObtenerTorneoPorCodigo(codigo);
+      if (!torneo) {
+        alert('No se pudo cargar este torneo.');
+        return;
+      }
+
+      const estadoPropio = tvEstadoTorneoPropio(torneo.fecha_inicio, torneo.cantidad_fechas);
       if (estadoPropio.estado === 'termino') {
         alert(`Este torneo ya finalizó (terminó el ${tvFormatoFecha(estadoPropio.fin)}). Podés consultar el ranking, pero ya no se puede jugar.`);
         return;
@@ -785,8 +842,10 @@
 
       tvJugadorNombre = nombre;
       tvCodigoTorneo = codigo;
+      tvTorneoActual = torneo;
 
       mostrarVista('view-juego');
+      tvMostrarSponsorBanner();
       tvCargarPreguntasTorneo(jornada);
     }
 
@@ -1331,6 +1390,12 @@
       const cantidadFechasInput = document.getElementById('nuevo-torneo-cantidad-fechas');
       const fechaInicio = fechaInicioInput.value;
       const cantidadFechas = parseInt(cantidadFechasInput.value, 10);
+      const sponsorNombreInput = document.getElementById('nuevo-torneo-sponsor-nombre');
+      const sponsorImagenInput = document.getElementById('nuevo-torneo-sponsor-imagen');
+      const sponsorLinkInput = document.getElementById('nuevo-torneo-sponsor-link');
+      const sponsorNombre = sponsorNombreInput.value.trim();
+      const sponsorImagen = sponsorImagenInput.value.trim();
+      const sponsorLink = sponsorLinkInput.value.trim();
       const btn = document.getElementById('btn-crear-torneo');
       const msg = document.getElementById('torneo-msg');
       msg.textContent = ''; msg.className = 'tv-msg';
@@ -1338,6 +1403,7 @@
       if(!nombreTorneo) { msg.textContent = 'Escribí un nombre para el torneo'; msg.className = 'tv-msg error'; return; }
       if(!fechaInicio) { msg.textContent = 'Elegí la fecha de inicio del torneo'; msg.className = 'tv-msg error'; return; }
       if(!cantidadFechas || cantidadFechas < 1 || cantidadFechas > 30) { msg.textContent = 'La cantidad de fechas tiene que ser entre 1 y 30'; msg.className = 'tv-msg error'; return; }
+      if(sponsorImagen && !sponsorNombre) { msg.textContent = 'Ponele un nombre al auspiciante'; msg.className = 'tv-msg error'; return; }
 
       btn.disabled = true;
       let intentos = 0;
@@ -1349,7 +1415,13 @@
         const codigo = generarCodigo(nombreTorneo);
         const { data, error } = await supabaseClient
           .from('torneos')
-          .insert({ codigo, nombre_torneo: nombreTorneo, creador_id: currentUser.id, fecha_inicio: fechaInicio, cantidad_fechas: cantidadFechas })
+          .insert({
+            codigo, nombre_torneo: nombreTorneo, creador_id: currentUser.id,
+            fecha_inicio: fechaInicio, cantidad_fechas: cantidadFechas,
+            sponsor_nombre: sponsorNombre || null,
+            sponsor_imagen_url: sponsorImagen || null,
+            sponsor_link_url: sponsorLink || null
+          })
           .select()
           .single();
         if (!error) { insertado = data; }
@@ -1368,6 +1440,9 @@
       nombreInput.value = '';
       fechaInicioInput.value = '';
       cantidadFechasInput.value = '15';
+      sponsorNombreInput.value = '';
+      sponsorImagenInput.value = '';
+      sponsorLinkInput.value = '';
       await cargarMisTorneos();
     }
 
@@ -1482,7 +1557,7 @@ function tvFestejoConfeti(){
         const finalizado = estado.estado === 'termino';
         const botonJugar = finalizado
           ? `<button class="btn btn-sm btn-primary" disabled title="Este torneo ya finalizó, solo se puede consultar el ranking">🔒 Jugar</button>`
-          : `<button onclick="jugarMiTorneo('${t.codigo}', '${t.fecha_inicio}', ${t.cantidad_fechas})" class="btn btn-sm btn-primary">🎮 Jugar</button>`;
+          : `<button onclick="jugarMiTorneo('${t.codigo}')" class="btn btn-sm btn-primary">🎮 Jugar</button>`;
         return `
           <li class="p-4" style="border-color:#DCE9F5;">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
