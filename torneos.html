@@ -210,7 +210,7 @@
 
       <div class="tv-temporizador-container">
         <div class="tv-circulo-tiempo" id="tv-anilloTiempo">
-          <div class="tv-circulo-interno" id="tv-txtTiempo">10</div>
+          <div class="tv-circulo-interno" id="tv-txtTiempo">15</div>
         </div>
       </div>
 
@@ -294,7 +294,7 @@
             </div>
             <div class="tv-temporizador-container">
               <div class="tv-circulo-tiempo" id="mn-anilloTiempo">
-                <div class="tv-circulo-interno" id="mn-txtTiempo">10</div>
+                <div class="tv-circulo-interno" id="mn-txtTiempo">15</div>
               </div>
             </div>
             <div class="mn-tarjeta-pregunta">
@@ -872,7 +872,7 @@
     let tvBaseDeDatosPreguntas = [];
     let tvIndicePregunta = 0;
     let tvPuntosTotales = 0;
-    let tvTiempoRestante = 10;
+    let tvTiempoRestante = 15;
     let tvTemporizadorIntervalo;
     let tvIdiomaActual = 'ES';
     let tvFechaActiva = 1;
@@ -1054,7 +1054,7 @@
     }
 
     function tvIniciarReloj() {
-      tvTiempoRestante = 10;
+      tvTiempoRestante = 15;
       tvActualizarRelojVisual();
 
       tvTemporizadorIntervalo = setInterval(() => {
@@ -1071,7 +1071,7 @@
 
     function tvActualizarRelojVisual() {
       document.getElementById('tv-txtTiempo').innerText = tvTiempoRestante;
-      let porcentaje = (tvTiempoRestante / 10) * 100;
+      let porcentaje = (tvTiempoRestante / 15) * 100;
       let colorAnillo = tvTiempoRestante <= 3 ? '#dc3545' : 'var(--accent)';
       document.getElementById('tv-anilloTiempo').style.background = `conic-gradient(${colorAnillo} ${porcentaje}%, #e0e0e0 0)`;
     }
@@ -1932,7 +1932,7 @@ function tvFestejoConfeti(){
     let mnBaseDeDatosPreguntas = [];
     let mnIndicePregunta = 0;
     let mnPuntosTotales = 0;
-    let mnTiempoRestante = 10;
+    let mnTiempoRestante = 15;
     let mnTemporizadorIntervalo;
     let mnIdiomaActual = 'ES';
     let mnFechaJugadaAhora = null; // qué número de fecha corresponde a la partida en curso
@@ -2053,7 +2053,7 @@ function tvFestejoConfeti(){
     }
 
     function mnIniciarReloj(){
-      mnTiempoRestante = 10;
+      mnTiempoRestante = 15;
       mnActualizarRelojVisual();
       mnTemporizadorIntervalo = setInterval(() => {
         mnTiempoRestante--;
@@ -2068,7 +2068,7 @@ function tvFestejoConfeti(){
 
     function mnActualizarRelojVisual(){
       document.getElementById('mn-txtTiempo').textContent = mnTiempoRestante;
-      let porcentaje = (mnTiempoRestante / 10) * 100;
+      let porcentaje = (mnTiempoRestante / 15) * 100;
       let colorAnillo = mnTiempoRestante <= 3 ? '#dc3545' : 'var(--accent)';
       document.getElementById('mn-anilloTiempo').style.background = `conic-gradient(${colorAnillo} ${porcentaje}%, #e0e0e0 0)`;
     }
