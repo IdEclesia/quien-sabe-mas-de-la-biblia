@@ -140,7 +140,7 @@
       <div class="flex items-center space-x-2">
         <button id="btn-instalar-app" onclick="instalarPWA()" class="hidden-view text-sm px-3 py-1.5 rounded font-semibold transition" style="background:var(--accent);color:var(--primary-dark);">📲 Instalar acceso</button>
         <button id="btn-activar-push" onclick="activarNotificaciones()" class="hidden-view text-sm px-3 py-1.5 rounded font-semibold transition" style="background:var(--accent);color:var(--primary-dark);">🔔 Activar notificaciones</button>
-        <button id="btn-home" onclick="mostrarVista('view-menu')" class="hidden-view text-sm text-blue-100 hover:text-white transition">Volver al Inicio</button>
+        <button id="btn-home" onclick="irInicio()" class="hidden-view text-sm text-blue-100 hover:text-white transition">Volver al Inicio</button>
         <button id="btn-logout" onclick="cerrarSesion()" class="hidden-view text-sm px-3 py-1.5 rounded transition" style="background:rgba(255,255,255,.15);">Cerrar Sesión</button>
       </div>
     </div>
@@ -437,6 +437,9 @@
           <h1 class="text-3xl">Mi Panel de Torneos</h1>
           <p style="color:var(--text-soft);" id="dashboard-saludo">Creá competencias y desafiá a tu comunidad.</p>
         </div>
+        <button onclick="mostrarVista('view-participar')" class="btn btn-outline" style="white-space:nowrap;">
+          🎟️ Participar de un Torneo (invitado)
+        </button>
       </div>
 
       <div id="carruselAuspiciantes" style="display:none;margin-bottom:22px;"></div>
@@ -559,6 +562,17 @@
 
     // 2. NAVEGACIÓN Y VISTAS
     const vistas = ['view-menu', 'view-participar', 'view-juego', 'view-mundial', 'view-unirse-mundial', 'view-login', 'view-registro', 'view-dashboard'];
+
+    // "Volver al Inicio": si hay una sesión iniciada (currentUser), vuelve al panel
+    // propio en vez de mandar al menú público. Así, jugar como invitado desde el
+    // panel (o desde cualquier otra vista) no te saca de tu cuenta.
+    function irInicio() {
+      if (currentUser) {
+        irADashboard();
+      } else {
+        mostrarVista('view-menu');
+      }
+    }
 
     function mostrarVista(vistaId) {
       vistas.forEach(v => document.getElementById(v).classList.add('hidden-view'));
