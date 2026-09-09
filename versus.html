@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>IdEclesia | Versus</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --primary:#1B4E82;
+    --primary-dark:#123457;
+    --secondary:#EAF3FA;
+    --accent:#D9995C;
+    --accent-soft:#F7E2B8;
+    --background:#F4F8FB;
+    --surface:#FFFFFF;
+    --text:#16233A;
+    --text-soft:#4C5C72;
+    --danger:#B4543A;
+    --vs-red:#B23A3A;
+    --vs-blue:#2A5C99;
+    --radius-lg:26px;
+    --radius-md:18px;
+    --shadow-sm:0 4px 14px -6px rgba(18,52,87,.22);
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:"Plus Jakarta Sans",system-ui,sans-serif;
+    background:
+      radial-gradient(80% 60% at 15% -10%, #DCEBF6 0%, transparent 60%),
+      radial-gradient(70% 50% at 110% 10%, #F7E2B8 0%, transparent 55%),
+      var(--background);
+    color:var(--text);
+  }
+  h1,h2,h3{font-family:"Fraunces",serif;font-weight:700;color:var(--primary-dark);letter-spacing:-.01em;}
+  .hidden-view{display:none !important;}
+  .tv-card{background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border:1px solid #DCE9F5;}
+  .btn{appearance:none;border:none;cursor:pointer;font-weight:700;font-size:1rem;padding:14px 20px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:transform .15s ease, opacity .15s ease;min-height:48px;font-family:inherit;}
+  .btn:active{transform:scale(.97);}
+  .btn-primary{background:var(--primary);color:#fff;box-shadow:var(--shadow-sm);}
+  .btn-primary:hover{background:var(--primary-dark);}
+  .btn-accent{background:var(--accent);color:#3B2B08;box-shadow:var(--shadow-sm);}
+  .btn-outline{background:transparent;color:var(--primary);border:2px solid var(--primary);}
+  .btn-outline:hover{background:var(--secondary);}
+  .btn-block{width:100%;}
+  .btn-sm{padding:9px 14px;min-height:auto;font-size:.82rem;border-radius:999px;}
+  .btn[disabled]{opacity:.5;cursor:not-allowed;}
+  .tv-input{width:100%;padding:13px 14px;border-radius:var(--radius-md);border:2px solid #DCE9F5;background:var(--secondary);font-size:.98rem;font-family:inherit;color:var(--text);}
+  .tv-input:focus{border-color:var(--accent);outline:none;}
+  .tv-label{display:block;font-size:.82rem;font-weight:700;color:var(--text-soft);margin-bottom:4px;}
+  .tv-msg{font-size:.85rem;font-weight:600;margin-top:10px;min-height:1.2em;}
+  .tv-msg.error{color:var(--danger);}
+  .tv-msg.ok{color:var(--primary);}
+  footer.credit{text-align:center;font-size:.72rem;color:#8FA0B6;margin-top:34px;padding-bottom:24px;}
+
+  /* --- Versus específico --- */
+  .vs-badge{display:inline-flex;align-items:center;gap:6px;background:var(--vs-red);color:#fff;font-weight:800;font-size:.72rem;padding:4px 10px;border-radius:999px;}
+  .vs-enfrentamiento{display:flex;align-items:center;justify-content:center;gap:14px;margin:14px 0;}
+  .vs-equipo-chip{flex:1;text-align:center;padding:14px 10px;border-radius:var(--radius-md);font-weight:800;}
+  .vs-equipo-chip.a{background:#EAF1FB;color:var(--vs-blue);}
+  .vs-equipo-chip.b{background:#FBEAEA;color:var(--vs-red);}
+  .vs-vs-letras{font-family:"Fraunces",serif;font-weight:800;font-size:1.4rem;color:var(--text-soft);}
+  .vs-lista-miembros li{padding:10px 4px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #DCE9F5;}
+  .vs-lista-miembros li:last-child{border-bottom:none;}
+  .vs-badge-estado{font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:999px;}
+  .vs-badge-estado.confirmado{background:#d4edda;color:#1d6b3a;}
+  .vs-badge-estado.pendiente{background:#F7E2B8;color:#7a5714;}
+
+  /* --- Motor de juego (idéntico look al de mundial) --- */
+  .tv-selector-idiomas{display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px;}
+  .tv-btn-lang{background:#fff;border:2px solid #DCE9F5;padding:4px 10px;border-radius:999px;cursor:pointer;font-weight:700;font-size:.75rem;color:var(--primary);font-family:inherit;}
+  .tv-btn-lang.activo{background:var(--primary);color:#fff;border-color:var(--primary);}
+  .tv-juego-encabezado{margin-bottom:16px;}
+  .tv-juego-categoria{display:flex;align-items:center;font-weight:800;font-size:1.05rem;margin-bottom:8px;color:var(--primary-dark);}
+  .tv-juego-progreso{font-size:.85rem;color:var(--text-soft);font-weight:700;margin-bottom:6px;}
+  .tv-barra-progreso{height:6px;background:#DCE9F5;border-radius:4px;overflow:hidden;}
+  .tv-barra-llena{height:100%;background:var(--accent);width:0%;transition:width .3s;}
+  .tv-temporizador-container{display:flex;justify-content:center;margin-bottom:-24px;position:relative;z-index:10;}
+  .tv-circulo-tiempo{width:56px;height:56px;border-radius:50%;background:conic-gradient(var(--accent) 100%, #e0e0e0 0);display:flex;justify-content:center;align-items:center;}
+  .tv-circulo-interno{width:46px;height:46px;background:#fff;border-radius:50%;display:flex;justify-content:center;align-items:center;font-size:1rem;font-weight:900;color:var(--primary-dark);}
+  .tv-tarjeta-pregunta{background:var(--surface);border-radius:var(--radius-lg);padding:36px 18px 18px;border:1px solid #DCE9F5;}
+  .tv-texto-pregunta{font-size:1.05rem;font-weight:800;margin-bottom:18px;line-height:1.3;color:var(--text);}
+  .tv-boton-opcion{display:flex;align-items:center;width:100%;background:var(--secondary);border:2px solid transparent;border-radius:var(--radius-md);padding:12px 14px;margin-bottom:10px;cursor:pointer;text-align:left;font-size:.95rem;font-weight:600;color:var(--text);transition:all .15s;font-family:inherit;}
+  .tv-boton-opcion:hover{background:#e2ecf5;}
+  .tv-letra-opcion{background:#fff;color:var(--primary);font-weight:800;width:28px;height:28px;display:flex;justify-content:center;align-items:center;border-radius:6px;margin-right:12px;flex-shrink:0;box-shadow:0 2px 4px rgba(0,0,0,.05);}
+  .tv-boton-opcion.correcta{background:#d4edda !important;border-color:#28a745 !important;}
+  .tv-boton-opcion.incorrecta{background:#f8d7da !important;border-color:#dc3545 !important;}
+  .tv-boton-opcion.deshabilitado{pointer-events:none;opacity:.8;}
+</style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <header style="background:var(--vs-red);" class="text-white shadow-md">
+    <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <span class="text-xl font-bold tracking-wide" style="font-family:'Fraunces',serif;">IdEclesia</span>
+        <span class="text-xs px-2 py-1 rounded font-bold" style="background:#fff;color:var(--vs-red);">VERSUS</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button id="btn-home" onclick="mostrarVista('view-menu')" class="hidden-view text-sm text-white/80 hover:text-white transition">Volver al Inicio</button>
+        <button id="btn-logout" onclick="cerrarSesion()" class="hidden-view text-sm px-3 py-1.5 rounded transition" style="background:rgba(255,255,255,.18);">Cerrar Sesión</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-grow flex items-center justify-center p-4">
+
+    <!-- ===================== MENÚ ===================== -->
+    <div id="view-menu" class="w-full max-w-md tv-card p-8 text-center">
+      <span class="vs-badge">⚔️ EQUIPO CONTRA EQUIPO</span>
+      <h1 class="text-3xl mt-3 mb-2">Versus</h1>
+      <p class="mb-8" style="color:var(--text-soft);">Armá tu equipo de 7, desafiá a otro y que gane el mejor</p>
+      <div class="space-y-4">
+        <button onclick="mostrarVista('view-login')" class="btn btn-outline btn-block">Iniciar sesión</button>
+        <button onclick="mostrarVista('view-registro')" class="btn btn-accent btn-block">Crear cuenta y armar equipo</button>
+      </div>
+    </div>
+
+    <!-- ===================== LOGIN ===================== -->
+    <div id="view-login" class="hidden-view w-full max-w-md tv-card p-8">
+      <h2 class="text-2xl mb-6 text-center">Iniciar Sesión</h2>
+      <form id="form-login" class="space-y-4">
+        <input type="email" id="login-email" placeholder="Correo electrónico" class="tv-input" required>
+        <input type="password" id="login-password" placeholder="Contraseña" class="tv-input" required>
+        <button type="submit" id="btn-login-submit" class="btn btn-primary btn-block">Ingresar</button>
+        <p id="login-msg" class="tv-msg"></p>
+      </form>
+      <button onclick="mostrarVista('view-menu')" class="btn btn-outline btn-block" style="margin-top:10px;">Volver</button>
+    </div>
+
+    <!-- ===================== REGISTRO ===================== -->
+    <div id="view-registro" class="hidden-view w-full max-w-md tv-card p-8">
+      <h2 class="text-2xl mb-6 text-center">Crear tu perfil</h2>
+      <form id="form-registro" class="space-y-3">
+        <input type="text" id="reg-nombre" placeholder="Nombre y Apellido" class="tv-input" required>
+        <input type="text" id="reg-pais" placeholder="País" class="tv-input" required>
+        <input type="text" id="reg-ciudad" placeholder="Ciudad" class="tv-input" required>
+        <input type="text" id="reg-iglesia" placeholder="Iglesia" class="tv-input" required>
+        <input type="email" id="reg-email" placeholder="Correo electrónico" class="tv-input" required>
+        <input type="password" id="reg-password" placeholder="Contraseña" class="tv-input" required>
+        <button type="submit" id="btn-registro-submit" class="btn btn-accent btn-block" style="margin-top:8px;">Crear cuenta</button>
+        <p id="registro-msg" class="tv-msg"></p>
+      </form>
+      <button onclick="mostrarVista('view-menu')" class="btn btn-outline btn-block" style="margin-top:10px;">Volver</button>
+    </div>
+
+    <!-- ===================== DASHBOARD ===================== -->
+    <div id="view-dashboard" class="hidden-view w-full max-w-lg tv-card p-8">
+
+      <!-- Sin equipo: crearlo -->
+      <div id="vs-sin-equipo">
+        <h2 class="text-2xl mb-2 text-center">Armá tu equipo</h2>
+        <p class="text-sm mb-4 text-center" style="color:var(--text-soft);">Vos sos el capitán. Anotá a tus 6 compañeros (7 en total).</p>
+        <label class="tv-label" for="vs-crear-nombre">Nombre del equipo</label>
+        <input type="text" id="vs-crear-nombre" placeholder="Ej: Guerreros de la Fe" class="tv-input mb-3">
+        <label class="tv-label">Tus 6 compañeros</label>
+        <div id="vs-crear-jugadores" class="space-y-2 mb-3"></div>
+        <button onclick="crearEquipoVersus()" id="btn-crear-equipo-vs" class="btn btn-accent btn-block">Crear equipo</button>
+        <p id="vs-crear-msg" class="tv-msg"></p>
+      </div>
+
+      <!-- Con equipo -->
+      <div id="vs-con-equipo" class="hidden-view">
+        <div class="tv-card p-4 mb-4" style="background:var(--secondary);">
+          <p class="text-xs" style="color:var(--text-soft);">Tu equipo</p>
+          <p class="font-bold text-lg" style="color:var(--primary-dark);" id="vs-equipo-nombre"></p>
+        </div>
+
+        <h3 class="font-bold mb-2" style="color:var(--primary-dark);">Plantilla (<span id="vs-cupo-actual">0</span>/7 aceptados)</h3>
+        <ul id="vs-lista-miembros" class="vs-lista-miembros mb-4"></ul>
+
+        <!-- Sin partido: crear desafío o unirse a uno -->
+        <div id="vs-sin-partido">
+          <div style="margin-top:10px;">
+            <button onclick="crearDesafio()" id="btn-crear-desafio" class="btn btn-primary btn-block">⚔️ Crear un Desafío</button>
+          </div>
+          <div class="relative flex py-3 items-center">
+            <div class="flex-grow border-t" style="border-color:#DCE9F5;"></div>
+            <span class="flex-shrink-0 mx-4 text-sm" style="color:var(--text-soft);">o</span>
+            <div class="flex-grow border-t" style="border-color:#DCE9F5;"></div>
+          </div>
+          <label class="tv-label" for="vs-codigo-aceptar">Código de desafío recibido</label>
+          <input type="text" id="vs-codigo-aceptar" placeholder="Ej: GUER-4821" style="text-transform:uppercase;" class="tv-input mb-2">
+          <button onclick="aceptarDesafio()" class="btn btn-outline btn-block">Aceptar Desafío</button>
+          <p id="vs-partido-msg" class="tv-msg"></p>
+        </div>
+
+        <!-- Partido esperando rival -->
+        <div id="vs-esperando-rival" class="hidden-view">
+          <div class="tv-card p-4" style="background:var(--secondary);">
+            <p class="text-sm font-bold mb-2" style="color:var(--primary-dark);">Esperando que un equipo acepte tu desafío</p>
+            <p class="text-xs mb-3" style="color:var(--text-soft);">Compartí este código con el capitán rival:</p>
+            <p class="text-2xl font-bold text-center mb-3" id="vs-mi-codigo-desafio" style="color:var(--vs-red);"></p>
+            <button onclick="compartirDesafio()" class="btn btn-accent btn-block">📲 Compartir por WhatsApp</button>
+          </div>
+        </div>
+
+        <!-- Partido en juego -->
+        <div id="vs-en-juego" class="hidden-view">
+          <div class="vs-enfrentamiento">
+            <div class="vs-equipo-chip a" id="vs-chip-equipo-a"></div>
+            <div class="vs-vs-letras">VS</div>
+            <div class="vs-equipo-chip b" id="vs-chip-equipo-b"></div>
+          </div>
+          <p class="text-sm text-center mb-3" style="color:var(--text-soft);">Fecha <span id="vs-fecha-numero"></span> · 20 preguntas por jugador</p>
+
+          <div id="vs-jugar-disponible" class="hidden-view">
+            <button onclick="vsEmpezarJuego()" id="btn-vs-jugar" class="btn btn-accent btn-block">🎮 Jugar mi parte del Versus</button>
+          </div>
+          <div id="vs-jugar-ya-jugado" class="hidden-view">
+            <p class="text-sm font-bold text-center" style="color:var(--primary);">Ya jugaste — sumaste <span id="vs-puntos-ya-jugado">0</span> puntos para tu equipo.</p>
+          </div>
+
+          <div id="vs-estado-equipos" class="tv-card p-4 mt-4" style="background:var(--secondary);">
+            <p class="text-sm" id="vs-texto-estado-equipos" style="color:var(--text-soft);">Cargando estado del partido...</p>
+          </div>
+        </div>
+
+        <!-- Partido finalizado -->
+        <div id="vs-finalizado" class="hidden-view">
+          <div class="tv-card p-6 text-center" style="background:var(--secondary);">
+            <p class="text-sm font-bold mb-1" id="vs-resultado-titulo" style="color:var(--primary-dark);"></p>
+            <div class="vs-enfrentamiento">
+              <div class="vs-equipo-chip a" id="vs-final-equipo-a"></div>
+              <div class="vs-vs-letras">—</div>
+              <div class="vs-equipo-chip b" id="vs-final-equipo-b"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Motor de juego -->
+        <div id="vs-vista-juego" class="hidden-view" style="margin-top:16px;">
+          <div class="tv-selector-idiomas">
+            <button class="tv-btn-lang activo" id="vs-langES" onclick="vsCambiarIdioma('ES')">ES</button>
+            <button class="tv-btn-lang" id="vs-langPT" onclick="vsCambiarIdioma('PT')">PT</button>
+            <button class="tv-btn-lang" id="vs-langEN" onclick="vsCambiarIdioma('EN')">EN</button>
+          </div>
+          <div class="tv-juego-encabezado">
+            <div class="tv-juego-categoria">📖 <span id="vs-txtCategoria" style="margin-left:8px;">Cargando...</span></div>
+            <div class="tv-juego-progreso">Pregunta <span id="vs-preguntaActualNum">0</span> de <span id="vs-totalPreguntas">0</span></div>
+            <div class="tv-barra-progreso"><div class="tv-barra-llena" id="vs-barraProgreso"></div></div>
+          </div>
+          <div class="tv-temporizador-container">
+            <div class="tv-circulo-tiempo" id="vs-anilloTiempo">
+              <div class="tv-circulo-interno" id="vs-txtTiempo">15</div>
+            </div>
+          </div>
+          <div class="tv-tarjeta-pregunta">
+            <div class="tv-texto-pregunta" id="vs-txtPregunta">Conectando con la base de datos...</div>
+            <div id="vs-contenedorOpciones"></div>
+          </div>
+          <div style="text-align:center;margin-top:14px;font-weight:800;color:var(--primary-dark);">
+            Puntaje: <span id="vs-txtPuntos">0</span> pts
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===================== UNIRSE A EQUIPO (invitación) ===================== -->
+    <div id="view-unirse" class="hidden-view w-full max-w-md tv-card p-8 text-center">
+      <div id="unirse-cargando"><p style="color:var(--text-soft);">Buscando la invitación...</p></div>
+      <div id="unirse-invalida" class="hidden-view">
+        <h2 class="text-2xl mb-3">Invitación no encontrada</h2>
+        <p style="color:var(--text-soft);">Este link no es válido o ya fue usado.</p>
+      </div>
+      <div id="unirse-info" class="hidden-view">
+        <h2 class="text-2xl mb-2">⚔️ Fuiste invitado</h2>
+        <p style="color:var(--text-soft);margin-bottom:18px;">a ser parte del equipo <strong id="unirse-equipo-nombre" style="color:var(--primary-dark);"></strong> para un Versus.</p>
+        <div id="unirse-necesita-login">
+          <p class="text-sm mb-3" style="color:var(--text-soft);">Para sumarte necesitás crear tu perfil primero.</p>
+          <button id="btn-unirse-registro" class="btn btn-accent btn-block">Crear mi perfil y unirme</button>
+          <button id="btn-unirse-login" class="btn btn-outline btn-block" style="margin-top:8px;">Ya tengo cuenta, iniciar sesión</button>
+        </div>
+        <div id="unirse-aceptar" class="hidden-view">
+          <button onclick="aceptarInvitacionVersus()" id="btn-aceptar-vs" class="btn btn-accent btn-block">Aceptar y unirme al equipo</button>
+          <p id="unirse-msg" class="tv-msg"></p>
+        </div>
+        <div id="unirse-ya-aceptada" class="hidden-view">
+          <p style="color:var(--primary);font-weight:600;margin-bottom:16px;">¡Ya sos parte de este equipo! 🎉</p>
+          <button onclick="mostrarVista('view-dashboard'); cargarDashboard();" class="btn btn-accent btn-block">Ir a mi equipo</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="credit">IdEclesia ©Matías Brizzio</footer>
+
+  <script>
+    // ===================== CONFIGURACIÓN DE SUPABASE (mismas credenciales que torneos.html) =====================
+    const SUPABASE_URL = "https://wfwmyuuxceyulmkhogqr.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_hrR11nillC0GtzH50LqQfQ_qEqX9FX6";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const VERSUS_URL = window.location.origin + window.location.pathname;
+
+    // Fuente de preguntas para todos los partidos de Versus: fija a Mundial_2.
+    const VERSUS_TORNEO_ID = 'Mundial_2';
+    const VERSUS_TOTAL_FECHAS = 6;
+
+    let currentUser = null;
+    let currentPerfil = null;
+    let miEquipoVersus = null;
+    let miMiembroIdActual = null;
+    let partidoActual = null;
+    let invitacionVersusActual = null;
+    let pendingInviteCode = null;
+
+    function mostrarVista(id){
+      ['view-menu','view-login','view-registro','view-dashboard','view-unirse'].forEach(v => {
+        document.getElementById(v).classList.toggle('hidden-view', v !== id);
+      });
+      document.getElementById('btn-home').classList.toggle('hidden-view', !currentUser);
+      document.getElementById('btn-logout').classList.toggle('hidden-view', !currentUser);
+    }
+
+    async function cargarPerfil(userId){
+      const { data } = await supabaseClient.from('perfiles').select('*').eq('id', userId).maybeSingle();
+      return data;
+    }
+
+    async function cerrarSesion(){
+      await supabaseClient.auth.signOut();
+      currentUser = null; currentPerfil = null;
+      mostrarVista('view-menu');
+    }
+
+    // ===================== LOGIN / REGISTRO =====================
+    document.getElementById('form-login').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const btn = document.getElementById('btn-login-submit');
+      const msg = document.getElementById('login-msg');
+      msg.textContent = ''; msg.className = 'tv-msg'; btn.disabled = true;
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      btn.disabled = false;
+      if (error) { msg.textContent = 'No se pudo ingresar: ' + error.message; msg.className = 'tv-msg error'; return; }
+      currentUser = data.user;
+      currentPerfil = await cargarPerfil(currentUser.id);
+      if (pendingInviteCode) { mostrarVista('view-unirse'); await cargarVistaUnirse(pendingInviteCode); return; }
+      mostrarVista('view-dashboard'); await cargarDashboard();
+    });
+
+    document.getElementById('form-registro').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nombre = document.getElementById('reg-nombre').value.trim();
+      const pais = document.getElementById('reg-pais').value.trim();
+      const ciudad = document.getElementById('reg-ciudad').value.trim();
+      const iglesia = document.getElementById('reg-iglesia').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const password = document.getElementById('reg-password').value;
+      const btn = document.getElementById('btn-registro-submit');
+      const msg = document.getElementById('registro-msg');
+      msg.textContent = ''; msg.className = 'tv-msg'; btn.disabled = true;
+
+      const { data, error } = await supabaseClient.auth.signUp({ email, password });
+      if (error) { btn.disabled = false; msg.textContent = 'No se pudo crear la cuenta: ' + error.message; msg.className = 'tv-msg error'; return; }
+      currentUser = data.user;
+      await supabaseClient.from('perfiles').insert({
+        id: currentUser.id, nombre_apellido: nombre, pais, ciudad, iglesia
+      });
+      currentPerfil = await cargarPerfil(currentUser.id);
+      btn.disabled = false;
+      if (pendingInviteCode) { mostrarVista('view-unirse'); await cargarVistaUnirse(pendingInviteCode); return; }
+      mostrarVista('view-dashboard'); await cargarDashboard();
+    });
+
+    document.getElementById('btn-unirse-registro').addEventListener('click', () => mostrarVista('view-registro'));
+    document.getElementById('btn-unirse-login').addEventListener('click', () => mostrarVista('view-login'));
+
+    // ===================== CREAR EQUIPO =====================
+    function generarCodigoEquipoVs(nombreEquipo){
+      const base = nombreEquipo.substring(0,4).toUpperCase().replace(/[^A-Z0-9]/g,'') || 'VS';
+      return base + '-' + Math.floor(1000 + Math.random() * 9000);
+    }
+    function generarCodigoInvitacionVs(){
+      return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+    }
+    function generarCodigoDesafio(nombreEquipo){
+      const base = nombreEquipo.substring(0,4).toUpperCase().replace(/[^A-Z0-9]/g,'') || 'VS';
+      return base + '-' + Math.floor(1000 + Math.random() * 9000);
+    }
+
+    async function cargarDashboard(){
+      const jugadoresDiv = document.getElementById('vs-crear-jugadores');
+      if (jugadoresDiv.children.length === 0) {
+        jugadoresDiv.innerHTML = Array.from({length: 6}, (_, i) => `
+          <input type="text" class="tv-input vs-jugador-input" placeholder="Nombre y apellido del jugador ${i+1}">`).join('');
+      }
+
+      miEquipoVersus = null;
+      const { data: comoCapitan } = await supabaseClient
+        .from('versus_equipos').select('*').eq('capitan_id', currentUser.id).maybeSingle();
+      if (comoCapitan) {
+        miEquipoVersus = comoCapitan;
+      } else {
+        const { data: comoMiembro } = await supabaseClient
+          .from('versus_miembros')
+          .select('*, versus_equipos(*)')
+          .eq('perfil_id', currentUser.id)
+          .eq('estado', 'aceptada')
+          .maybeSingle();
+        if (comoMiembro && comoMiembro.versus_equipos) miEquipoVersus = comoMiembro.versus_equipos;
+      }
+
+      if (!miEquipoVersus) {
+        document.getElementById('vs-sin-equipo').classList.remove('hidden-view');
+        document.getElementById('vs-con-equipo').classList.add('hidden-view');
+        return;
+      }
+
+      document.getElementById('vs-sin-equipo').classList.add('hidden-view');
+      document.getElementById('vs-con-equipo').classList.remove('hidden-view');
+      document.getElementById('vs-equipo-nombre').textContent = miEquipoVersus.nombre;
+
+      await cargarMiembrosVersus(miEquipoVersus.id, currentUser.id === miEquipoVersus.capitan_id);
+      await cargarEstadoPartido();
+    }
+
+    async function crearEquipoVersus(){
+      const nombreInput = document.getElementById('vs-crear-nombre');
+      const nombreEquipo = nombreInput.value.trim();
+      const nombresJugadores = Array.from(document.querySelectorAll('.vs-jugador-input'))
+        .map(inp => inp.value.trim()).filter(Boolean);
+      const btn = document.getElementById('btn-crear-equipo-vs');
+      const msg = document.getElementById('vs-crear-msg');
+      msg.textContent = ''; msg.className = 'tv-msg';
+      if (!nombreEquipo) { msg.textContent = 'Escribí un nombre para el equipo'; msg.className = 'tv-msg error'; return; }
+      if (nombresJugadores.length === 0) { msg.textContent = 'Anotá al menos a un compañero de equipo'; msg.className = 'tv-msg error'; return; }
+
+      btn.disabled = true;
+      let intentos = 0, insertado = null, ultimoError = null;
+      while (intentos < 4 && !insertado) {
+        const codigo = generarCodigoEquipoVs(nombreEquipo);
+        const { data, error } = await supabaseClient
+          .from('versus_equipos')
+          .insert({ nombre: nombreEquipo, codigo, capitan_id: currentUser.id })
+          .select().single();
+        if (!error) { insertado = data; } else { ultimoError = error; if (error.code !== '23505') break; }
+        intentos++;
+      }
+      if (!insertado) {
+        btn.disabled = false;
+        msg.textContent = 'No se pudo crear el equipo: ' + (ultimoError ? ultimoError.message : 'intentá de nuevo');
+        msg.className = 'tv-msg error';
+        return;
+      }
+
+      await supabaseClient.from('versus_miembros').insert({
+        equipo_id: insertado.id,
+        nombre: currentPerfil ? currentPerfil.nombre_apellido : 'Capitán',
+        es_capitan: true, estado: 'aceptada', perfil_id: currentUser.id
+      });
+      for (const nombreJugador of nombresJugadores) {
+        const codigoInvitacion = generarCodigoInvitacionVs();
+        await supabaseClient.from('versus_miembros').insert({
+          equipo_id: insertado.id, nombre: nombreJugador, es_capitan: false,
+          estado: 'pendiente', codigo_invitacion: codigoInvitacion
+        });
+      }
+      btn.disabled = false;
+      await cargarDashboard();
+    }
+
+    async function cargarMiembrosVersus(equipoId, esCapitan){
+      const { data } = await supabaseClient
+        .from('versus_miembros')
+        .select('id, nombre, es_capitan, estado, codigo_invitacion')
+        .eq('equipo_id', equipoId)
+        .order('created_at', { ascending: true });
+
+      const lista = document.getElementById('vs-lista-miembros');
+      const cupo = document.getElementById('vs-cupo-actual');
+      if (!data) { lista.innerHTML = '<li>No se pudo cargar la plantilla.</li>'; return; }
+
+      cupo.textContent = data.filter(m => m.estado === 'aceptada').length;
+      lista.innerHTML = data.map(m => {
+        const estadoTexto = m.es_capitan ? '<span class="text-xs font-bold" style="color:var(--accent);">CAPITÁN</span>'
+          : m.estado === 'aceptada' ? '<span class="vs-badge-estado confirmado">Confirmado</span>'
+          : '<span class="vs-badge-estado pendiente">Pendiente</span>';
+        const btnInvitar = (esCapitan && m.estado === 'pendiente' && m.codigo_invitacion)
+          ? `<button class="btn btn-sm btn-outline" style="margin-left:8px;" onclick='reenviarInvitacionVersus(${JSON.stringify(m.codigo_invitacion)}, ${JSON.stringify(m.nombre)}, ${JSON.stringify(miEquipoVersus.nombre)})'>📲</button>` : '';
+        return `<li><span>${m.nombre}</span><span>${estadoTexto}${btnInvitar}</span></li>`;
+      }).join('');
+    }
+
+    function reenviarInvitacionVersus(codigoInvitacion, nombreJugador, nombreEquipo){
+      const link = `${VERSUS_URL}?vista=unirse&codigo=${codigoInvitacion}`;
+      const mensaje = `¡Hola ${nombreJugador}! Te invité a formar parte del equipo "${nombreEquipo}" para jugar un Versus bíblico. Ingresá acá para sumarte: ${link}`;
+      window.open('https://wa.me/?text=' + encodeURIComponent(mensaje), '_blank', 'noopener');
+    }
+
+    async function cargarVistaUnirse(codigoInvitacion){
+      pendingInviteCode = codigoInvitacion;
+      const cargando = document.getElementById('unirse-cargando');
+      const invalida = document.getElementById('unirse-invalida');
+      const info = document.getElementById('unirse-info');
+      cargando.classList.remove('hidden-view'); invalida.classList.add('hidden-view'); info.classList.add('hidden-view');
+
+      const { data } = await supabaseClient
+        .from('versus_miembros')
+        .select('id, equipo_id, nombre, estado, versus_equipos(nombre)')
+        .eq('codigo_invitacion', codigoInvitacion)
+        .maybeSingle();
+
+      cargando.classList.add('hidden-view');
+      if (!data) { invalida.classList.remove('hidden-view'); return; }
+
+      invitacionVersusActual = { codigo: codigoInvitacion, equipoId: data.equipo_id,
+        equipoNombre: data.versus_equipos ? data.versus_equipos.nombre : 'tu equipo', jugadorNombre: data.nombre };
+      document.getElementById('unirse-equipo-nombre').textContent = invitacionVersusActual.equipoNombre;
+      info.classList.remove('hidden-view');
+
+      const necesitaLogin = document.getElementById('unirse-necesita-login');
+      const aceptar = document.getElementById('unirse-aceptar');
+      const yaAceptada = document.getElementById('unirse-ya-aceptada');
+      if (data.estado === 'aceptada') {
+        necesitaLogin.classList.add('hidden-view'); aceptar.classList.add('hidden-view'); yaAceptada.classList.remove('hidden-view');
+      } else if (currentUser) {
+        necesitaLogin.classList.add('hidden-view'); aceptar.classList.remove('hidden-view'); yaAceptada.classList.add('hidden-view');
+      } else {
+        necesitaLogin.classList.remove('hidden-view'); aceptar.classList.add('hidden-view'); yaAceptada.classList.add('hidden-view');
+      }
+    }
+
+    async function aceptarInvitacionVersus(){
+      if (!invitacionVersusActual || !currentUser) return;
+      const btn = document.getElementById('btn-aceptar-vs');
+      const msg = document.getElementById('unirse-msg');
+      btn.disabled = true; msg.textContent = ''; msg.className = 'tv-msg';
+      const { error } = await supabaseClient
+        .from('versus_miembros')
+        .update({ perfil_id: currentUser.id, estado: 'aceptada' })
+        .eq('codigo_invitacion', invitacionVersusActual.codigo).eq('estado', 'pendiente');
+      btn.disabled = false;
+      if (error) { msg.textContent = 'No se pudo confirmar tu lugar: ' + error.message; msg.className = 'tv-msg error'; return; }
+      pendingInviteCode = null;
+      document.getElementById('unirse-aceptar').classList.add('hidden-view');
+      document.getElementById('unirse-ya-aceptada').classList.remove('hidden-view');
+    }
+
+    // ===================== DESAFÍO (crear / aceptar) =====================
+    // Asigna secuencialmente la próxima fecha libre de Mundial_2 (1 a 6). Si en algún
+    // momento el Mundial real llega a jugarse y esa fecha ya tiene resultados en
+    // mundial_puntos, se saltea automáticamente a la siguiente.
+    async function obtenerProximaFechaVersus(){
+      const { data: partidosUsados } = await supabaseClient
+        .from('versus_partidos').select('fecha_asignada').order('fecha_asignada', { ascending: true });
+      const usadas = new Set((partidosUsados || []).map(p => p.fecha_asignada));
+
+      for (let f = 1; f <= VERSUS_TOTAL_FECHAS; f++) {
+        if (usadas.has(f)) continue;
+        const { count } = await supabaseClient
+          .from('mundial_puntos').select('id', { count: 'exact', head: true }).eq('fecha', f);
+        if (!count || count === 0) return f;
+      }
+      return 1; // fallback si las 6 fechas ya están comprometidas
+    }
+
+    async function crearDesafio(){
+      const btn = document.getElementById('btn-crear-desafio');
+      const msg = document.getElementById('vs-partido-msg');
+      btn.disabled = true; msg.textContent = ''; msg.className = 'tv-msg';
+
+      const fecha = await obtenerProximaFechaVersus();
+      let intentos = 0, insertado = null, ultimoError = null;
+      while (intentos < 4 && !insertado) {
+        const codigo = generarCodigoDesafio(miEquipoVersus.nombre);
+        const { data, error } = await supabaseClient
+          .from('versus_partidos')
+          .insert({ codigo_desafio: codigo, equipo_a_id: miEquipoVersus.id, fecha_asignada: fecha, estado: 'esperando_rival' })
+          .select().single();
+        if (!error) { insertado = data; } else { ultimoError = error; if (error.code !== '23505') break; }
+        intentos++;
+      }
+      btn.disabled = false;
+      if (!insertado) { msg.textContent = 'No se pudo crear el desafío: ' + (ultimoError ? ultimoError.message : ''); msg.className = 'tv-msg error'; return; }
+      await cargarEstadoPartido();
+    }
+
+    function compartirDesafio(){
+      if (!partidoActual) return;
+      const mensaje = `¡El equipo "${miEquipoVersus.nombre}" te desafía a un Versus bíblico! Armá tu equipo de 7 en ${VERSUS_URL} y aceptá con el código: ${partidoActual.codigo_desafio}`;
+      window.open('https://wa.me/?text=' + encodeURIComponent(mensaje), '_blank', 'noopener');
+    }
+
+    async function aceptarDesafio(){
+      const input = document.getElementById('vs-codigo-aceptar');
+      const codigo = input.value.trim().toUpperCase();
+      const msg = document.getElementById('vs-partido-msg');
+      msg.textContent = ''; msg.className = 'tv-msg';
+      if (!codigo) { msg.textContent = 'Ingresá el código del desafío'; msg.className = 'tv-msg error'; return; }
+
+      const { data: partido } = await supabaseClient
+        .from('versus_partidos').select('*').eq('codigo_desafio', codigo).maybeSingle();
+      if (!partido) { msg.textContent = 'Código no encontrado'; msg.className = 'tv-msg error'; return; }
+      if (partido.estado !== 'esperando_rival') { msg.textContent = 'Este desafío ya no está disponible'; msg.className = 'tv-msg error'; return; }
+      if (partido.equipo_a_id === miEquipoVersus.id) { msg.textContent = 'No podés aceptar tu propio desafío'; msg.className = 'tv-msg error'; return; }
+
+      const { error } = await supabaseClient
+        .from('versus_partidos')
+        .update({ equipo_b_id: miEquipoVersus.id, estado: 'en_juego' })
+        .eq('id', partido.id).eq('estado', 'esperando_rival');
+      if (error) { msg.textContent = 'No se pudo aceptar: ' + error.message; msg.className = 'tv-msg error'; return; }
+      await cargarEstadoPartido();
+    }
+
+    // ===================== ESTADO DEL PARTIDO =====================
+    async function cargarEstadoPartido(){
+      const { data: comoA } = await supabaseClient
+        .from('versus_partidos').select('*').eq('equipo_a_id', miEquipoVersus.id)
+        .order('creado_en', { ascending: false }).limit(1).maybeSingle();
+      const { data: comoB } = await supabaseClient
+        .from('versus_partidos').select('*').eq('equipo_b_id', miEquipoVersus.id)
+        .order('creado_en', { ascending: false }).limit(1).maybeSingle();
+
+      // Se toma el partido activo más reciente entre los dos roles posibles.
+      const candidatos = [comoA, comoB].filter(Boolean);
+      partidoActual = candidatos.sort((x, y) => new Date(y.creado_en) - new Date(x.creado_en))[0] || null;
+
+      const sinPartido = document.getElementById('vs-sin-partido');
+      const esperando = document.getElementById('vs-esperando-rival');
+      const enJuego = document.getElementById('vs-en-juego');
+      const finalizado = document.getElementById('vs-finalizado');
+      [sinPartido, esperando, enJuego, finalizado].forEach(d => d.classList.add('hidden-view'));
+
+      if (!partidoActual) { sinPartido.classList.remove('hidden-view'); return; }
+
+      if (partidoActual.estado === 'esperando_rival') {
+        esperando.classList.remove('hidden-view');
+        document.getElementById('vs-mi-codigo-desafio').textContent = partidoActual.codigo_desafio;
+        return;
+      }
+
+      const { data: equipoA } = await supabaseClient.from('versus_equipos').select('nombre').eq('id', partidoActual.equipo_a_id).maybeSingle();
+      const { data: equipoB } = await supabaseClient.from('versus_equipos').select('nombre').eq('id', partidoActual.equipo_b_id).maybeSingle();
+      const nombreA = equipoA ? equipoA.nombre : 'Equipo A';
+      const nombreB = equipoB ? equipoB.nombre : 'Equipo B';
+
+      if (partidoActual.estado === 'finalizado') {
+        finalizado.classList.remove('hidden-view');
+        const { data: sumaA } = await supabaseClient.from('versus_resultados').select('puntos').eq('partido_id', partidoActual.id).eq('equipo_id', partidoActual.equipo_a_id);
+        const { data: sumaB } = await supabaseClient.from('versus_resultados').select('puntos').eq('partido_id', partidoActual.id).eq('equipo_id', partidoActual.equipo_b_id);
+        const totalA = (sumaA || []).reduce((a, r) => a + (r.puntos || 0), 0);
+        const totalB = (sumaB || []).reduce((a, r) => a + (r.puntos || 0), 0);
+        document.getElementById('vs-final-equipo-a').textContent = `${nombreA}: ${totalA} pts`;
+        document.getElementById('vs-final-equipo-b').textContent = `${nombreB}: ${totalB} pts`;
+        const gano = partidoActual.ganador_id === miEquipoVersus.id;
+        document.getElementById('vs-resultado-titulo').textContent = partidoActual.ganador_id
+          ? (gano ? '🏆 ¡Ganaron el Versus!' : 'Perdieron este Versus') : 'Empate';
+        return;
+      }
+
+      // en_juego
+      enJuego.classList.remove('hidden-view');
+      document.getElementById('vs-chip-equipo-a').textContent = nombreA;
+      document.getElementById('vs-chip-equipo-b').textContent = nombreB;
+      document.getElementById('vs-fecha-numero').textContent = partidoActual.fecha_asignada;
+
+      const { data: miMiembro } = await supabaseClient
+        .from('versus_miembros').select('id, estado').eq('equipo_id', miEquipoVersus.id).eq('perfil_id', currentUser.id).maybeSingle();
+      miMiembroIdActual = miMiembro ? miMiembro.id : null;
+
+      const jugarDisponible = document.getElementById('vs-jugar-disponible');
+      const jugarYaJugado = document.getElementById('vs-jugar-ya-jugado');
+      [jugarDisponible, jugarYaJugado].forEach(d => d.classList.add('hidden-view'));
+
+      if (miMiembroIdActual) {
+        const { data: yaJugue } = await supabaseClient
+          .from('versus_resultados').select('puntos').eq('partido_id', partidoActual.id).eq('miembro_id', miMiembroIdActual).maybeSingle();
+        if (yaJugue) {
+          jugarYaJugado.classList.remove('hidden-view');
+          document.getElementById('vs-puntos-ya-jugado').textContent = yaJugue.puntos;
+        } else {
+          jugarDisponible.classList.remove('hidden-view');
+        }
+      }
+
+      await actualizarEstadoEquipos(partidoActual, nombreA, nombreB);
+    }
+
+    async function actualizarEstadoEquipos(partido, nombreA, nombreB){
+      const listoA = await equipoEstaListo(partido.equipo_a_id, partido.id);
+      const listoB = await equipoEstaListo(partido.equipo_b_id, partido.id);
+      const textoEl = document.getElementById('vs-texto-estado-equipos');
+      textoEl.textContent = `${nombreA}: ${listoA ? 'listo ✅' : 'jugando...'}  ·  ${nombreB}: ${listoB ? 'listo ✅' : 'jugando...'}`;
+
+      if (listoA && listoB && partido.estado !== 'finalizado') {
+        await finalizarPartido(partido);
+        await cargarEstadoPartido();
+      }
+    }
+
+    async function equipoEstaListo(equipoId, partidoId){
+      const { count: totalMiembros } = await supabaseClient
+        .from('versus_miembros').select('id', { count: 'exact', head: true }).eq('equipo_id', equipoId).eq('estado', 'aceptada');
+      const { count: completados } = await supabaseClient
+        .from('versus_resultados').select('id', { count: 'exact', head: true }).eq('partido_id', partidoId).eq('equipo_id', equipoId);
+      return (totalMiembros || 0) > 0 && completados === totalMiembros;
+    }
+
+    async function finalizarPartido(partido){
+      const { data: puntosA } = await supabaseClient.from('versus_resultados').select('puntos').eq('partido_id', partido.id).eq('equipo_id', partido.equipo_a_id);
+      const { data: puntosB } = await supabaseClient.from('versus_resultados').select('puntos').eq('partido_id', partido.id).eq('equipo_id', partido.equipo_b_id);
+      const totalA = (puntosA || []).reduce((a, r) => a + (r.puntos || 0), 0);
+      const totalB = (puntosB || []).reduce((a, r) => a + (r.puntos || 0), 0);
+      const ganadorId = totalA === totalB ? null : (totalA > totalB ? partido.equipo_a_id : partido.equipo_b_id);
+      await supabaseClient.from('versus_partidos').update({ estado: 'finalizado', ganador_id: ganadorId }).eq('id', partido.id);
+    }
+
+    // ===================== MOTOR DE JUEGO (idéntico al de Mundial: 15s, 10+tiempoRestante) =====================
+    let vsBaseDeDatosPreguntas = [];
+    let vsIndicePregunta = 0;
+    let vsPuntosTotales = 0;
+    let vsTiempoRestante = 15;
+    let vsTemporizadorIntervalo;
+    let vsIdiomaActual = 'ES';
+
+    async function vsEmpezarJuego(){
+      if (!partidoActual || !miMiembroIdActual) return;
+      const { data: yaJugue } = await supabaseClient
+        .from('versus_resultados').select('puntos').eq('partido_id', partidoActual.id).eq('miembro_id', miMiembroIdActual).maybeSingle();
+      if (yaJugue) { await cargarEstadoPartido(); return; }
+
+      document.getElementById('vs-jugar-disponible').classList.add('hidden-view');
+      document.getElementById('vs-vista-juego').classList.remove('hidden-view');
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('preguntas_mundial_26')
+          .select('id, categoria, pregunta_es, opcion1_es, opcion2_es, opcion3_es, pregunta_pt, opcion1_pt, opcion2_pt, opcion3_pt, pregunta_en, opcion1_en, opcion2_en, opcion3_en')
+          .eq('torneo', VERSUS_TORNEO_ID)
+          .eq('fecha', partidoActual.fecha_asignada);
+        if (error) throw error;
+
+        vsBaseDeDatosPreguntas = data.map(row => ({
+          id: row.id, categoria: row.categoria,
+          preguntaES: row.pregunta_es, opcion1ES: row.opcion1_es, opcion2ES: row.opcion2_es, opcion3ES: row.opcion3_es,
+          preguntaPT: row.pregunta_pt, opcion1PT: row.opcion1_pt, opcion2PT: row.opcion2_pt, opcion3PT: row.opcion3_pt,
+          preguntaEN: row.pregunta_en, opcion1EN: row.opcion1_en, opcion2EN: row.opcion2_en, opcion3EN: row.opcion3_en
+        }));
+
+        vsIndicePregunta = 0; vsPuntosTotales = 0;
+        vsActualizarPuntaje();
+        document.getElementById('vs-totalPreguntas').textContent = vsBaseDeDatosPreguntas.length;
+        vsCargarPreguntaActual();
+      } catch (err) {
+        console.error('Error al cargar preguntas del Versus:', err);
+        document.getElementById('vs-txtPregunta').textContent = 'Error al conectar con la base de datos de preguntas.';
+      }
+    }
+
+    function vsCambiarIdioma(nuevoIdioma){
+      vsIdiomaActual = nuevoIdioma;
+      ['ES', 'PT', 'EN'].forEach(lang => {
+        const btn = document.getElementById(`vs-lang${lang}`);
+        if (btn) btn.className = `tv-btn-lang ${vsIdiomaActual === lang ? 'activo' : ''}`;
+      });
+      if (vsBaseDeDatosPreguntas.length > 0) vsCargarPreguntaActual();
+    }
+
+    async function vsCargarPreguntaActual(){
+      clearInterval(vsTemporizadorIntervalo);
+
+      if (vsIndicePregunta >= vsBaseDeDatosPreguntas.length) {
+        document.getElementById('vs-txtPregunta').textContent = `¡Terminaste tu parte! Sumaste ${vsPuntosTotales} puntos para tu equipo.`;
+        document.getElementById('vs-contenedorOpciones').innerHTML = '';
+        document.getElementById('vs-anilloTiempo').style.background = 'conic-gradient(#38a169 100%, #e0e0e0 0)';
+
+        await supabaseClient.from('versus_resultados').insert({
+          partido_id: partidoActual.id, equipo_id: miEquipoVersus.id,
+          miembro_id: miMiembroIdActual, puntos: vsPuntosTotales, completado: true
+        });
+        document.getElementById('vs-vista-juego').classList.add('hidden-view');
+        await cargarEstadoPartido();
+        return;
+      }
+
+      const datos = vsBaseDeDatosPreguntas[vsIndicePregunta];
+      let textoPregunta = datos.preguntaES;
+      let op1 = datos.opcion1ES, op2 = datos.opcion2ES, op3 = datos.opcion3ES;
+      if (vsIdiomaActual === 'PT') { textoPregunta = datos.preguntaPT; op1 = datos.opcion1PT; op2 = datos.opcion2PT; op3 = datos.opcion3PT; }
+      else if (vsIdiomaActual === 'EN') { textoPregunta = datos.preguntaEN; op1 = datos.opcion1EN; op2 = datos.opcion2EN; op3 = datos.opcion3EN; }
+
+      document.getElementById('vs-txtCategoria').textContent = `${datos.categoria} (Fecha ${partidoActual.fecha_asignada})`;
+      document.getElementById('vs-preguntaActualNum').textContent = vsIndicePregunta + 1;
+      document.getElementById('vs-txtPregunta').textContent = textoPregunta;
+      document.getElementById('vs-barraProgreso').style.width = `${((vsIndicePregunta + 1) / vsBaseDeDatosPreguntas.length) * 100}%`;
+
+      let opciones = [{ texto: op1, idOpcion: 1 }, { texto: op2, idOpcion: 2 }, { texto: op3, idOpcion: 3 }];
+      for (let i = opciones.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [opciones[i], opciones[j]] = [opciones[j], opciones[i]];
+      }
+      vsRenderizarBotones(opciones, datos.id);
+      vsIniciarReloj();
+    }
+
+    function vsRenderizarBotones(opcionesMezcladas, preguntaId){
+      const contenedor = document.getElementById('vs-contenedorOpciones');
+      contenedor.innerHTML = '';
+      const letras = ['A', 'B', 'C'];
+      opcionesMezcladas.forEach((opcion, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'tv-boton-opcion';
+        btn.dataset.idOpcion = opcion.idOpcion;
+        btn.innerHTML = `<div class="tv-letra-opcion">${letras[index]}</div> ${opcion.texto}`;
+        btn.onclick = () => vsProcesarRespuesta(btn, preguntaId, opcion.idOpcion);
+        contenedor.appendChild(btn);
+      });
+    }
+
+    function vsIniciarReloj(){
+      vsTiempoRestante = 15;
+      vsActualizarRelojVisual();
+      vsTemporizadorIntervalo = setInterval(() => {
+        vsTiempoRestante--;
+        vsActualizarRelojVisual();
+        if (vsTiempoRestante <= 0) {
+          clearInterval(vsTemporizadorIntervalo);
+          const preguntaIdActual = vsBaseDeDatosPreguntas[vsIndicePregunta]?.id;
+          vsProcesarRespuesta(null, preguntaIdActual, 0);
+        }
+      }, 1000);
+    }
+
+    function vsActualizarRelojVisual(){
+      document.getElementById('vs-txtTiempo').textContent = vsTiempoRestante;
+      let porcentaje = (vsTiempoRestante / 15) * 100;
+      let colorAnillo = vsTiempoRestante <= 3 ? '#dc3545' : 'var(--accent)';
+      document.getElementById('vs-anilloTiempo').style.background = `conic-gradient(${colorAnillo} ${porcentaje}%, #e0e0e0 0)`;
+    }
+
+    // Reutiliza el mismo RPC de validación que Mundial: validar_respuesta_mundial.
+    async function vsProcesarRespuesta(botonClickeado, preguntaId, idOpcionElegida){
+      clearInterval(vsTemporizadorIntervalo);
+      document.querySelectorAll('#vs-contenedorOpciones .tv-boton-opcion').forEach(b => b.classList.add('deshabilitado'));
+
+      let esAcertada = false;
+      if (preguntaId && idOpcionElegida > 0) {
+        const { data, error } = await supabaseClient.rpc('validar_respuesta_mundial', {
+          p_pregunta_id: preguntaId, p_opcion_elegida: idOpcionElegida
+        });
+        if (!error && data === true) esAcertada = true;
+      }
+
+      if (esAcertada) {
+        if (botonClickeado) botonClickeado.classList.add('correcta');
+        vsPuntosTotales += 10 + vsTiempoRestante;
+        vsActualizarPuntaje();
+      } else if (botonClickeado) {
+        botonClickeado.classList.add('incorrecta');
+      }
+
+      setTimeout(() => { vsIndicePregunta++; vsCargarPreguntaActual(); }, 2000);
+    }
+
+    function vsActualizarPuntaje(){
+      document.getElementById('vs-txtPuntos').textContent = vsPuntosTotales;
+    }
+
+    // ===================== INICIALIZACIÓN =====================
+    (async function init(){
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      const params = new URLSearchParams(window.location.search);
+      const vistaPedida = params.get('vista');
+
+      if (session) {
+        currentUser = session.user;
+        currentPerfil = await cargarPerfil(currentUser.id);
+      }
+
+      if (vistaPedida === 'unirse') {
+        const codigoInv = params.get('codigo');
+        mostrarVista('view-unirse');
+        if (codigoInv) await cargarVistaUnirse(codigoInv);
+        return;
+      }
+
+      if (session) { mostrarVista('view-dashboard'); await cargarDashboard(); return; }
+      mostrarVista('view-menu');
+    })();
+  </script>
+</body>
+</html>
