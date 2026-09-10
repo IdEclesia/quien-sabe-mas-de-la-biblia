@@ -520,10 +520,22 @@
 
       <div class="tv-card p-6 mt-6">
         <h3 class="font-bold mb-1" style="color:var(--primary-dark);">⚔️ Versus (1 vs 1)</h3>
-        <p class="text-sm mb-3" style="color:var(--text-soft);">Desafiá a otro equipo a un solo partido, una sola fecha. Armá tu equipo de 7 y esperá que el rival confirme para competir.</p>
-        <button onclick="location.href='versus.html'" class="btn btn-accent">
-          Ir a Versus
-        </button>
+
+        <div id="dash-versus-sin-equipo" class="hidden-view">
+          <p class="text-sm mb-3" style="color:var(--text-soft);">Desafiá a otro equipo a un solo partido, una sola fecha. Armá tu equipo de 7 y esperá que el rival confirme para competir.</p>
+          <button onclick="location.href='versus.html'" class="btn btn-accent">
+            Armar equipo para Versus
+          </button>
+        </div>
+
+        <div id="dash-versus-con-equipo" class="hidden-view">
+          <p class="text-xs" style="color:var(--text-soft);">Estás en el equipo</p>
+          <p class="font-bold text-lg mb-1" id="dash-versus-equipo-nombre" style="color:var(--primary-dark);"></p>
+          <p class="text-sm mb-3" id="dash-versus-estado-partido" style="color:var(--text-soft);">Cargando estado del partido...</p>
+          <button onclick="location.href='versus.html'" class="btn btn-outline btn-sm">
+            Ver mi equipo / jugar
+          </button>
+        </div>
       </div>
 
       <div class="tv-card p-6 mt-6">
@@ -1285,6 +1297,7 @@
       await cargarMisTorneos();
       await cargarRankingPerfil();
       await cargarResumenMundialDashboard();
+      await cargarResumenVersusDashboard();
       await cargarCarruselAuspiciantes();
     }
 
@@ -1857,6 +1870,66 @@ function tvFestejoConfeti(){
 
       if (fechas.length === 0) {
         tbody.innerHTML += '<tr><td colspan="3" class="text-sm" style="color:var(--text-soft);">Todavía no hay puntos cargados de ninguna fecha.</td></tr>';
+      }
+    }
+
+    // ===================== RESUMEN DEL VERSUS EN EL PERFIL =====================
+    // Espejo de cargarResumenMundialDashboard(), pero para versus_equipos/versus_miembros.
+    // Muestra "Estás en el equipo: X" apenas el usuario es capitán o fue aceptado en
+    // algún equipo de Versus, y un texto corto con el estado del partido si tiene uno.
+    async function cargarResumenVersusDashboard(){
+      const sinEquipo = document.getElementById('dash-versus-sin-equipo');
+      const conEquipo = document.getElementById('dash-versus-con-equipo');
+      if (!sinEquipo || !conEquipo) return;
+
+      if (!currentUser) {
+        sinEquipo.classList.remove('hidden-view');
+        conEquipo.classList.add('hidden-view');
+        return;
+      }
+
+      let equipo = null;
+      const { data: comoCapitan } = await supabaseClient
+        .from('versus_equipos').select('*').eq('capitan_id', currentUser.id).maybeSingle();
+      if (comoCapitan) {
+        equipo = comoCapitan;
+      } else {
+        const { data: comoMiembro } = await supabaseClient
+          .from('versus_miembros')
+          .select('*, versus_equipos(*)')
+          .eq('perfil_id', currentUser.id)
+          .eq('estado', 'aceptada')
+          .maybeSingle();
+        if (comoMiembro && comoMiembro.versus_equipos) equipo = comoMiembro.versus_equipos;
+      }
+
+      if (!equipo) {
+        sinEquipo.classList.remove('hidden-view');
+        conEquipo.classList.add('hidden-view');
+        return;
+      }
+
+      sinEquipo.classList.add('hidden-view');
+      conEquipo.classList.remove('hidden-view');
+      document.getElementById('dash-versus-equipo-nombre').textContent = equipo.nombre;
+
+      const estadoEl = document.getElementById('dash-versus-estado-partido');
+      const { data: comoA } = await supabaseClient
+        .from('versus_partidos').select('estado').eq('equipo_a_id', equipo.id)
+        .order('creado_en', { ascending: false }).limit(1).maybeSingle();
+      const { data: comoB } = await supabaseClient
+        .from('versus_partidos').select('estado').eq('equipo_b_id', equipo.id)
+        .order('creado_en', { ascending: false }).limit(1).maybeSingle();
+      const partido = comoA || comoB;
+
+      if (!partido) {
+        estadoEl.textContent = 'Todavía no tenés un desafío en juego.';
+      } else if (partido.estado === 'esperando_rival') {
+        estadoEl.textContent = 'Esperando que un rival acepte tu desafío.';
+      } else if (partido.estado === 'en_juego') {
+        estadoEl.textContent = '¡Tenés un partido en juego! Entrá a jugar tu parte.';
+      } else if (partido.estado === 'finalizado') {
+        estadoEl.textContent = 'Tu último partido ya finalizó. Podés crear un nuevo desafío.';
       }
     }
 
