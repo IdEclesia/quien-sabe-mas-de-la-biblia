@@ -90,8 +90,13 @@
   .tv-msg.ok{color:var(--primary);}
 
   .ranking-panel{background:var(--secondary);border-radius:var(--radius-md);padding:12px 14px;margin-top:8px;font-size:.86rem;}
-  .ranking-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #DCE9F5;}
+  .ranking-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #DCE9F5;gap:8px;flex-wrap:wrap;}
   .ranking-row:last-child{border-bottom:none;}
+  .ranking-row-right{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+  .ranking-status{font-size:.78rem;font-weight:700;white-space:nowrap;}
+  .ranking-status-ok{color:var(--primary);}
+  .ranking-status-pending{color:var(--text-soft);}
+  .btn-recordar{padding:6px 10px;min-height:auto;font-size:.72rem;border-radius:999px;white-space:nowrap;}
 
   footer.credit{text-align:center;font-size:.72rem;color:#8FA0B6;margin-top:34px;padding-bottom:24px;}
 
@@ -563,28 +568,6 @@
 
     // URL donde queda publicado este mismo archivo (ajustar si el dominio real es otro)
     const TORNEOS_URL = "https://ideclesia.github.io/quien-sabe-mas-de-la-biblia/torneos.html";
-
-    // Escapa un texto para poder meterlo de forma segura dentro de un atributo
-    // HTML delimitado con comillas dobles (data-*). A diferencia de JSON.stringify
-    // dentro de un onclick con comillas simples, esto no se rompe si el texto
-    // contiene apóstrofes (nombres de equipo, jugadores o torneos con ' adentro).
-    function escapeAttr(str){
-      return String(str == null ? '' : str)
-        .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
-        .replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
-
-    // Listener delegado único para los botones de invitación por WhatsApp:
-    // leen su contenido de data-* (ya decodificado por el navegador), no del
-    // onclick, así ningún caracter especial en un nombre puede romperlos.
-    document.addEventListener('click', (e) => {
-      const btnTorneo = e.target.closest('.btn-invitar-torneo');
-      if (btnTorneo) { invitar(btnTorneo.dataset.mensaje); return; }
-      const btnMundial = e.target.closest('.btn-reenviar-invitacion');
-      if (btnMundial) {
-        reenviarInvitacion(btnMundial.dataset.codigo, btnMundial.dataset.nombre, btnMundial.dataset.equipo);
-      }
-    });
     // URL del juego (index.html) al que se manda a los invitados
     const JUEGO_URL = "index.html";
 
@@ -698,7 +681,7 @@
     async function tvObtenerTorneoPorCodigo(codigo){
       const { data, error } = await supabaseClient
         .from('torneos')
-        .select('fecha_inicio, cantidad_fechas, estado, sponsor_nombre, sponsor_imagen_url, sponsor_link_url')
+        .select('nombre_torneo, fecha_inicio, cantidad_fechas, estado, sponsor_nombre, sponsor_imagen_url, sponsor_link_url')
         .eq('codigo', codigo)
         .maybeSingle();
       if (error || !data) return null;
@@ -765,7 +748,15 @@
     // Trae y arma el HTML del ranking acumulado de un torneo por su código.
     // La usan tanto verRankingPublico() (cualquiera, sin login ni haber jugado)
     // como verRanking() (el organizador, desde su dashboard) para no duplicar la consulta.
-    async function obtenerRankingHTML(codigo){
+    //
+    // opciones.modoOrganizador: true solo cuando lo llama el organizador desde
+    // "Ver Ranking" en su propio panel. En ese caso (y SOLO en ese caso) cada fila
+    // suma: si el jugador ya jugó hoy (✅ ¡Listo!) o todavía no (❌ + botón para
+    // recordarle por WhatsApp). La vista pública (verRankingPublico) nunca recibe
+    // esta info: no se le pasa modoOrganizador, así que no hace la consulta extra.
+    async function obtenerRankingHTML(codigo, opciones = {}){
+      const modoOrganizador = !!opciones.modoOrganizador;
+      const adminNombre = opciones.adminNombre || 'el organizador';
       // Se fija si ESTE torneo (según su propia fecha de inicio y cantidad de
       // fechas) ya finalizó, para mostrar el festejo con confetis a quien sea
       // que entre a consultar el ranking (organizador o invitado). De paso trae
@@ -812,13 +803,52 @@
         .sort((a, b) => b.total - a.total)
         .slice(0, 20);
 
+      // Solo para el organizador: quiénes ya jugaron la jornada de HOY (misma
+      // jornada global que usa el motor de preguntas), para poder marcarlos
+      // con ✅ o mandarles un recordatorio a los que todavía no jugaron hoy.
+      let jugaronHoy = null;
+      const nombreTorneo = torneoInfo && torneoInfo.nombre_torneo ? torneoInfo.nombre_torneo : 'el torneo';
+      if (modoOrganizador) {
+        jugaronHoy = new Set();
+        const { jornada: jornadaHoy } = tvCalcularJornadaActual();
+        const { data: hoyData, error: hoyError } = await supabaseClient
+          .from('torneo_resultados')
+          .select('jugador_nombre')
+          .eq('torneo_codigo', codigo)
+          .eq('jornada', jornadaHoy);
+        if (!hoyError && hoyData) {
+          hoyData.forEach(fila => {
+            jugaronHoy.add((fila.jugador_nombre || '').trim().toLowerCase());
+          });
+        }
+      }
+
       return banner + '<div class="ranking-panel">' +
-        ranking.map((p, i) => `
+        ranking.map((p, i) => {
+          let extra = '';
+          if (modoOrganizador) {
+            const clave = p.nombre.toLowerCase();
+            if (jugaronHoy.has(clave)) {
+              extra = `<span class="ranking-status ranking-status-ok">✅ ¡Listo!</span>`;
+            } else {
+              const mensaje = `¡Hola ${p.nombre}! Soy ${adminNombre}. Llevás ${p.total} puntos acumulados en el torneo "${nombreTorneo}". Hoy tenés una nueva oportunidad para sumar más puntos 👉 ${TORNEOS_URL}`;
+              extra = `<span class="ranking-status ranking-status-pending">❌</span>
+                <button onclick='enviarRecordatorio(${JSON.stringify(mensaje)})' class="btn btn-recordar btn-accent" title="Recordarle por WhatsApp">📲 Recordar</button>`;
+            }
+          }
+          return `
           <div class="ranking-row">
             <span>${i+1}. ${p.nombre}</span>
-            <span><strong>${p.total} pts</strong></span>
-          </div>`).join('') +
+            <span class="ranking-row-right"><strong>${p.total} pts</strong>${extra}</span>
+          </div>`;
+        }).join('') +
         '</div>' + sponsorHTML;
+    }
+
+    // Botón "Recordar" del organizador: abre WhatsApp con el mensaje ya armado
+    // (mismo patrón que invitar(), pero sin contarlo como invitación nueva).
+    function enviarRecordatorio(mensaje){
+      window.open("https://wa.me/?text=" + encodeURIComponent(mensaje), '_blank', 'noopener');
     }
 
     // Ver el ranking de un torneo por código desde la pantalla pública de "Unirse a
@@ -1647,10 +1677,10 @@ function tvFestejoConfeti(){
               </div>
               <div class="flex space-x-2">
                 ${botonJugar}
-                <button class="btn btn-sm btn-accent btn-invitar-torneo" data-mensaje="${escapeAttr(mensajeWpp)}">
+                <button onclick='invitar(${JSON.stringify(mensajeWpp)})' class="btn btn-sm btn-accent">
                   📲 Invitar
                 </button>
-                <button onclick="verRanking('${t.codigo}', this)" class="btn btn-sm btn-outline">
+                <button onclick="verRanking('${t.codigo}', this)" class="btn btn-sm btn-outline btn-ver-ranking">
                   🏆 Ver Ranking
                 </button>
               </div>
@@ -1672,10 +1702,16 @@ function tvFestejoConfeti(){
       const li = btnEl.closest('li');
       const slot = li.querySelector('.ranking-slot');
 
-      if (slot.innerHTML) { slot.innerHTML = ''; return; } // toggle
+      if (slot.innerHTML) { // toggle: ya estaba abierto -> cerrar
+        slot.innerHTML = '';
+        btnEl.innerHTML = '🏆 Ver Ranking';
+        return;
+      }
 
+      btnEl.innerHTML = '❌ Cerrar Ranking';
       slot.innerHTML = '<div class="ranking-panel">Cargando ranking...</div>';
-      slot.innerHTML = await obtenerRankingHTML(codigo);
+      const adminNombre = currentPerfil ? currentPerfil.nombre_apellido : 'el organizador';
+      slot.innerHTML = await obtenerRankingHTML(codigo, { modoOrganizador: true, adminNombre });
     }
 
     // ===================== MUNDIAL DE LA BIBLIA =====================
@@ -1797,7 +1833,7 @@ function tvFestejoConfeti(){
           : m.estado === 'aceptada' ? '<span class="text-xs font-bold" style="color:var(--primary);">Confirmado</span>'
           : '<span class="text-xs" style="color:var(--text-soft);">Invitación pendiente</span>';
         const btnInvitar = (esCapitan && m.estado === 'pendiente' && m.codigo_invitacion)
-          ? `<button class="btn btn-sm btn-outline btn-reenviar-invitacion" style="margin-left:8px;" data-codigo="${escapeAttr(m.codigo_invitacion)}" data-nombre="${escapeAttr(m.nombre)}" data-equipo="${escapeAttr(miEquipoMundial.nombre)}">📲 Invitar</button>`
+          ? `<button class="btn btn-sm btn-outline" style="margin-left:8px;" onclick='reenviarInvitacion(${JSON.stringify(m.codigo_invitacion)}, ${JSON.stringify(m.nombre)}, ${JSON.stringify(miEquipoMundial.nombre)})'>📲 Invitar</button>`
           : '';
         return `
           <li class="p-3 flex items-center justify-between">
