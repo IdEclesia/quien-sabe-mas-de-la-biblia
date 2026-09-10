@@ -181,6 +181,7 @@
   .torneo-card .actions{display:flex;gap:8px;flex-wrap:wrap;}
   .tag-activo{background:#E4F1E6;color:var(--success);}
   .tag-cerrado{background:#FBE9E4;color:var(--danger);}
+  .tag-finalizado{background:var(--secondary);color:var(--primary-dark);}
   .rank-row{
     display:flex;align-items:center;gap:12px;background:var(--secondary);
     border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:8px;
@@ -300,6 +301,7 @@
       <button class="tab-btn" data-tab="conocimiento" onclick="switchAdminTab('conocimiento')">Conocimiento</button>
       <button class="tab-btn" data-tab="torneos" onclick="switchAdminTab('torneos')">Torneo Bíblico</button>
       <button class="tab-btn" data-tab="mundial" onclick="switchAdminTab('mundial')">Mundial de la Biblia</button>
+      <button class="tab-btn" data-tab="versus" onclick="switchAdminTab('versus')">Versus (1 vs 1)</button>
       <button class="tab-btn" data-tab="banners" onclick="switchAdminTab('banners')">Banners</button>
     </div>
 
@@ -321,6 +323,14 @@
         <div class="kpi-card">
           <div class="label">Equipos del Mundial</div>
           <div class="value" id="kpiEquiposMundial">--</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">Equipos de Versus</div>
+          <div class="value" id="kpiEquiposVersus">--</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">Retos 1 vs 1 jugados</div>
+          <div class="value" id="kpiRetosVersus">--</div>
         </div>
         <div class="kpi-card">
           <div class="label">Tests jugados (desafío)</div>
@@ -557,6 +567,10 @@
           <div class="label">Jugadores distintos</div>
           <div class="value" id="torKpiJugadores">--</div>
         </div>
+        <div class="mini-kpi">
+          <div class="label">Volvieron a jugar otra fecha</div>
+          <div class="value" id="torKpiRetencion">--</div>
+        </div>
       </div>
 
       <div class="panel">
@@ -620,6 +634,70 @@
           <table class="rank-table">
             <thead><tr><th>Nombre</th><th>Estado</th><th>Equipos</th><th>Cupo</th></tr></thead>
             <tbody id="tablaMundiales"><tr><td colspan="4"><div class="empty-state">Cargando...</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ TAB: VERSUS (1 vs 1) ============ -->
+    <div id="panelVersus" class="tab-panel" style="display:none">
+      <div class="mini-kpi-grid">
+        <div class="mini-kpi">
+          <div class="label">Equipos creados</div>
+          <div class="value" id="vsKpiEquipos">--</div>
+        </div>
+        <div class="mini-kpi">
+          <div class="label">Retos creados</div>
+          <div class="value" id="vsKpiRetos">--</div>
+        </div>
+        <div class="mini-kpi">
+          <div class="label">Retos en juego</div>
+          <div class="value" id="vsKpiEnJuego">--</div>
+        </div>
+        <div class="mini-kpi">
+          <div class="label">Retos finalizados</div>
+          <div class="value" id="vsKpiFinalizados">--</div>
+        </div>
+        <div class="mini-kpi">
+          <div class="label">Jugadas individuales completadas</div>
+          <div class="value" id="vsKpiResultados">--</div>
+        </div>
+        <div class="mini-kpi">
+          <div class="label">Puntos totales anotados</div>
+          <div class="value" id="vsKpiPuntos">--</div>
+        </div>
+      </div>
+
+      <div class="panel-grid cols-2">
+        <div class="panel">
+          <h2>Estado de los retos</h2>
+          <div class="chart-wrap"><canvas id="chartEstadoVersus"></canvas></div>
+        </div>
+        <div class="panel">
+          <h2>Embudo de desafíos 1 vs 1</h2>
+          <p class="section-sub">Jugadores invitados por un capitán a su equipo de Versus vs. los que confirmaron.</p>
+          <div id="funnelVersus"><div class="loading-msg">Cargando...</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="section-title"><h2>Ranking de equipos</h2></div>
+        <p class="section-sub">Solo cuenta retos ya emparejados con un rival (jugados, ganados, perdidos, empatados) y los puntos que sumó cada equipo entre todos sus retos.</p>
+        <div id="rankingEquiposVersus"><div class="loading-msg">Cargando...</div></div>
+      </div>
+
+      <div class="panel">
+        <div class="section-title"><h2>Jugadores más activos</h2></div>
+        <p class="section-sub">Los jugadores que más puntos sumaron para su equipo en retos Versus.</p>
+        <div id="rankingJugadoresVersus"><div class="loading-msg">Cargando...</div></div>
+      </div>
+
+      <div class="panel">
+        <div class="section-title"><h2>Últimos retos</h2></div>
+        <div class="table-scroll">
+          <table class="rank-table">
+            <thead><tr><th>Partido</th><th>Marcador</th><th>Estado</th><th>Fecha</th></tr></thead>
+            <tbody id="tablaVersusPartidos"><tr><td colspan="4"><div class="empty-state">Cargando...</div></td></tr></tbody>
           </table>
         </div>
       </div>
@@ -888,6 +966,10 @@ function getMundialEventos(){ return fetchSafe('mundialEventos', () => supabaseC
 function getMundialEquipos(){ return fetchSafe('mundialEquipos', () => supabaseClient.from('mundial_equipos').select('*')); }
 function getMundialMiembros(){ return fetchSafe('mundialMiembros', () => supabaseClient.from('mundial_miembros').select('*')); }
 function getMundialPuntos(){ return fetchSafe('mundialPuntos', () => supabaseClient.from('mundial_puntos').select('*')); }
+function getVersusEquipos(){ return fetchSafe('versusEquipos', () => supabaseClient.from('versus_equipos').select('*')); }
+function getVersusMiembros(){ return fetchSafe('versusMiembros', () => supabaseClient.from('versus_miembros').select('*')); }
+function getVersusPartidos(){ return fetchSafe('versusPartidos', () => supabaseClient.from('versus_partidos').select('*').order('creado_en',{ascending:false}).limit(1000)); }
+function getVersusResultados(){ return fetchSafe('versusResultados', () => supabaseClient.from('versus_resultados').select('*').limit(5000)); }
 
 function clearCache(){ Object.keys(cache).forEach(k=>delete cache[k]); }
 
@@ -906,8 +988,8 @@ async function loadData(){
    TAB: GENERAL
    ===================================================================== */
 async function renderGeneral(){
-  const [perfiles, participaciones, mundialEquipos, mundialMiembros] = await Promise.all([
-    getPerfiles(), getParticipaciones(), getMundialEquipos(), getMundialMiembros()
+  const [perfiles, participaciones, mundialEquipos, mundialMiembros, versusEquipos, versusPartidos] = await Promise.all([
+    getPerfiles(), getParticipaciones(), getMundialEquipos(), getMundialMiembros(), getVersusEquipos(), getVersusPartidos()
   ]);
 
   // KPIs de alcance
@@ -917,6 +999,8 @@ async function renderGeneral(){
   document.getElementById('kpiPaises').textContent = paisesSet.size;
   document.getElementById('kpiIglesias').textContent = iglesiasSet.size;
   document.getElementById('kpiEquiposMundial').textContent = mundialEquipos.length;
+  document.getElementById('kpiEquiposVersus').textContent = versusEquipos.length;
+  document.getElementById('kpiRetosVersus').textContent = versusPartidos.filter(p=>p.estado === 'finalizado').length;
 
   // KPIs de participación (desafío "¿Quién sabe más de la Biblia?")
   const total = participaciones.length;
@@ -1044,6 +1128,7 @@ async function loadTabData(tab){
   else if (tab === 'conocimiento') await renderConocimiento();
   else if (tab === 'torneos') await loadTorneos();
   else if (tab === 'mundial') await renderMundial();
+  else if (tab === 'versus') await renderVersus();
   else if (tab === 'banners') await renderBanners();
 }
 
@@ -1303,7 +1388,24 @@ async function loadTorneos(force){
   const jugadoresDistintos = new Set(torneoResultados.map(r=>r.jugador_nombre||'').filter(Boolean));
   document.getElementById('torKpiJugadores').textContent = jugadoresDistintos.size;
 
-  renderTorneos(torneos);
+  // Retención: por cada torneo, de los jugadores que jugaron al menos una
+  // fecha, cuántos volvieron a jugar OTRA fecha distinta (jornada > 1
+  // registrada). Sirve para medir si el recordatorio por WhatsApp del panel
+  // del organizador está logrando que la gente no juegue una sola vez y se
+  // olvide (el problema que motivó ese botón).
+  const jornadasPorJugadorTorneo = {}; // "codigo|nombre" -> Set de jornadas
+  torneoResultados.forEach(r=>{
+    const nombre = (r.jugador_nombre || '').trim().toLowerCase();
+    if (!nombre) return;
+    const clave = (r.torneo_codigo || '') + '|' + nombre;
+    (jornadasPorJugadorTorneo[clave] || (jornadasPorJugadorTorneo[clave] = new Set())).add(r.jornada);
+  });
+  const clavesJugadores = Object.keys(jornadasPorJugadorTorneo);
+  const volvieron = clavesJugadores.filter(k => jornadasPorJugadorTorneo[k].size > 1).length;
+  const retKpi = document.getElementById('torKpiRetencion');
+  if (retKpi) retKpi.textContent = clavesJugadores.length ? Math.round((volvieron / clavesJugadores.length) * 100) + '%' : '--';
+
+  renderTorneos(torneos, jornadasPorJugadorTorneo);
 }
 
 // Mismo cálculo que usa torneos.html (el front-end): el torneo dura
@@ -1333,7 +1435,7 @@ function tvInfoFechasTexto(t){
   return `Fecha ${r.diaTorneo} de ${t.cantidad_fechas} en curso · empezó el ${tvFormatoFecha(r.inicio)} · termina el ${tvFormatoFecha(r.fin)}`;
 }
 
-function renderTorneos(torneos){
+function renderTorneos(torneos, jornadasPorJugadorTorneo){
   const list = document.getElementById('torneosList');
   if (!torneos.length){
     list.innerHTML = '<div class="empty-state">Todavía no creaste ningún torneo.</div>';
@@ -1351,6 +1453,15 @@ function renderTorneos(torneos){
            <span>Auspicia: ${t.sponsor_nombre || '(sin nombre)'}</span>
          </div>`
       : '';
+    let retencionMeta = '';
+    if (jornadasPorJugadorTorneo){
+      const claves = Object.keys(jornadasPorJugadorTorneo).filter(k => k.startsWith(codigo + '|'));
+      if (claves.length){
+        const vuelven = claves.filter(k => jornadasPorJugadorTorneo[k].size > 1).length;
+        const pct = Math.round((vuelven / claves.length) * 100);
+        retencionMeta = `<div class="meta">🔁 ${pct}% volvió a jugar otra fecha (${vuelven} de ${claves.length} jugadores)</div>`;
+      }
+    }
     return `
       <div class="torneo-card">
         <div class="info">
@@ -1358,6 +1469,7 @@ function renderTorneos(torneos){
           <div class="code">Código: ${codigo}</div>
           <div class="meta">Creado ${date}${t.organizador_email ? ' · ' + t.organizador_email : ''}</div>
           <div class="meta">${tvInfoFechasTexto(t)}</div>
+          ${retencionMeta}
           ${sponsorResumen}
         </div>
         <div class="actions">
@@ -1637,6 +1749,178 @@ async function onCambiarMundialSeleccionado(){
 document.getElementById('loginPassword').addEventListener('keydown', (e)=>{
   if (e.key === 'Enter') doLogin();
 });
+
+/* =====================================================================
+   TAB: VERSUS (1 vs 1)
+   ===================================================================== */
+// Mismos estados que usa torneos.html para versus_partidos:
+// 'esperando_rival' (recién creado, todavía sin rival), 'en_juego' (ya
+// emparejado y jugando su parte cada equipo) y 'finalizado'.
+const VERSUS_ESTADO_LABELS = {
+  esperando_rival: 'Esperando rival',
+  en_juego: 'En juego',
+  finalizado: 'Finalizado'
+};
+function versusTagClase(estado){
+  if (estado === 'en_juego') return 'tag tag-activo';
+  if (estado === 'esperando_rival') return 'tag tag-pendiente';
+  if (estado === 'finalizado') return 'tag tag-finalizado';
+  return 'tag';
+}
+
+async function renderVersus(){
+  const [equipos, miembros, partidos, resultados] = await Promise.all([
+    getVersusEquipos(), getVersusMiembros(), getVersusPartidos(), getVersusResultados()
+  ]);
+
+  const enJuego = partidos.filter(p=>p.estado === 'en_juego').length;
+  const esperando = partidos.filter(p=>p.estado === 'esperando_rival').length;
+  const finalizados = partidos.filter(p=>p.estado === 'finalizado').length;
+  const puntosTotales = resultados.reduce((s,r)=>s+(r.puntos||0), 0);
+
+  document.getElementById('vsKpiEquipos').textContent = equipos.length;
+  document.getElementById('vsKpiRetos').textContent = partidos.length;
+  document.getElementById('vsKpiEnJuego').textContent = enJuego;
+  document.getElementById('vsKpiFinalizados').textContent = finalizados;
+  document.getElementById('vsKpiResultados').textContent = resultados.length;
+  document.getElementById('vsKpiPuntos').textContent = puntosTotales;
+
+  // Estado de los retos
+  if (partidos.length){
+    showChartCanvas('chartEstadoVersus');
+    renderDoughnutChart('chartEstadoVersus', ['Esperando rival', 'En juego', 'Finalizados'], [esperando, enJuego, finalizados]);
+  } else {
+    renderEmptyChart('chartEstadoVersus', 'Todavía no se creó ningún reto Versus.');
+  }
+
+  // Embudo: equipos creados -> invitados a jugar -> confirmados
+  // (mismo patrón que el embudo del Mundial: cada miembro no-capitán es una
+  // invitación; "aceptada" es quien confirmó y se sumó al equipo).
+  const invitados = miembros.filter(m=>!m.es_capitan);
+  const confirmados = invitados.filter(m=>m.estado === 'aceptada');
+  renderFunnel('funnelVersus', [
+    { label: 'Equipos creados', value: equipos.length },
+    { label: 'Invitados a jugar', value: invitados.length },
+    { label: 'Confirmados', value: confirmados.length }
+  ]);
+
+  const nombrePorEquipo = {};
+  equipos.forEach(e=>{ nombrePorEquipo[e.id] = e.nombre || 'Equipo sin nombre'; });
+
+  // Puntos totales por partido+equipo (para el marcador de la tabla y las
+  // estadísticas de cada equipo), sumando versus_resultados de cada miembro.
+  const puntosPorPartidoEquipo = {}; // "partidoId|equipoId" -> puntos
+  resultados.forEach(r=>{
+    if (!r.partido_id || !r.equipo_id) return;
+    const key = r.partido_id + '|' + r.equipo_id;
+    puntosPorPartidoEquipo[key] = (puntosPorPartidoEquipo[key] || 0) + (r.puntos || 0);
+  });
+
+  // Ranking de equipos: jugados / ganados / perdidos / empatados / puntos
+  // totales. Solo cuentan como "jugados" los retos que ya tienen rival
+  // (equipo_b_id asignado) — un reto "esperando rival" todavía no es un
+  // partido real.
+  const statsPorEquipo = {};
+  const stats = (id) => statsPorEquipo[id] || (statsPorEquipo[id] = { jugados:0, ganados:0, perdidos:0, empatados:0, puntos:0 });
+  partidos.forEach(p=>{
+    if (!p.equipo_a_id || !p.equipo_b_id) return;
+    stats(p.equipo_a_id).jugados++;
+    stats(p.equipo_b_id).jugados++;
+    if (p.estado === 'finalizado'){
+      if (p.ganador_id){
+        stats(p.ganador_id).ganados++;
+        const perdedorId = p.ganador_id === p.equipo_a_id ? p.equipo_b_id : p.equipo_a_id;
+        stats(perdedorId).perdidos++;
+      } else {
+        stats(p.equipo_a_id).empatados++;
+        stats(p.equipo_b_id).empatados++;
+      }
+    }
+  });
+  resultados.forEach(r=>{
+    if (!r.equipo_id) return;
+    stats(r.equipo_id).puntos += (r.puntos || 0);
+  });
+
+  const rankingEquipos = Object.keys(statsPorEquipo)
+    .map(id => ({ nombre: nombrePorEquipo[id] || 'Equipo sin nombre', ...statsPorEquipo[id] }))
+    .filter(e => e.jugados > 0)
+    .sort((a,b) => b.ganados - a.ganados || b.puntos - a.puntos)
+    .slice(0, 15);
+
+  const rankingEl = document.getElementById('rankingEquiposVersus');
+  if (!rankingEquipos.length){
+    rankingEl.innerHTML = '<div class="empty-state">Todavía no hay retos jugados con rival asignado.</div>';
+  } else {
+    const max = Math.max(1, rankingEquipos[0].puntos);
+    rankingEl.innerHTML = `<div class="rank-list">${rankingEquipos.map((e,i)=>`
+      <div class="rank-item">
+        <div class="idx">${i+1}</div>
+        <div class="body">
+          <div class="top"><span>${e.nombre}</span><span>${e.puntos} pts</span></div>
+          <div class="sub">${e.jugados} jugado${e.jugados===1?'':'s'} · ${e.ganados}G ${e.perdidos}P ${e.empatados}E</div>
+          <div class="track"><div class="fill" style="width:${Math.max(6,Math.round((e.puntos/max)*100))}%"></div></div>
+        </div>
+      </div>`).join('')}</div>`;
+  }
+
+  // Jugadores más activos: suma de puntos de cada miembro (usa el nombre
+  // cargado en versus_miembros, que es el mismo para capitanes e invitados).
+  const nombrePorMiembro = {};
+  miembros.forEach(m=>{ nombrePorMiembro[m.id] = m.nombre || 'Jugador'; });
+  const statsPorMiembro = {};
+  resultados.forEach(r=>{
+    if (!r.miembro_id) return;
+    const s = statsPorMiembro[r.miembro_id] || (statsPorMiembro[r.miembro_id] = { partidos:0, puntos:0 });
+    s.partidos++;
+    s.puntos += (r.puntos || 0);
+  });
+  const rankingJugadores = Object.keys(statsPorMiembro)
+    .map(id => ({ nombre: nombrePorMiembro[id] || 'Jugador', ...statsPorMiembro[id] }))
+    .sort((a,b) => b.puntos - a.puntos)
+    .slice(0, 15);
+
+  const rankingJugEl = document.getElementById('rankingJugadoresVersus');
+  if (!rankingJugadores.length){
+    rankingJugEl.innerHTML = '<div class="empty-state">Todavía nadie jugó su parte de un reto Versus.</div>';
+  } else {
+    const maxJ = Math.max(1, rankingJugadores[0].puntos);
+    rankingJugEl.innerHTML = `<div class="rank-list">${rankingJugadores.map((j,i)=>`
+      <div class="rank-item">
+        <div class="idx">${i+1}</div>
+        <div class="body">
+          <div class="top"><span>${j.nombre}</span><span>${j.puntos} pts</span></div>
+          <div class="sub">${j.partidos} reto${j.partidos===1?'':'s'} jugado${j.partidos===1?'':'s'}</div>
+          <div class="track"><div class="fill" style="width:${Math.max(6,Math.round((j.puntos/maxJ)*100))}%"></div></div>
+        </div>
+      </div>`).join('')}</div>`;
+  }
+
+  // Últimos retos, con marcador cuando ya hay puntos cargados
+  const tabla = document.getElementById('tablaVersusPartidos');
+  if (!partidos.length){
+    tabla.innerHTML = '<tr><td colspan="4"><div class="empty-state">Todavía no hay retos registrados.</div></td></tr>';
+  } else {
+    tabla.innerHTML = partidos.slice(0, 30).map(p=>{
+      const nombreA = nombrePorEquipo[p.equipo_a_id] || 'Equipo A';
+      const nombreB = p.equipo_b_id ? (nombrePorEquipo[p.equipo_b_id] || 'Equipo B') : 'Sin rival todavía';
+      const date = p.creado_en ? new Date(p.creado_en).toLocaleDateString('es-PY', { day:'2-digit', month:'2-digit', year:'2-digit' }) : '--';
+      const estadoLabel = VERSUS_ESTADO_LABELS[p.estado] || p.estado || '--';
+      let marcador = '--';
+      if (p.equipo_a_id && p.equipo_b_id){
+        const totalA = puntosPorPartidoEquipo[p.id + '|' + p.equipo_a_id] || 0;
+        const totalB = puntosPorPartidoEquipo[p.id + '|' + p.equipo_b_id] || 0;
+        marcador = `${totalA} - ${totalB}`;
+      }
+      return `<tr>
+        <td>${nombreA} vs ${nombreB}</td>
+        <td>${marcador}</td>
+        <td><span class="${versusTagClase(p.estado)}">${estadoLabel}</span></td>
+        <td>${date}</td>
+      </tr>`;
+    }).join('');
+  }
+}
 
 /* =====================================================================
    TAB: BANNERS Y AUSPICIANTES
