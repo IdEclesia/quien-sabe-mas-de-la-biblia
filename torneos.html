@@ -563,6 +563,28 @@
 
     // URL donde queda publicado este mismo archivo (ajustar si el dominio real es otro)
     const TORNEOS_URL = "https://ideclesia.github.io/quien-sabe-mas-de-la-biblia/torneos.html";
+
+    // Escapa un texto para poder meterlo de forma segura dentro de un atributo
+    // HTML delimitado con comillas dobles (data-*). A diferencia de JSON.stringify
+    // dentro de un onclick con comillas simples, esto no se rompe si el texto
+    // contiene apóstrofes (nombres de equipo, jugadores o torneos con ' adentro).
+    function escapeAttr(str){
+      return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // Listener delegado único para los botones de invitación por WhatsApp:
+    // leen su contenido de data-* (ya decodificado por el navegador), no del
+    // onclick, así ningún caracter especial en un nombre puede romperlos.
+    document.addEventListener('click', (e) => {
+      const btnTorneo = e.target.closest('.btn-invitar-torneo');
+      if (btnTorneo) { invitar(btnTorneo.dataset.mensaje); return; }
+      const btnMundial = e.target.closest('.btn-reenviar-invitacion');
+      if (btnMundial) {
+        reenviarInvitacion(btnMundial.dataset.codigo, btnMundial.dataset.nombre, btnMundial.dataset.equipo);
+      }
+    });
     // URL del juego (index.html) al que se manda a los invitados
     const JUEGO_URL = "index.html";
 
@@ -1625,7 +1647,7 @@ function tvFestejoConfeti(){
               </div>
               <div class="flex space-x-2">
                 ${botonJugar}
-                <button onclick='invitar(${JSON.stringify(mensajeWpp)})' class="btn btn-sm btn-accent">
+                <button class="btn btn-sm btn-accent btn-invitar-torneo" data-mensaje="${escapeAttr(mensajeWpp)}">
                   📲 Invitar
                 </button>
                 <button onclick="verRanking('${t.codigo}', this)" class="btn btn-sm btn-outline">
@@ -1775,7 +1797,7 @@ function tvFestejoConfeti(){
           : m.estado === 'aceptada' ? '<span class="text-xs font-bold" style="color:var(--primary);">Confirmado</span>'
           : '<span class="text-xs" style="color:var(--text-soft);">Invitación pendiente</span>';
         const btnInvitar = (esCapitan && m.estado === 'pendiente' && m.codigo_invitacion)
-          ? `<button class="btn btn-sm btn-outline" style="margin-left:8px;" onclick='reenviarInvitacion(${JSON.stringify(m.codigo_invitacion)}, ${JSON.stringify(m.nombre)}, ${JSON.stringify(miEquipoMundial.nombre)})'>📲 Invitar</button>`
+          ? `<button class="btn btn-sm btn-outline btn-reenviar-invitacion" style="margin-left:8px;" data-codigo="${escapeAttr(m.codigo_invitacion)}" data-nombre="${escapeAttr(m.nombre)}" data-equipo="${escapeAttr(miEquipoMundial.nombre)}">📲 Invitar</button>`
           : '';
         return `
           <li class="p-3 flex items-center justify-between">
