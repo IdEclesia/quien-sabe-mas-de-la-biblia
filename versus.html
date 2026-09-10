@@ -123,6 +123,14 @@
         <button onclick="mostrarVista('view-login')" class="btn btn-outline btn-block">Iniciar sesión</button>
         <button onclick="mostrarVista('view-registro')" class="btn btn-accent btn-block">Crear cuenta y armar equipo</button>
       </div>
+      <div class="relative flex py-2 items-center" style="margin-top:18px;">
+        <div class="flex-grow border-t" style="border-color:#DCE9F5;"></div>
+        <span class="flex-shrink-0 mx-4 text-sm" style="color:var(--text-soft);">¿Te invitaron?</span>
+        <div class="flex-grow border-t" style="border-color:#DCE9F5;"></div>
+      </div>
+      <p class="text-xs mb-2" style="color:var(--text-soft);">Si no tenés el link, pegá acá el código que te pasó tu capitán</p>
+      <input type="text" id="menu-codigo-invitacion" placeholder="Código de invitación" class="tv-input mb-2">
+      <button onclick="unirmeConCodigoManual()" class="btn btn-outline btn-block">Unirme con este código</button>
     </div>
 
     <!-- ===================== LOGIN ===================== -->
@@ -282,7 +290,8 @@
           <button id="btn-unirse-login" class="btn btn-outline btn-block" style="margin-top:8px;">Ya tengo cuenta, iniciar sesión</button>
         </div>
         <div id="unirse-aceptar" class="hidden-view">
-          <button onclick="aceptarInvitacionVersus()" id="btn-aceptar-vs" class="btn btn-accent btn-block">Aceptar y unirme al equipo</button>
+          <p style="color:var(--text-soft);margin-bottom:12px;">Confirmando tu lugar en el equipo...</p>
+          <button onclick="aceptarInvitacionVersus()" id="btn-aceptar-vs" class="btn btn-accent btn-block hidden-view">Reintentar</button>
           <p id="unirse-msg" class="tv-msg"></p>
         </div>
         <div id="unirse-ya-aceptada" class="hidden-view">
@@ -363,17 +372,34 @@
       const msg = document.getElementById('registro-msg');
       msg.textContent = ''; msg.className = 'tv-msg'; btn.disabled = true;
 
-      const { data, error } = await supabaseClient.auth.signUp({ email, password });
-      if (error) { btn.disabled = false; msg.textContent = 'No se pudo crear la cuenta: ' + error.message; msg.className = 'tv-msg error'; return; }
-      currentUser = data.user;
-      await supabaseClient.from('perfiles').insert({
-        id: currentUser.id, nombre_apellido: nombre, pais, ciudad, iglesia
+      // Igual que en torneos.html: el perfil lo crea automáticamente un trigger
+      // en la base de datos a partir de estos mismos datos (no se inserta acá
+      // a mano, para no duplicar/chocar con lo que hace ese trigger).
+      const { data, error } = await supabaseClient.auth.signUp({
+        email, password,
+        options: { data: { nombre_apellido: nombre, pais, ciudad, iglesia } }
       });
-      currentPerfil = await cargarPerfil(currentUser.id);
+      if (error) { btn.disabled = false; msg.textContent = 'No se pudo crear la cuenta: ' + error.message; msg.className = 'tv-msg error'; return; }
       btn.disabled = false;
+
+      if (!data.session) {
+        msg.textContent = 'Cuenta creada. Revisá tu correo para confirmar antes de ingresar.';
+        msg.className = 'tv-msg ok';
+        return;
+      }
+
+      currentUser = data.user;
+      currentPerfil = { id: data.user.id, correo: email, nombre_apellido: nombre, pais, ciudad, iglesia };
       if (pendingInviteCode) { mostrarVista('view-unirse'); await cargarVistaUnirse(pendingInviteCode); return; }
       mostrarVista('view-dashboard'); await cargarDashboard();
     });
+
+    function unirmeConCodigoManual(){
+      const codigo = document.getElementById('menu-codigo-invitacion').value.trim();
+      if (!codigo) return;
+      mostrarVista('view-unirse');
+      cargarVistaUnirse(codigo);
+    }
 
     document.getElementById('btn-unirse-registro').addEventListener('click', () => mostrarVista('view-registro'));
     document.getElementById('btn-unirse-login').addEventListener('click', () => mostrarVista('view-login'));
@@ -527,7 +553,10 @@
       if (data.estado === 'aceptada') {
         necesitaLogin.classList.add('hidden-view'); aceptar.classList.add('hidden-view'); yaAceptada.classList.remove('hidden-view');
       } else if (currentUser) {
+        // Ya tiene perfil (recién creado o ya existente): lo sumamos al equipo
+        // directamente, sin pedirle que escriba ni confirme el código de nuevo.
         necesitaLogin.classList.add('hidden-view'); aceptar.classList.remove('hidden-view'); yaAceptada.classList.add('hidden-view');
+        await aceptarInvitacionVersus();
       } else {
         necesitaLogin.classList.remove('hidden-view'); aceptar.classList.add('hidden-view'); yaAceptada.classList.add('hidden-view');
       }
@@ -535,15 +564,19 @@
 
     async function aceptarInvitacionVersus(){
       if (!invitacionVersusActual || !currentUser) return;
-      const btn = document.getElementById('btn-aceptar-vs');
+      const btnReintentar = document.getElementById('btn-aceptar-vs');
       const msg = document.getElementById('unirse-msg');
-      btn.disabled = true; msg.textContent = ''; msg.className = 'tv-msg';
+      btnReintentar.classList.add('hidden-view'); msg.textContent = ''; msg.className = 'tv-msg';
       const { error } = await supabaseClient
         .from('versus_miembros')
         .update({ perfil_id: currentUser.id, estado: 'aceptada' })
         .eq('codigo_invitacion', invitacionVersusActual.codigo).eq('estado', 'pendiente');
-      btn.disabled = false;
-      if (error) { msg.textContent = 'No se pudo confirmar tu lugar: ' + error.message; msg.className = 'tv-msg error'; return; }
+      if (error) {
+        msg.textContent = 'No se pudo confirmar tu lugar: ' + error.message;
+        msg.className = 'tv-msg error';
+        btnReintentar.classList.remove('hidden-view');
+        return;
+      }
       pendingInviteCode = null;
       document.getElementById('unirse-aceptar').classList.add('hidden-view');
       document.getElementById('unirse-ya-aceptada').classList.remove('hidden-view');
