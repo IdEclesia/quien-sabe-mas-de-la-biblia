@@ -525,6 +525,11 @@
             <label for="torneoCantidadFechasInput">Cantidad de fechas (cada una dura 1 día)</label>
             <input type="number" id="torneoCantidadFechasInput" min="1" max="30" value="30">
           </div>
+          <div class="field">
+            <label for="torneoHoraCierreInput">🕒 Hora de cierre (opcional)</label>
+            <input type="datetime-local" id="torneoHoraCierreInput">
+            <p style="font-size:.75rem;color:var(--text-soft);margin:4px 0 0;">Si la dejás vacía, el torneo se cierra solo al completar la cantidad de fechas. Si la completás, el torneo se cierra automáticamente en ese momento exacto (ideal para torneos relámpago, por ejemplo uno que dure lo que dure un programa de radio).</p>
+          </div>
 
           <details style="margin-top:2px;">
             <summary style="cursor:pointer;font-weight:700;font-size:.85rem;color:var(--text-soft);">¿Este torneo tiene un auspiciante? (opcional)</summary>
@@ -1294,6 +1299,7 @@ async function crearTorneo(){
   const emailInput = document.getElementById('torneoEmailInput');
   const fechaInicioInput = document.getElementById('torneoFechaInicioInput');
   const cantidadFechasInput = document.getElementById('torneoCantidadFechasInput');
+  const horaCierreInput = document.getElementById('torneoHoraCierreInput');
   const sponsorNombreInput = document.getElementById('torneoSponsorNombreInput');
   const sponsorArchivoInput = document.getElementById('torneoSponsorArchivoInput');
   const sponsorLinkInput = document.getElementById('torneoSponsorLinkInput');
@@ -1304,6 +1310,7 @@ async function crearTorneo(){
   const email = emailInput.value.trim();
   const fechaInicio = fechaInicioInput.value;
   const cantidadFechas = parseInt(cantidadFechasInput.value, 10);
+  const horaCierreValor = horaCierreInput ? horaCierreInput.value : ''; // 'YYYY-MM-DDTHH:MM' o '' si no se puso
   const sponsorNombre = sponsorNombreInput.value.trim();
   const sponsorArchivo = sponsorArchivoInput.files[0];
   const sponsorLink = sponsorLinkInput.value.trim();
@@ -1329,6 +1336,20 @@ async function crearTorneo(){
     return;
   }
 
+  // Si se completó una hora de cierre, la convertimos a timestamp (instante
+  // exacto, sin importar el huso horario con el que se lea después).
+  let horaCierreISO = null;
+  if (horaCierreValor){
+    const cierreLocal = new Date(horaCierreValor);
+    if (isNaN(cierreLocal)){
+      errBox.textContent = 'La hora de cierre no es válida.';
+      errBox.classList.add('show');
+      return;
+    }
+    horaCierreISO = cierreLocal.toISOString();
+  }
+
+
   let sponsorImagenUrl = null;
   if (sponsorArchivo){
     const nombreArchivo = `torneo_${Date.now()}_${sponsorArchivo.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
@@ -1353,6 +1374,7 @@ async function crearTorneo(){
       estado: 'activo',
       fecha_inicio: fechaInicio,
       cantidad_fechas: cantidadFechas,
+      hora_cierre: horaCierreISO,
       sponsor_nombre: sponsorNombre || null,
       sponsor_imagen_url: sponsorImagenUrl,
       sponsor_link_url: sponsorLink || null
@@ -1369,6 +1391,7 @@ async function crearTorneo(){
   emailInput.value = '';
   fechaInicioInput.value = '';
   cantidadFechasInput.value = '30';
+  if (horaCierreInput) horaCierreInput.value = '';
   sponsorNombreInput.value = '';
   sponsorArchivoInput.value = '';
   sponsorLinkInput.value = '';
@@ -1426,13 +1449,42 @@ function tvEstadoTorneoPropio(fechaInicioStr, cantidadFechas, ahora = new Date()
 function tvFormatoFecha(d){
   return d.toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric' });
 }
+function tvFormatoHora(d){
+  return d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+}
+// Convierte un timestamp guardado (ISO/UTC) al formato que espera un input
+// type="datetime-local" (hora LOCAL del navegador, sin segundos ni zona).
+function tvISOaInputLocal(iso){
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+// ¿Este torneo ya pasó su hora de cierre programada? (independiente del
+// campo "estado" y de la cantidad de fechas: es la 3ra forma de bloquearlo,
+// igual que en torneos.html).
+function tvYaPasoHoraCierre(t){
+  if (!t.hora_cierre) return false;
+  const cierre = new Date(t.hora_cierre);
+  if (isNaN(cierre)) return false;
+  return new Date() >= cierre;
+}
 function tvInfoFechasTexto(t){
   const r = tvEstadoTorneoPropio(t.fecha_inicio, t.cantidad_fechas);
   const dur = `${t.cantidad_fechas} fecha${t.cantidad_fechas === 1 ? '' : 's'}`;
-  if (r.estado === 'sin-datos') return 'Sin fecha de inicio configurada';
-  if (r.estado === 'no-empezo') return `Empieza el ${tvFormatoFecha(r.inicio)} · dura ${dur} · termina el ${tvFormatoFecha(r.fin)}`;
-  if (r.estado === 'termino') return `Terminó el ${tvFormatoFecha(r.fin)} (empezó el ${tvFormatoFecha(r.inicio)}, duró ${dur})`;
-  return `Fecha ${r.diaTorneo} de ${t.cantidad_fechas} en curso · empezó el ${tvFormatoFecha(r.inicio)} · termina el ${tvFormatoFecha(r.fin)}`;
+  let base;
+  if (r.estado === 'sin-datos') base = 'Sin fecha de inicio configurada';
+  else if (r.estado === 'no-empezo') base = `Empieza el ${tvFormatoFecha(r.inicio)} · dura ${dur} · termina el ${tvFormatoFecha(r.fin)}`;
+  else if (r.estado === 'termino') base = `Terminó el ${tvFormatoFecha(r.fin)} (empezó el ${tvFormatoFecha(r.inicio)}, duró ${dur})`;
+  else base = `Fecha ${r.diaTorneo} de ${t.cantidad_fechas} en curso · empezó el ${tvFormatoFecha(r.inicio)} · termina el ${tvFormatoFecha(r.fin)}`;
+
+  if (!t.hora_cierre) return base;
+  const cierre = new Date(t.hora_cierre);
+  if (isNaN(cierre)) return base;
+  return tvYaPasoHoraCierre(t)
+    ? `${base} · 🕒 cierre programado ya pasó (${tvFormatoFecha(cierre)} ${tvFormatoHora(cierre)})`
+    : `${base} · 🕒 cierra el ${tvFormatoFecha(cierre)} a las ${tvFormatoHora(cierre)}`;
 }
 
 function renderTorneos(torneos, jornadasPorJugadorTorneo){
@@ -1488,6 +1540,11 @@ function renderTorneos(torneos, jornadasPorJugadorTorneo){
               <input type="number" id="editCantidad-${t.id}" min="1" max="30" value="${t.cantidad_fechas || 30}">
             </div>
             <div class="field">
+              <label>🕒 Hora de cierre (opcional)</label>
+              <input type="datetime-local" id="editHoraCierre-${t.id}" value="${tvISOaInputLocal(t.hora_cierre)}">
+              <p style="font-size:.75rem;color:var(--text-soft);margin:4px 0 0;">Dejala vacía para que el torneo se cierre solo al completar la cantidad de fechas. ${t.hora_cierre ? 'Para quitar el cierre programado, borrá la fecha y hora de este campo.' : ''}</p>
+            </div>
+            <div class="field">
               <label>Nombre del auspiciante</label>
               <input type="text" id="editSponsorNombre-${t.id}" value="${(t.sponsor_nombre || '').replace(/"/g, '&quot;')}">
             </div>
@@ -1529,6 +1586,8 @@ async function guardarEdicionTorneo(id){
 
   const fechaInicio = document.getElementById('editFecha-' + id).value;
   const cantidadFechas = parseInt(document.getElementById('editCantidad-' + id).value, 10);
+  const horaCierreInput = document.getElementById('editHoraCierre-' + id);
+  const horaCierreValor = horaCierreInput ? horaCierreInput.value : '';
   const sponsorNombre = document.getElementById('editSponsorNombre-' + id).value.trim();
   const sponsorArchivo = document.getElementById('editSponsorArchivo-' + id).files[0];
   const sponsorLink = document.getElementById('editSponsorLink-' + id).value.trim();
@@ -1551,9 +1610,23 @@ async function guardarEdicionTorneo(id){
     return;
   }
 
+  // Si se completó una hora de cierre la convertimos a timestamp; si el campo
+  // quedó vacío, se manda null para poder QUITAR un cierre ya programado.
+  let horaCierreISO = null;
+  if (horaCierreValor){
+    const cierreLocal = new Date(horaCierreValor);
+    if (isNaN(cierreLocal)){
+      errBox.textContent = 'La hora de cierre no es válida.';
+      errBox.classList.add('show');
+      return;
+    }
+    horaCierreISO = cierreLocal.toISOString();
+  }
+
   const cambios = {
     fecha_inicio: fechaInicio,
     cantidad_fechas: cantidadFechas,
+    hora_cierre: horaCierreISO,
     sponsor_nombre: sponsorNombre || null,
     sponsor_link_url: sponsorLink || null
   };
