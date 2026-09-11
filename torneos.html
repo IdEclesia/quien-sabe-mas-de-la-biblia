@@ -461,6 +461,10 @@
           <label class="tv-label" for="nuevo-torneo-cantidad-fechas">Cantidad de fechas (cada una dura 1 día)</label>
           <input type="number" id="nuevo-torneo-cantidad-fechas" class="tv-input mb-3" min="1" max="30" value="30">
 
+          <label class="tv-label" for="nuevo-torneo-hora-cierre">🕒 Hora de cierre (opcional)</label>
+          <input type="time" id="nuevo-torneo-hora-cierre" class="tv-input mb-1">
+          <p class="text-xs" style="color:var(--text-soft);margin-top:0;margin-bottom:12px;">Si la dejás vacía, el torneo se cierra solo al completar la cantidad de fechas. Si ponés una hora, el torneo se cierra automáticamente ese mismo día de inicio a esa hora (ideal para torneos relámpago de un solo día, por ejemplo uno que dure lo que dure un programa de radio).</p>
+
           <div style="margin-bottom:12px;">
             <label class="tv-label" for="nuevo-torneo-tiene-sponsor">¿Tiene sponsor este torneo? (opcional)</label>
             <select id="nuevo-torneo-tiene-sponsor" class="tv-input mb-2" onchange="tvToggleSolicitudSponsor()">
@@ -680,7 +684,7 @@
     async function tvObtenerTorneoPorCodigo(codigo){
       const { data, error } = await supabaseClient
         .from('torneos')
-        .select('nombre_torneo, fecha_inicio, cantidad_fechas, estado, sponsor_nombre, sponsor_imagen_url, sponsor_link_url')
+        .select('nombre_torneo, fecha_inicio, cantidad_fechas, estado, hora_cierre, sponsor_nombre, sponsor_imagen_url, sponsor_link_url')
         .eq('codigo', codigo)
         .maybeSingle();
       if (error || !data) return null;
@@ -690,9 +694,15 @@
     // Combina las dos formas en que un torneo puede quedar bloqueado para jugar:
     // (a) automática, porque ya pasaron sus "cantidad_fechas" días desde el inicio, o
     // (b) manual, porque el administrador lo cerró desde el Panel Pro (columna "estado").
-    function tvTorneoBloqueado(t){
+    function tvTorneoBloqueado(t, ahora = new Date()){
       if (t.estado === 'cerrado') return { bloqueado: true, motivo: 'cerrado' };
-      const r = tvEstadoTorneoPropio(t.fecha_inicio, t.cantidad_fechas);
+      // (c) por hora de cierre: el creador fijó una hora exacta (ej: torneos
+      // relámpago que duran lo que dura un programa de radio) y ya pasó.
+      if (t.hora_cierre) {
+        const cierre = new Date(t.hora_cierre);
+        if (!isNaN(cierre) && ahora >= cierre) return { bloqueado: true, motivo: 'hora-cierre', fin: cierre };
+      }
+      const r = tvEstadoTorneoPropio(t.fecha_inicio, t.cantidad_fechas, ahora);
       if (r.estado === 'termino') return { bloqueado: true, motivo: 'finalizado', fin: r.fin };
       return { bloqueado: false };
     }
@@ -766,12 +776,18 @@
         ? tvEstadoTorneoPropio(torneoInfo.fecha_inicio, torneoInfo.cantidad_fechas)
         : null;
       const finalizado = !!(estadoPropio && estadoPropio.estado === 'termino');
-      const cerradoManual = !!(torneoInfo && torneoInfo.estado === 'cerrado' && !finalizado);
+      // Si tenía hora de cierre programada y ya pasó, cuenta como "cerrado" para
+      // este cartel (mismo trato visual que el cierre manual del administrador).
+      const cierreProgramado = torneoInfo && torneoInfo.hora_cierre ? new Date(torneoInfo.hora_cierre) : null;
+      const cerradoPorHora = !!(cierreProgramado && !isNaN(cierreProgramado) && new Date() >= cierreProgramado && !finalizado);
+      const cerradoManual = !!(torneoInfo && torneoInfo.estado === 'cerrado' && !finalizado && !cerradoPorHora);
       const banner = finalizado
         ? `<div class="ranking-panel" style="text-align:center;font-weight:800;color:var(--primary-dark);">🎉 ¡Torneo finalizado${estadoPropio.fin ? ' el ' + tvFormatoFecha(estadoPropio.fin) : ''}! Felicitaciones a todos los que jugaron 🎉</div>`
-        : cerradoManual
-          ? `<div class="ranking-panel" style="text-align:center;font-weight:700;color:var(--text-soft);">Este torneo fue cerrado. Ya no se puede jugar, pero podés seguir consultando el ranking.</div>`
-          : '';
+        : cerradoPorHora
+          ? `<div class="ranking-panel" style="text-align:center;font-weight:700;color:var(--text-soft);">Este torneo cerró el ${tvFormatoFecha(cierreProgramado)} a las ${tvFormatoHora(cierreProgramado)}. Ya no se puede jugar, pero podés seguir consultando el ranking.</div>`
+          : cerradoManual
+            ? `<div class="ranking-panel" style="text-align:center;font-weight:700;color:var(--text-soft);">Este torneo fue cerrado. Ya no se puede jugar, pero podés seguir consultando el ranking.</div>`
+            : '';
 
       if (finalizado) tvFestejoConfeti();
 
@@ -889,9 +905,7 @@
       }
       const bloqueo = tvTorneoBloqueado(torneo);
       if (bloqueo.bloqueado) {
-        alert(bloqueo.motivo === 'cerrado'
-          ? 'Este torneo fue cerrado y ya no se puede jugar. Podés consultar el ranking.'
-          : `Este torneo ya finalizó (terminó el ${tvFormatoFecha(bloqueo.fin)}). Podés consultar el ranking, pero ya no se puede jugar.`);
+        alert(tvMensajeBloqueo(bloqueo));
         return;
       }
 
@@ -930,9 +944,7 @@
       }
       const bloqueo = tvTorneoBloqueado(torneo);
       if (bloqueo.bloqueado) {
-        alert(bloqueo.motivo === 'cerrado'
-          ? 'Este torneo fue cerrado y ya no se puede jugar. Podés consultar el ranking.'
-          : `Este torneo ya finalizó (terminó el ${tvFormatoFecha(bloqueo.fin)}). Podés consultar el ranking, pero ya no se puede jugar.`);
+        alert(tvMensajeBloqueo(bloqueo));
         return;
       }
 
@@ -1496,8 +1508,10 @@
       const nombreTorneo = nombreInput.value.trim();
       const fechaInicioInput = document.getElementById('nuevo-torneo-fecha-inicio');
       const cantidadFechasInput = document.getElementById('nuevo-torneo-cantidad-fechas');
+      const horaCierreInput = document.getElementById('nuevo-torneo-hora-cierre');
       const fechaInicio = fechaInicioInput.value;
       const cantidadFechas = parseInt(cantidadFechasInput.value, 10);
+      const horaCierre = horaCierreInput ? horaCierreInput.value : ''; // 'HH:MM' o '' si no se puso
       const btn = document.getElementById('btn-crear-torneo');
       const msg = document.getElementById('torneo-msg');
       msg.textContent = ''; msg.className = 'tv-msg';
@@ -1505,6 +1519,17 @@
       if(!nombreTorneo) { msg.textContent = 'Escribí un nombre para el torneo'; msg.className = 'tv-msg error'; return; }
       if(!fechaInicio) { msg.textContent = 'Elegí la fecha de inicio del torneo'; msg.className = 'tv-msg error'; return; }
       if(!cantidadFechas || cantidadFechas < 1 || cantidadFechas > 30) { msg.textContent = 'La cantidad de fechas tiene que ser entre 1 y 30'; msg.className = 'tv-msg error'; return; }
+
+      // Si pusieron hora de cierre, la combinamos con la fecha de inicio para
+      // armar el instante exacto de cierre (se guarda como timestamp con zona,
+      // así que no importa qué huso horario tenga el server, es el mismo
+      // instante para cualquiera que lo lea).
+      let horaCierreISO = null;
+      if (horaCierre) {
+        const cierreLocal = new Date(`${fechaInicio}T${horaCierre}:00`);
+        if (isNaN(cierreLocal)) { msg.textContent = 'La hora de cierre no es válida'; msg.className = 'tv-msg error'; return; }
+        horaCierreISO = cierreLocal.toISOString();
+      }
 
       btn.disabled = true;
       let intentos = 0;
@@ -1518,7 +1543,8 @@
           .from('torneos')
           .insert({
             codigo, nombre_torneo: nombreTorneo, creador_id: currentUser.id,
-            fecha_inicio: fechaInicio, cantidad_fechas: cantidadFechas
+            fecha_inicio: fechaInicio, cantidad_fechas: cantidadFechas,
+            hora_cierre: horaCierreISO
           })
           .select()
           .single();
@@ -1538,6 +1564,7 @@
       nombreInput.value = '';
       fechaInicioInput.value = '';
       cantidadFechasInput.value = '15';
+      if (horaCierreInput) horaCierreInput.value = '';
       const tieneSponsorInput = document.getElementById('nuevo-torneo-tiene-sponsor');
       tieneSponsorInput.value = 'no';
       tvToggleSolicitudSponsor();
@@ -1596,12 +1623,41 @@ function tvFormatoFecha(d){
   return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+function tvFormatoHora(d){
+  return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+}
+
 function estadoTorneoTexto(t){
   if (t.estado === 'cerrado') return 'Cerrado por el administrador';
+
+  // Si tiene hora de cierre programada, esa es la info más relevante a mostrar.
+  if (t.hora_cierre) {
+    const cierre = new Date(t.hora_cierre);
+    if (!isNaN(cierre)) {
+      if (new Date() >= cierre) return `Cerrado (cierre programado el ${tvFormatoFecha(cierre)} a las ${tvFormatoHora(cierre)})`;
+      const r = tvEstadoTorneoPropio(t.fecha_inicio, t.cantidad_fechas);
+      if (r.estado === 'no-empezo') return `Empieza el ${tvFormatoFecha(r.inicio)} · cierra a las ${tvFormatoHora(cierre)}`;
+      return `En curso · cierra el ${tvFormatoFecha(cierre)} a las ${tvFormatoHora(cierre)}`;
+    }
+  }
+
   const r = tvEstadoTorneoPropio(t.fecha_inicio, t.cantidad_fechas);
   if (r.estado === 'no-empezo') return `Empieza el ${tvFormatoFecha(r.inicio)}`;
   if (r.estado === 'termino') return `Finalizado (terminó el ${tvFormatoFecha(r.fin)})`;
   return `Fecha ${r.diaTorneo} de ${t.cantidad_fechas} en curso · termina el ${tvFormatoFecha(r.fin)}`;
+}
+
+// Arma el mensaje de alerta cuando un torneo está bloqueado para jugar,
+// según el motivo (cerrado a mano, hora de cierre programada, o finalizado
+// por cantidad de fechas). Se usa tanto para el invitado como para el creador.
+function tvMensajeBloqueo(bloqueo){
+  if (bloqueo.motivo === 'cerrado') {
+    return 'Este torneo fue cerrado y ya no se puede jugar. Podés consultar el ranking.';
+  }
+  if (bloqueo.motivo === 'hora-cierre') {
+    return `Este torneo ya cerró (el ${tvFormatoFecha(bloqueo.fin)} a las ${tvFormatoHora(bloqueo.fin)}). Podés consultar el ranking, pero ya no se puede jugar.`;
+  }
+  return `Este torneo ya finalizó (terminó el ${tvFormatoFecha(bloqueo.fin)}). Podés consultar el ranking, pero ya no se puede jugar.`;
 }
 
 // Lanza el festejo visual cuando corresponde (torneo recién visto como finalizado).
