@@ -525,11 +525,6 @@
             <label for="torneoCantidadFechasInput">Cantidad de fechas (cada una dura 1 día)</label>
             <input type="number" id="torneoCantidadFechasInput" min="1" max="30" value="30">
           </div>
-          <div class="field">
-            <label for="torneoHoraCierreInput">🕒 Hora de cierre (opcional)</label>
-            <input type="datetime-local" id="torneoHoraCierreInput">
-            <p style="font-size:.75rem;color:var(--text-soft);margin:4px 0 0;">Si la dejás vacía, el torneo se cierra solo al completar la cantidad de fechas. Si la completás, el torneo se cierra automáticamente en ese momento exacto (ideal para torneos relámpago, por ejemplo uno que dure lo que dure un programa de radio).</p>
-          </div>
 
           <details style="margin-top:2px;">
             <summary style="cursor:pointer;font-weight:700;font-size:.85rem;color:var(--text-soft);">¿Este torneo tiene un auspiciante? (opcional)</summary>
@@ -586,7 +581,10 @@
       <div class="panel" id="torneoRankingPanel" style="display:none">
         <h2 id="torneoRankingTitle">Ranking</h2>
         <div id="torneoRankingBody"></div>
-        <button class="btn btn-ghost" style="margin-top:14px" onclick="closeTorneoRanking()">Cerrar ranking</button>
+        <div style="display:flex;gap:8px;margin-top:14px;">
+          <button class="btn btn-primary" onclick="descargarListaCompletaPDF()">📄 Descargar PDF</button>
+          <button class="btn btn-ghost" onclick="closeTorneoRanking()">Cerrar ranking</button>
+        </div>
       </div>
     </div>
 
@@ -757,6 +755,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.js"></script>
 <script>
 /* =====================================================================
    CONFIGURACIÓN (mismas credenciales que usa index.html)
@@ -1299,7 +1299,6 @@ async function crearTorneo(){
   const emailInput = document.getElementById('torneoEmailInput');
   const fechaInicioInput = document.getElementById('torneoFechaInicioInput');
   const cantidadFechasInput = document.getElementById('torneoCantidadFechasInput');
-  const horaCierreInput = document.getElementById('torneoHoraCierreInput');
   const sponsorNombreInput = document.getElementById('torneoSponsorNombreInput');
   const sponsorArchivoInput = document.getElementById('torneoSponsorArchivoInput');
   const sponsorLinkInput = document.getElementById('torneoSponsorLinkInput');
@@ -1310,7 +1309,6 @@ async function crearTorneo(){
   const email = emailInput.value.trim();
   const fechaInicio = fechaInicioInput.value;
   const cantidadFechas = parseInt(cantidadFechasInput.value, 10);
-  const horaCierreValor = horaCierreInput ? horaCierreInput.value : ''; // 'YYYY-MM-DDTHH:MM' o '' si no se puso
   const sponsorNombre = sponsorNombreInput.value.trim();
   const sponsorArchivo = sponsorArchivoInput.files[0];
   const sponsorLink = sponsorLinkInput.value.trim();
@@ -1336,20 +1334,6 @@ async function crearTorneo(){
     return;
   }
 
-  // Si se completó una hora de cierre, la convertimos a timestamp (instante
-  // exacto, sin importar el huso horario con el que se lea después).
-  let horaCierreISO = null;
-  if (horaCierreValor){
-    const cierreLocal = new Date(horaCierreValor);
-    if (isNaN(cierreLocal)){
-      errBox.textContent = 'La hora de cierre no es válida.';
-      errBox.classList.add('show');
-      return;
-    }
-    horaCierreISO = cierreLocal.toISOString();
-  }
-
-
   let sponsorImagenUrl = null;
   if (sponsorArchivo){
     const nombreArchivo = `torneo_${Date.now()}_${sponsorArchivo.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
@@ -1374,7 +1358,6 @@ async function crearTorneo(){
       estado: 'activo',
       fecha_inicio: fechaInicio,
       cantidad_fechas: cantidadFechas,
-      hora_cierre: horaCierreISO,
       sponsor_nombre: sponsorNombre || null,
       sponsor_imagen_url: sponsorImagenUrl,
       sponsor_link_url: sponsorLink || null
@@ -1391,7 +1374,6 @@ async function crearTorneo(){
   emailInput.value = '';
   fechaInicioInput.value = '';
   cantidadFechasInput.value = '30';
-  if (horaCierreInput) horaCierreInput.value = '';
   sponsorNombreInput.value = '';
   sponsorArchivoInput.value = '';
   sponsorLinkInput.value = '';
@@ -1449,42 +1431,13 @@ function tvEstadoTorneoPropio(fechaInicioStr, cantidadFechas, ahora = new Date()
 function tvFormatoFecha(d){
   return d.toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric' });
 }
-function tvFormatoHora(d){
-  return d.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
-}
-// Convierte un timestamp guardado (ISO/UTC) al formato que espera un input
-// type="datetime-local" (hora LOCAL del navegador, sin segundos ni zona).
-function tvISOaInputLocal(iso){
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (isNaN(d)) return '';
-  const pad = n => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-// ¿Este torneo ya pasó su hora de cierre programada? (independiente del
-// campo "estado" y de la cantidad de fechas: es la 3ra forma de bloquearlo,
-// igual que en torneos.html).
-function tvYaPasoHoraCierre(t){
-  if (!t.hora_cierre) return false;
-  const cierre = new Date(t.hora_cierre);
-  if (isNaN(cierre)) return false;
-  return new Date() >= cierre;
-}
 function tvInfoFechasTexto(t){
   const r = tvEstadoTorneoPropio(t.fecha_inicio, t.cantidad_fechas);
   const dur = `${t.cantidad_fechas} fecha${t.cantidad_fechas === 1 ? '' : 's'}`;
-  let base;
-  if (r.estado === 'sin-datos') base = 'Sin fecha de inicio configurada';
-  else if (r.estado === 'no-empezo') base = `Empieza el ${tvFormatoFecha(r.inicio)} · dura ${dur} · termina el ${tvFormatoFecha(r.fin)}`;
-  else if (r.estado === 'termino') base = `Terminó el ${tvFormatoFecha(r.fin)} (empezó el ${tvFormatoFecha(r.inicio)}, duró ${dur})`;
-  else base = `Fecha ${r.diaTorneo} de ${t.cantidad_fechas} en curso · empezó el ${tvFormatoFecha(r.inicio)} · termina el ${tvFormatoFecha(r.fin)}`;
-
-  if (!t.hora_cierre) return base;
-  const cierre = new Date(t.hora_cierre);
-  if (isNaN(cierre)) return base;
-  return tvYaPasoHoraCierre(t)
-    ? `${base} · 🕒 cierre programado ya pasó (${tvFormatoFecha(cierre)} ${tvFormatoHora(cierre)})`
-    : `${base} · 🕒 cierra el ${tvFormatoFecha(cierre)} a las ${tvFormatoHora(cierre)}`;
+  if (r.estado === 'sin-datos') return 'Sin fecha de inicio configurada';
+  if (r.estado === 'no-empezo') return `Empieza el ${tvFormatoFecha(r.inicio)} · dura ${dur} · termina el ${tvFormatoFecha(r.fin)}`;
+  if (r.estado === 'termino') return `Terminó el ${tvFormatoFecha(r.fin)} (empezó el ${tvFormatoFecha(r.inicio)}, duró ${dur})`;
+  return `Fecha ${r.diaTorneo} de ${t.cantidad_fechas} en curso · empezó el ${tvFormatoFecha(r.inicio)} · termina el ${tvFormatoFecha(r.fin)}`;
 }
 
 function renderTorneos(torneos, jornadasPorJugadorTorneo){
@@ -1525,7 +1478,7 @@ function renderTorneos(torneos, jornadasPorJugadorTorneo){
           ${sponsorResumen}
         </div>
         <div class="actions">
-          <button class="btn btn-ghost" onclick="viewTorneoRanking('${codigo}', '${(t.nombre_torneo || '').replace(/'/g, "\\'")}')">Ver ranking</button>
+          <button class="btn btn-ghost" onclick="viewTorneoRanking('${codigo}', '${(t.nombre_torneo || '').replace(/'/g, "\\'")}', '${t.fecha_inicio || ''}', ${t.cantidad_fechas || 0})">Ver ranking</button>
           <button class="btn btn-ghost" onclick="toggleTorneoEstado('${t.id}', '${activo ? 'cerrado' : 'activo'}')">${activo ? 'Cerrar' : 'Reabrir'}</button>
           <button class="btn btn-ghost" onclick="toggleEditarTorneo('${t.id}')">Editar</button>
         </div>
@@ -1538,11 +1491,6 @@ function renderTorneos(torneos, jornadasPorJugadorTorneo){
             <div class="field">
               <label>Cantidad de fechas</label>
               <input type="number" id="editCantidad-${t.id}" min="1" max="30" value="${t.cantidad_fechas || 30}">
-            </div>
-            <div class="field">
-              <label>🕒 Hora de cierre (opcional)</label>
-              <input type="datetime-local" id="editHoraCierre-${t.id}" value="${tvISOaInputLocal(t.hora_cierre)}">
-              <p style="font-size:.75rem;color:var(--text-soft);margin:4px 0 0;">Dejala vacía para que el torneo se cierre solo al completar la cantidad de fechas. ${t.hora_cierre ? 'Para quitar el cierre programado, borrá la fecha y hora de este campo.' : ''}</p>
             </div>
             <div class="field">
               <label>Nombre del auspiciante</label>
@@ -1586,8 +1534,6 @@ async function guardarEdicionTorneo(id){
 
   const fechaInicio = document.getElementById('editFecha-' + id).value;
   const cantidadFechas = parseInt(document.getElementById('editCantidad-' + id).value, 10);
-  const horaCierreInput = document.getElementById('editHoraCierre-' + id);
-  const horaCierreValor = horaCierreInput ? horaCierreInput.value : '';
   const sponsorNombre = document.getElementById('editSponsorNombre-' + id).value.trim();
   const sponsorArchivo = document.getElementById('editSponsorArchivo-' + id).files[0];
   const sponsorLink = document.getElementById('editSponsorLink-' + id).value.trim();
@@ -1610,23 +1556,9 @@ async function guardarEdicionTorneo(id){
     return;
   }
 
-  // Si se completó una hora de cierre la convertimos a timestamp; si el campo
-  // quedó vacío, se manda null para poder QUITAR un cierre ya programado.
-  let horaCierreISO = null;
-  if (horaCierreValor){
-    const cierreLocal = new Date(horaCierreValor);
-    if (isNaN(cierreLocal)){
-      errBox.textContent = 'La hora de cierre no es válida.';
-      errBox.classList.add('show');
-      return;
-    }
-    horaCierreISO = cierreLocal.toISOString();
-  }
-
   const cambios = {
     fecha_inicio: fechaInicio,
     cantidad_fechas: cantidadFechas,
-    hora_cierre: horaCierreISO,
     sponsor_nombre: sponsorNombre || null,
     sponsor_link_url: sponsorLink || null
   };
@@ -1669,7 +1601,7 @@ async function toggleTorneoEstado(id, nuevoEstado){
   loadTorneos(true);
 }
 
-async function viewTorneoRanking(torneoCodigo, nombreTorneo){
+async function viewTorneoRanking(torneoCodigo, nombreTorneo, fechaInicio, cantidadFechas){
   const panel = document.getElementById('torneoRankingPanel');
   const title = document.getElementById('torneoRankingTitle');
   const body = document.getElementById('torneoRankingBody');
@@ -1677,6 +1609,8 @@ async function viewTorneoRanking(torneoCodigo, nombreTorneo){
   body.innerHTML = '<div class="empty-state">Cargando...</div>';
   panel.style.display = '';
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  window.torneoRankingActual = { torneoCodigo, nombreTorneo, fechaInicio, cantidadFechas };
 
   const torneoResultados = await getTorneoResultados();
   const filas = torneoResultados.filter(r => r.torneo_codigo === torneoCodigo);
@@ -1693,10 +1627,12 @@ async function viewTorneoRanking(torneoCodigo, nombreTorneo){
     if (!porJugador[nombre]) porJugador[nombre] = 0;
     porJugador[nombre] += (r.puntaje_total || 0);
   });
-  const ranking = Object.entries(porJugador).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const ranking = Object.entries(porJugador).sort((a,b)=>b[1]-a[1]);
   const max = ranking.length ? ranking[0][1] : 1;
 
-  body.innerHTML = `<div class="rank-list">${ranking.map(([nombre,puntos],i)=>`
+  body.innerHTML = `
+    <div class="meta" style="margin-bottom:10px;">${ranking.length} participante${ranking.length === 1 ? '' : 's'}</div>
+    <div class="rank-list">${ranking.map(([nombre,puntos],i)=>`
     <div class="rank-item">
       <div class="idx">${i+1}</div>
       <div class="body">
@@ -1708,6 +1644,112 @@ async function viewTorneoRanking(torneoCodigo, nombreTorneo){
 
 function closeTorneoRanking(){
   document.getElementById('torneoRankingPanel').style.display = 'none';
+}
+
+// El logo del sistema (LOGO_URL) está en formato webp; jsPDF no siempre
+// soporta ese formato, así que lo convertimos una vez a PNG en memoria.
+let logoPngCache = null;
+function getLogoPngParaPDF(){
+  return new Promise((resolve, reject) => {
+    if (logoPngCache) { resolve(logoPngCache); return; }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      logoPngCache = canvas.toDataURL('image/png');
+      resolve(logoPngCache);
+    };
+    img.onerror = reject;
+    img.src = LOGO_URL;
+  });
+}
+
+async function descargarListaCompletaPDF(){
+  const ctx = window.torneoRankingActual;
+  if (!ctx){
+    alert('Abrí primero el ranking del torneo que querés descargar.');
+    return;
+  }
+  const { torneoCodigo, nombreTorneo, fechaInicio, cantidadFechas } = ctx;
+
+  const torneoResultados = await getTorneoResultados();
+  const filas = torneoResultados.filter(r => r.torneo_codigo === torneoCodigo);
+  const porJugador = {};
+  filas.forEach(r=>{
+    const nombre = r.jugador_nombre || 'Anónimo';
+    if (!porJugador[nombre]) porJugador[nombre] = 0;
+    porJugador[nombre] += (r.puntaje_total || 0);
+  });
+  const ranking = Object.entries(porJugador).sort((a,b)=>b[1]-a[1]);
+
+  if (!ranking.length){
+    alert('Todavía no hay participantes con resultados en este torneo.');
+    return;
+  }
+
+  let logoPng = null;
+  try { logoPng = await getLogoPngParaPDF(); } catch(e){ console.error('No se pudo preparar el logo para el PDF:', e); }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 14;
+  const fechaTexto = fechaInicio ? tvFormatoFecha(new Date(fechaInicio + 'T00:00:00')) : '--';
+
+  function dibujarEncabezado(){
+    if (logoPng){
+      try { doc.addImage(logoPng, 'PNG', margin, 10, 42, 15); } catch(e){ console.error('No se pudo dibujar el logo en el PDF:', e); }
+    }
+    const xInfo = pageWidth - margin;
+    let y = 12;
+    const filaInfo = (etiqueta, valor) => {
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'bold');
+      doc.text(etiqueta, xInfo, y, { align: 'right' });
+      y += 4.5;
+      doc.setFont(undefined, 'normal');
+      doc.text(String(valor), xInfo, y, { align: 'right' });
+      y += 6;
+    };
+    filaInfo('Nombre del Torneo:', nombreTorneo || 'Torneo sin nombre');
+    filaInfo('Fecha del Torneo:', fechaTexto);
+    filaInfo('Cantidad de fechas:', cantidadFechas || '--');
+    filaInfo('Cantidad de participantes:', ranking.length);
+    doc.setDrawColor(200);
+    doc.line(margin, 32, pageWidth - margin, 32);
+  }
+
+  function dibujarPie(){
+    doc.setFontSize(8);
+    doc.setTextColor(120);
+    doc.text('IdEclesia ©Matías Brizzio', margin, pageHeight - 8);
+    doc.setTextColor(0);
+  }
+
+  const filasTabla = ranking.map(([nombre, puntos], i) => [i + 1, nombre, puntos]);
+
+  doc.autoTable({
+    head: [['#', 'Nombre', 'Puntos']],
+    body: filasTabla,
+    startY: 38,
+    margin: { left: margin, right: margin, top: 38, bottom: 16 },
+    styles: { fontSize: 9 },
+    headStyles: { fillColor: [30, 58, 95] },
+    didDrawPage: dibujarEncabezado
+  });
+
+  const totalPaginas = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= totalPaginas; p++){
+    doc.setPage(p);
+    dibujarPie();
+  }
+
+  const nombreArchivo = `ranking_${(nombreTorneo || 'torneo').replace(/[^a-zA-Z0-9]+/g, '_')}_${torneoCodigo}.pdf`;
+  doc.save(nombreArchivo);
 }
 
 /* =====================================================================
