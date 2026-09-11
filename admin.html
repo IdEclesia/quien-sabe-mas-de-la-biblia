@@ -1647,7 +1647,8 @@ function closeTorneoRanking(){
 }
 
 // El logo del sistema (LOGO_URL) está en formato webp; jsPDF no siempre
-// soporta ese formato, así que lo convertimos una vez a PNG en memoria.
+// soporta ese formato, así que lo convertimos una vez a PNG en memoria,
+// guardando también su ancho/alto real para no deformarlo al insertarlo.
 let logoPngCache = null;
 function getLogoPngParaPDF(){
   return new Promise((resolve, reject) => {
@@ -1659,12 +1660,26 @@ function getLogoPngParaPDF(){
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
       canvas.getContext('2d').drawImage(img, 0, 0);
-      logoPngCache = canvas.toDataURL('image/png');
+      logoPngCache = { dataUrl: canvas.toDataURL('image/png'), width: img.naturalWidth, height: img.naturalHeight };
       resolve(logoPngCache);
     };
     img.onerror = reject;
     img.src = LOGO_URL;
   });
+}
+
+// Dibuja un gráfico de barras usando Chart.js sobre un canvas fuera de pantalla
+// y devuelve la imagen como PNG, lista para insertar en el PDF.
+function renderChartToImage(config, width, height){
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const chart = new Chart(canvas.getContext('2d'), Object.assign({
+    options: { responsive: false, animation: false, plugins: { legend: { display: false } } }
+  }, config));
+  const dataUrl = canvas.toDataURL('image/png');
+  chart.destroy();
+  return dataUrl;
 }
 
 async function descargarListaCompletaPDF(){
@@ -1690,8 +1705,8 @@ async function descargarListaCompletaPDF(){
     return;
   }
 
-  let logoPng = null;
-  try { logoPng = await getLogoPngParaPDF(); } catch(e){ console.error('No se pudo preparar el logo para el PDF:', e); }
+  let logo = null;
+  try { logo = await getLogoPngParaPDF(); } catch(e){ console.error('No se pudo preparar el logo para el PDF:', e); }
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -1699,28 +1714,41 @@ async function descargarListaCompletaPDF(){
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 14;
   const fechaTexto = fechaInicio ? tvFormatoFecha(new Date(fechaInicio + 'T00:00:00')) : '--';
+  const anchoDatos = 95; // ancho máximo (mm) para el bloque de datos a la derecha
+  const yTabla = 74; // Y donde arranca la tabla (deja lugar de sobra al encabezado)
+  const ySeparador = 68;
+
+  function dibujarLogo(x, yLogo, altoLogo){
+    if (!logo) return;
+    const anchoLogo = altoLogo * (logo.width / logo.height);
+    try { doc.addImage(logo.dataUrl, 'PNG', x, yLogo, anchoLogo, altoLogo); } catch(e){ console.error('No se pudo dibujar el logo en el PDF:', e); }
+  }
 
   function dibujarEncabezado(){
-    if (logoPng){
-      try { doc.addImage(logoPng, 'PNG', margin, 10, 42, 15); } catch(e){ console.error('No se pudo dibujar el logo en el PDF:', e); }
-    }
+    dibujarLogo(margin, 10, 16);
+
     const xInfo = pageWidth - margin;
+    let tituloLineas = doc.splitTextToSize(nombreTorneo || 'Torneo sin nombre', anchoDatos);
+    if (tituloLineas.length > 2){ tituloLineas = [tituloLineas[0], tituloLineas[1].replace(/.{0,3}$/, '…')]; }
+
     let y = 12;
-    const filaInfo = (etiqueta, valor) => {
+    const etiquetaValor = (etiqueta, lineasValor) => {
       doc.setFontSize(9);
       doc.setFont(undefined, 'bold');
       doc.text(etiqueta, xInfo, y, { align: 'right' });
-      y += 4.5;
+      y += 4.2;
       doc.setFont(undefined, 'normal');
-      doc.text(String(valor), xInfo, y, { align: 'right' });
-      y += 6;
+      lineasValor.forEach(linea => { doc.text(linea, xInfo, y, { align: 'right' }); y += 4.2; });
+      y += 1.8;
     };
-    filaInfo('Nombre del Torneo:', nombreTorneo || 'Torneo sin nombre');
-    filaInfo('Fecha del Torneo:', fechaTexto);
-    filaInfo('Cantidad de fechas:', cantidadFechas || '--');
-    filaInfo('Cantidad de participantes:', ranking.length);
+
+    etiquetaValor('Nombre del Torneo:', tituloLineas);
+    etiquetaValor('Fecha del Torneo:', [fechaTexto]);
+    etiquetaValor('Cantidad de fechas:', [String(cantidadFechas || '--')]);
+    etiquetaValor('Cantidad de participantes:', [String(ranking.length)]);
+
     doc.setDrawColor(200);
-    doc.line(margin, 32, pageWidth - margin, 32);
+    doc.line(margin, ySeparador, pageWidth - margin, ySeparador);
   }
 
   function dibujarPie(){
@@ -1735,11 +1763,134 @@ async function descargarListaCompletaPDF(){
   doc.autoTable({
     head: [['#', 'Nombre', 'Puntos']],
     body: filasTabla,
-    startY: 38,
-    margin: { left: margin, right: margin, top: 38, bottom: 16 },
+    startY: yTabla,
+    margin: { left: margin, right: margin, top: yTabla, bottom: 16 },
     styles: { fontSize: 9 },
     headStyles: { fillColor: [30, 58, 95] },
     didDrawPage: dibujarEncabezado
+  });
+
+  // ---------- Página de análisis (aparte, al final) ----------
+  const porCategoria = {};
+  filas.forEach(r=>{
+    if (!r.categoria) return;
+    if (!porCategoria[r.categoria]) porCategoria[r.categoria] = { total: 0, count: 0 };
+    porCategoria[r.categoria].total += (r.puntaje_total || 0);
+    porCategoria[r.categoria].count += 1;
+  });
+  const categoriasOrdenadas = Object.entries(porCategoria)
+    .map(([cat, v]) => ({ cat, promedio: v.total / v.count }))
+    .sort((a,b)=>b.promedio - a.promedio);
+
+  const franjas = { 'Madrugada (00-06h)': 0, 'Mañana (06-12h)': 0, 'Tarde (12-18h)': 0, 'Noche (18-24h)': 0 };
+  let filasConHora = 0;
+  filas.forEach(r=>{
+    if (!r.created_at) return;
+    const h = new Date(r.created_at).getHours();
+    filasConHora++;
+    if (h < 6) franjas['Madrugada (00-06h)']++;
+    else if (h < 12) franjas['Mañana (06-12h)']++;
+    else if (h < 18) franjas['Tarde (12-18h)']++;
+    else franjas['Noche (18-24h)']++;
+  });
+  const hayDatosHorario = filasConHora > 0;
+
+  doc.addPage();
+  dibujarLogo(margin, 10, 12);
+  let y = 32;
+  doc.setFontSize(14);
+  doc.setFont(undefined, 'bold');
+  doc.text('Análisis del torneo', margin, y);
+  y += 10;
+
+  const anchoGrafico = (pageWidth - margin*2 - 8) / 2;
+  const altoGrafico = 55;
+
+  if (categoriasOrdenadas.length){
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'bold');
+    doc.text('Conocimiento general por categoría', margin, y);
+    const imgCategorias = renderChartToImage({
+      type: 'bar',
+      data: {
+        labels: categoriasOrdenadas.map(c => c.cat),
+        datasets: [{ data: categoriasOrdenadas.map(c => Math.round(c.promedio * 10) / 10), backgroundColor: '#1e3a5f' }]
+      },
+      options: { scales: { y: { beginAtZero: true, suggestedMax: 20 } } }
+    }, 700, 420);
+    doc.addImage(imgCategorias, 'PNG', margin, y + 4, anchoGrafico, altoGrafico);
+  } else {
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    doc.text('No hay datos de categoría disponibles para este torneo.', margin, y + 8);
+  }
+
+  const xGrafico2 = margin + anchoGrafico + 8;
+  if (hayDatosHorario){
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'bold');
+    doc.text('Participación por franja horaria', xGrafico2, y);
+    const imgHorario = renderChartToImage({
+      type: 'bar',
+      data: {
+        labels: Object.keys(franjas),
+        datasets: [{ data: Object.values(franjas), backgroundColor: '#3f7ac2' }]
+      },
+      options: { scales: { y: { beginAtZero: true } } }
+    }, 700, 420);
+    doc.addImage(imgHorario, 'PNG', xGrafico2, y + 4, anchoGrafico, altoGrafico);
+  } else {
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    const lineas = doc.splitTextToSize('No hay datos de horario disponibles para este torneo.', anchoGrafico);
+    doc.text(lineas, xGrafico2, y + 8);
+  }
+
+  y += altoGrafico + 16;
+
+  const promedioGeneral = ranking.reduce((acc, [, p]) => acc + p, 0) / ranking.length;
+  let analisisTexto = `Participaron ${ranking.length} jugadores, con un promedio general de ${Math.round(promedioGeneral)} puntos.`;
+  if (categoriasOrdenadas.length > 1){
+    const mejor = categoriasOrdenadas[0];
+    const peor = categoriasOrdenadas[categoriasOrdenadas.length - 1];
+    analisisTexto += ` La categoría con mejor desempeño fue "${mejor.cat}" (promedio ${Math.round(mejor.promedio * 10) / 10} pts), mientras que "${peor.cat}" mostró el resultado más bajo (promedio ${Math.round(peor.promedio * 10) / 10} pts), lo que sugiere una oportunidad de refuerzo en ese contenido.`;
+  }
+  if (hayDatosHorario){
+    const franjaPico = Object.entries(franjas).sort((a,b)=>b[1]-a[1])[0][0];
+    analisisTexto += ` La franja horaria con mayor participación fue "${franjaPico}".`;
+  }
+
+  doc.setFontSize(11);
+  doc.setFont(undefined, 'bold');
+  doc.text('Análisis de resultados', margin, y);
+  y += 6;
+  doc.setFontSize(9);
+  doc.setFont(undefined, 'normal');
+  const lineasAnalisis = doc.splitTextToSize(analisisTexto, pageWidth - margin*2);
+  doc.text(lineasAnalisis, margin, y);
+  y += lineasAnalisis.length * 4.5 + 8;
+
+  const acciones = [];
+  if (categoriasOrdenadas.length > 1){
+    acciones.push(`Reforzar contenidos de "${categoriasOrdenadas[categoriasOrdenadas.length - 1].cat}" con devocionales o repasos antes del próximo torneo.`);
+  }
+  if (hayDatosHorario){
+    const franjaPico = Object.entries(franjas).sort((a,b)=>b[1]-a[1])[0][0];
+    acciones.push(`Programar recordatorios y anuncios de nuevas fechas cerca de la franja "${franjaPico}", que es cuando más participan.`);
+  }
+  acciones.push('Reconocer públicamente a los primeros puestos del ranking para incentivar la participación en el próximo torneo.');
+  acciones.push('Compartir este resumen con los líderes de comunidad para motivar a quienes no llegaron a jugar todas las fechas.');
+
+  doc.setFontSize(11);
+  doc.setFont(undefined, 'bold');
+  doc.text('Plan de acción sugerido', margin, y);
+  y += 6;
+  doc.setFontSize(9);
+  doc.setFont(undefined, 'normal');
+  acciones.forEach(accion => {
+    const lineas = doc.splitTextToSize('• ' + accion, pageWidth - margin*2);
+    doc.text(lineas, margin, y);
+    y += lineas.length * 4.5 + 2;
   });
 
   const totalPaginas = doc.internal.getNumberOfPages();
