@@ -1494,7 +1494,13 @@ function renderTorneos(torneos, jornadasPorJugadorTorneo){
             <div class="field">
               <label>Reemplazar imagen del banner (opcional)</label>
               <input type="file" id="editSponsorArchivo-${t.id}" accept="image/*">
-              ${t.sponsor_imagen_url ? `<p style="font-size:.75rem;color:var(--text-soft);margin-top:4px;">Actual: <a href="${t.sponsor_imagen_url}" target="_blank" rel="noopener">ver imagen</a></p>` : ''}
+              ${t.sponsor_imagen_url ? `
+                <p style="font-size:.75rem;color:var(--text-soft);margin-top:4px;">Actual: <a href="${t.sponsor_imagen_url}" target="_blank" rel="noopener">ver imagen</a></p>
+                <label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:.8rem;margin-top:6px;">
+                  <input type="checkbox" id="editSponsorQuitar-${t.id}" style="width:auto;">
+                  Quitar la imagen actual (deja el torneo sin banner, salvo que subas una nueva arriba)
+                </label>
+              ` : ''}
             </div>
             <div class="field">
               <label>Link del banner</label>
@@ -1526,6 +1532,8 @@ async function guardarEdicionTorneo(id){
   const sponsorNombre = document.getElementById('editSponsorNombre-' + id).value.trim();
   const sponsorArchivo = document.getElementById('editSponsorArchivo-' + id).files[0];
   const sponsorLink = document.getElementById('editSponsorLink-' + id).value.trim();
+  const quitarCheckbox = document.getElementById('editSponsorQuitar-' + id);
+  const quitarImagen = quitarCheckbox ? quitarCheckbox.checked : false;
 
   if (!fechaInicio){
     errBox.textContent = 'Elegí la fecha de inicio.';
@@ -1554,12 +1562,15 @@ async function guardarEdicionTorneo(id){
     const nombreArchivo = `torneo_${Date.now()}_${sponsorArchivo.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
     const { error: errorSubida } = await supabaseClient.storage.from('banners').upload(nombreArchivo, sponsorArchivo);
     if (errorSubida){
+      console.error('Error subiendo imagen de sponsor:', errorSubida);
       errBox.textContent = 'No se pudo subir la nueva imagen: ' + errorSubida.message;
       errBox.classList.add('show');
       return;
     }
     const { data: urlData } = supabaseClient.storage.from('banners').getPublicUrl(nombreArchivo);
     cambios.sponsor_imagen_url = urlData.publicUrl;
+  } else if (quitarImagen){
+    cambios.sponsor_imagen_url = null;
   }
 
   const { error } = await supabaseClient.from('torneos').update(cambios).eq('id', id);
