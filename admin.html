@@ -1682,7 +1682,23 @@ function renderChartToImage(config, width, height){
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
-  const chart = new Chart(canvas.getContext('2d'), Object.assign({
+
+  const opcionesBase = {
+    responsive: false,
+    maintainAspectRatio: false,
+    animation: false,
+    plugins: { legend: { display: false } }
+  };
+  // Merge "profundo" (no Object.assign plano): si no, las opciones propias de
+  // cada gráfico (ej. scales) pisaban por completo a responsive/animation y,
+  // al no estar el canvas insertado en la página, Chart.js terminaba dibujando
+  // en blanco.
+  const opcionesFinales = Object.assign({}, opcionesBase, config.options, {
+    plugins: Object.assign({}, opcionesBase.plugins, config.options && config.options.plugins)
+  });
+
+  const chart = new Chart(canvas.getContext('2d'), Object.assign({}, config, {
+    options: opcionesFinales,
     plugins: [{
       id: 'fondoBlancoParaPDF',
       beforeDraw: (c) => {
@@ -1693,9 +1709,8 @@ function renderChartToImage(config, width, height){
         ctx.fillRect(0, 0, c.width, c.height);
         ctx.restore();
       }
-    }],
-    options: { responsive: false, animation: false, plugins: { legend: { display: false } } }
-  }, config));
+    }]
+  }));
   const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
   chart.destroy();
   return dataUrl;
@@ -1734,8 +1749,17 @@ async function descargarListaCompletaPDF(){
   const margin = 14;
   const fechaTexto = fechaInicio ? tvFormatoFecha(new Date(fechaInicio + 'T00:00:00')) : '--';
   const anchoDatos = 95; // ancho máximo (mm) para el bloque de datos a la derecha
-  const yTabla = 74; // Y donde arranca la tabla (deja lugar de sobra al encabezado)
-  const ySeparador = 68;
+  const yInicioEncabezado = 12;
+
+  let tituloLineas = doc.splitTextToSize(nombreTorneo || 'Torneo sin nombre', anchoDatos);
+  if (tituloLineas.length > 2){ tituloLineas = [tituloLineas[0], tituloLineas[1].replace(/.{0,3}$/, '…')]; }
+
+  // Altura real del bloque de datos (título + fecha + cantidad de fechas + participantes),
+  // para que el separador y la tabla arranquen justo debajo, sin espacio de más.
+  const lineasPorItem = [tituloLineas.length, 1, 1, 1];
+  const alturaBloqueDatos = lineasPorItem.reduce((acc, n) => acc + 4.2 + n * 4.2 + 1.8, 0);
+  const ySeparador = yInicioEncabezado + alturaBloqueDatos + 2;
+  const yTabla = ySeparador + 6;
 
   function dibujarLogo(x, yLogo, altoLogo){
     if (!logo) return;
@@ -1744,13 +1768,10 @@ async function descargarListaCompletaPDF(){
   }
 
   function dibujarEncabezado(){
-    dibujarLogo(margin, 10, 16);
+    dibujarLogo(margin, 8, 24);
 
     const xInfo = pageWidth - margin;
-    let tituloLineas = doc.splitTextToSize(nombreTorneo || 'Torneo sin nombre', anchoDatos);
-    if (tituloLineas.length > 2){ tituloLineas = [tituloLineas[0], tituloLineas[1].replace(/.{0,3}$/, '…')]; }
-
-    let y = 12;
+    let y = yInicioEncabezado;
     const etiquetaValor = (etiqueta, lineasValor) => {
       doc.setFontSize(9);
       doc.setFont(undefined, 'bold');
@@ -1814,6 +1835,22 @@ async function descargarListaCompletaPDF(){
   });
   const hayDatosHorario = filasConHora > 0;
 
+  // Alternativa cuando no hay columna de categoría disponible: distribución
+  // de puntajes entre los participantes (siempre se puede calcular, porque
+  // solo depende del ranking que ya tenemos).
+  const maxPuntaje = ranking.length ? ranking[0][1] : 0;
+  const numBaldes = 6;
+  const tamanoBalde = Math.max(10, Math.ceil((maxPuntaje + 1) / numBaldes / 10) * 10);
+  const distribucionPuntajes = Array.from({ length: numBaldes }, (_, i) => ({
+    label: `${i * tamanoBalde}-${i * tamanoBalde + tamanoBalde - 1}`,
+    cantidad: 0
+  }));
+  ranking.forEach(([, puntos]) => {
+    let idx = Math.floor(puntos / tamanoBalde);
+    if (idx >= numBaldes) idx = numBaldes - 1;
+    distribucionPuntajes[idx].cantidad++;
+  });
+
   doc.addPage();
   dibujarLogo(margin, 10, 12);
   let y = 32;
@@ -1840,8 +1877,17 @@ async function descargarListaCompletaPDF(){
     doc.addImage(imgCategorias, 'JPEG', margin, y + 4, anchoGrafico, altoGrafico);
   } else {
     doc.setFontSize(9);
-    doc.setFont(undefined, 'normal');
-    doc.text('No hay datos de categoría disponibles para este torneo.', margin, y + 8);
+    doc.setFont(undefined, 'bold');
+    doc.text('Distribución de puntajes', margin, y);
+    const imgDistribucion = renderChartToImage({
+      type: 'bar',
+      data: {
+        labels: distribucionPuntajes.map(d => d.label),
+        datasets: [{ data: distribucionPuntajes.map(d => d.cantidad), backgroundColor: '#1e3a5f' }]
+      },
+      options: { scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+    }, 700, 420);
+    doc.addImage(imgDistribucion, 'JPEG', margin, y + 4, anchoGrafico, altoGrafico);
   }
 
   const xGrafico2 = margin + anchoGrafico + 8;
@@ -1873,6 +1919,11 @@ async function descargarListaCompletaPDF(){
     const mejor = categoriasOrdenadas[0];
     const peor = categoriasOrdenadas[categoriasOrdenadas.length - 1];
     analisisTexto += ` La categoría con mejor desempeño fue "${mejor.cat}" (promedio ${Math.round(mejor.promedio * 10) / 10} pts), mientras que "${peor.cat}" mostró el resultado más bajo (promedio ${Math.round(peor.promedio * 10) / 10} pts), lo que sugiere una oportunidad de refuerzo en ese contenido.`;
+  } else {
+    const baldeMasComun = distribucionPuntajes.reduce((a, b) => (b.cantidad > a.cantidad ? b : a), distribucionPuntajes[0]);
+    if (baldeMasComun && baldeMasComun.cantidad > 0){
+      analisisTexto += ` La mayoría de los participantes (${baldeMasComun.cantidad}) se ubicó en el rango de ${baldeMasComun.label} puntos.`;
+    }
   }
   if (hayDatosHorario){
     const franjaPico = Object.entries(franjas).sort((a,b)=>b[1]-a[1])[0][0];
