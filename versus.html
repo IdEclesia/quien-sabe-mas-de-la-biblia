@@ -222,10 +222,11 @@
         <!-- Partido esperando rival -->
         <div id="vs-esperando-rival" class="hidden-view">
           <div class="tv-card p-4" style="background:var(--secondary);">
-            <p class="text-sm font-bold mb-2" style="color:var(--primary-dark);">Esperando que un equipo acepte tu desafío</p>
-            <p class="text-xs mb-3" style="color:var(--text-soft);">Compartí este código con el capitán rival:</p>
+            <p class="text-sm font-bold mb-2" id="vs-esperando-titulo" style="color:var(--primary-dark);">Esperando que un equipo acepte tu desafío</p>
+            <p class="text-xs mb-3" id="vs-esperando-subtitulo" style="color:var(--text-soft);">Compartí este código con el capitán rival:</p>
             <p class="text-2xl font-bold text-center mb-3" id="vs-mi-codigo-desafio" style="color:var(--vs-red);"></p>
             <button onclick="compartirDesafio()" class="btn btn-accent btn-block">📲 Compartir por WhatsApp</button>
+            <button onclick="cancelarDesafio()" class="btn btn-outline btn-block" style="margin-top:8px;">Cancelar este desafío</button>
           </div>
         </div>
 
@@ -694,6 +695,18 @@
       await cargarEstadoPartido();
     }
 
+    async function cancelarDesafio(){
+      if (!partidoActual || partidoActual.estado !== 'esperando_rival') return;
+      if (!confirm('¿Cancelar este desafío? El código dejará de servir.')) return;
+      await supabaseClient
+        .from('versus_partidos')
+        .delete()
+        .eq('id', partidoActual.id)
+        .eq('estado', 'esperando_rival');
+      partidoActual = null;
+      await cargarEstadoPartido();
+    }
+
     function compartirDesafio(){
       if (!partidoActual) return;
       const formato = textoFormato(miEquipoVersus.tamano_equipo || 7);
@@ -781,6 +794,11 @@
 
       if (partidoActual.estado === 'esperando_rival') {
         esperando.classList.remove('hidden-view');
+        const esIndividual1 = (miEquipoVersus.tamano_equipo || 7) === 1;
+        document.getElementById('vs-esperando-titulo').textContent = esIndividual1
+          ? 'Esperando que alguien acepte tu desafío' : 'Esperando que un equipo acepte tu desafío';
+        document.getElementById('vs-esperando-subtitulo').textContent = esIndividual1
+          ? 'Compartí este código con la persona que querés desafiar:' : 'Compartí este código con el capitán rival:';
         document.getElementById('vs-mi-codigo-desafio').textContent = partidoActual.codigo_desafio;
         return;
       }
