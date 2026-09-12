@@ -463,7 +463,7 @@
 
       miEquipoVersus = null;
       const { data: comoCapitan } = await supabaseClient
-        .from('versus_equipos').select('*').eq('capitan_id', currentUser.id).maybeSingle();
+        .from('versus_equipos').select('*').eq('admin_perfil_id', currentUser.id).maybeSingle();
       if (comoCapitan) {
         miEquipoVersus = comoCapitan;
       } else {
@@ -486,7 +486,7 @@
       document.getElementById('vs-con-equipo').classList.remove('hidden-view');
       document.getElementById('vs-equipo-nombre').textContent = miEquipoVersus.nombre;
 
-      await cargarMiembrosVersus(miEquipoVersus.id, currentUser.id === miEquipoVersus.capitan_id);
+      await cargarMiembrosVersus(miEquipoVersus.id, currentUser.id === miEquipoVersus.admin_perfil_id);
       await cargarEstadoPartido();
     }
 
@@ -515,7 +515,7 @@
         const codigo = generarCodigoEquipoVs(nombreEquipo);
         const { data, error } = await supabaseClient
           .from('versus_equipos')
-          .insert({ nombre: nombreEquipo, codigo, capitan_id: currentUser.id, tamano_equipo: modoSeleccionado })
+          .insert({ nombre: nombreEquipo, codigo_equipo: codigo, admin_perfil_id: currentUser.id, tamano_equipo: modoSeleccionado })
           .select().single();
         if (!error) { insertado = data; } else { ultimoError = error; if (error.code !== '23505') break; }
         intentos++;
@@ -775,10 +775,10 @@
 
       if (partidoActual.estado === 'finalizado') {
         finalizado.classList.remove('hidden-view');
-        const { data: sumaA } = await supabaseClient.from('versus_resultados').select('puntos').eq('partido_id', partidoActual.id).eq('equipo_id', partidoActual.equipo_a_id);
-        const { data: sumaB } = await supabaseClient.from('versus_resultados').select('puntos').eq('partido_id', partidoActual.id).eq('equipo_id', partidoActual.equipo_b_id);
-        const totalA = (sumaA || []).reduce((a, r) => a + (r.puntos || 0), 0);
-        const totalB = (sumaB || []).reduce((a, r) => a + (r.puntos || 0), 0);
+        const { data: sumaA } = await supabaseClient.from('versus_resultados').select('puntaje_total').eq('partido_id', partidoActual.id).eq('equipo_id', partidoActual.equipo_a_id);
+        const { data: sumaB } = await supabaseClient.from('versus_resultados').select('puntaje_total').eq('partido_id', partidoActual.id).eq('equipo_id', partidoActual.equipo_b_id);
+        const totalA = (sumaA || []).reduce((a, r) => a + (r.puntaje_total || 0), 0);
+        const totalB = (sumaB || []).reduce((a, r) => a + (r.puntaje_total || 0), 0);
         document.getElementById('vs-final-equipo-a').textContent = `${nombreA}: ${totalA} pts`;
         document.getElementById('vs-final-equipo-b').textContent = `${nombreB}: ${totalB} pts`;
         const gano = partidoActual.ganador_id === miEquipoVersus.id;
@@ -803,10 +803,10 @@
 
       if (miMiembroIdActual) {
         const { data: yaJugue } = await supabaseClient
-          .from('versus_resultados').select('puntos').eq('partido_id', partidoActual.id).eq('miembro_id', miMiembroIdActual).maybeSingle();
+          .from('versus_resultados').select('puntaje_total').eq('partido_id', partidoActual.id).eq('miembro_id', miMiembroIdActual).maybeSingle();
         if (yaJugue) {
           jugarYaJugado.classList.remove('hidden-view');
-          document.getElementById('vs-puntos-ya-jugado').textContent = yaJugue.puntos;
+          document.getElementById('vs-puntos-ya-jugado').textContent = yaJugue.puntaje_total;
         } else {
           jugarDisponible.classList.remove('hidden-view');
         }
@@ -836,10 +836,10 @@
     }
 
     async function finalizarPartido(partido){
-      const { data: puntosA } = await supabaseClient.from('versus_resultados').select('puntos').eq('partido_id', partido.id).eq('equipo_id', partido.equipo_a_id);
-      const { data: puntosB } = await supabaseClient.from('versus_resultados').select('puntos').eq('partido_id', partido.id).eq('equipo_id', partido.equipo_b_id);
-      const totalA = (puntosA || []).reduce((a, r) => a + (r.puntos || 0), 0);
-      const totalB = (puntosB || []).reduce((a, r) => a + (r.puntos || 0), 0);
+      const { data: puntosA } = await supabaseClient.from('versus_resultados').select('puntaje_total').eq('partido_id', partido.id).eq('equipo_id', partido.equipo_a_id);
+      const { data: puntosB } = await supabaseClient.from('versus_resultados').select('puntaje_total').eq('partido_id', partido.id).eq('equipo_id', partido.equipo_b_id);
+      const totalA = (puntosA || []).reduce((a, r) => a + (r.puntaje_total || 0), 0);
+      const totalB = (puntosB || []).reduce((a, r) => a + (r.puntaje_total || 0), 0);
       const ganadorId = totalA === totalB ? null : (totalA > totalB ? partido.equipo_a_id : partido.equipo_b_id);
       await supabaseClient.from('versus_partidos').update({ estado: 'finalizado', ganador_id: ganadorId }).eq('id', partido.id);
     }
@@ -855,7 +855,7 @@
     async function vsEmpezarJuego(){
       if (!partidoActual || !miMiembroIdActual) return;
       const { data: yaJugue } = await supabaseClient
-        .from('versus_resultados').select('puntos').eq('partido_id', partidoActual.id).eq('miembro_id', miMiembroIdActual).maybeSingle();
+        .from('versus_resultados').select('puntaje_total').eq('partido_id', partidoActual.id).eq('miembro_id', miMiembroIdActual).maybeSingle();
       if (yaJugue) { await cargarEstadoPartido(); return; }
 
       document.getElementById('vs-jugar-disponible').classList.add('hidden-view');
@@ -905,7 +905,7 @@
 
         await supabaseClient.from('versus_resultados').insert({
           partido_id: partidoActual.id, equipo_id: miEquipoVersus.id,
-          miembro_id: miMiembroIdActual, puntos: vsPuntosTotales, completado: true
+          miembro_id: miMiembroIdActual, puntaje_total: vsPuntosTotales, completado: true
         });
         document.getElementById('vs-vista-juego').classList.add('hidden-view');
         await cargarEstadoPartido();
