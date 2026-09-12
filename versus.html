@@ -319,6 +319,37 @@
       </div>
     </div>
 
+    <!-- ===================== ACEPTAR DESAFÍO (link, para enganchar gente nueva) ===================== -->
+    <div id="view-desafio" class="hidden-view w-full max-w-md tv-card p-8 text-center">
+      <div id="desafio-cargando"><p style="color:var(--text-soft);">Buscando el desafío...</p></div>
+      <div id="desafio-invalido" class="hidden-view">
+        <h2 class="text-2xl mb-3">Desafío no encontrado</h2>
+        <p style="color:var(--text-soft);">Este código no es válido o ya no está disponible.</p>
+      </div>
+      <div id="desafio-info" class="hidden-view">
+        <h2 class="text-2xl mb-2">⚔️ Te desafiaron</h2>
+        <p style="color:var(--text-soft);margin-bottom:6px;"><strong id="desafio-nombre-rival" style="color:var(--primary-dark);"></strong> te desafía a un Versus bíblico</p>
+        <p class="text-sm mb-6" style="color:var(--text-soft);">Formato: <strong id="desafio-formato"></strong></p>
+        <div id="desafio-necesita-login">
+          <p class="text-sm mb-3" style="color:var(--text-soft);">Para aceptar necesitás crear tu perfil primero (es gratis y rapidito).</p>
+          <button id="btn-desafio-registro" class="btn btn-accent btn-block">Crear mi perfil y aceptar</button>
+          <button id="btn-desafio-login" class="btn btn-outline btn-block" style="margin-top:8px;">Ya tengo cuenta, iniciar sesión</button>
+        </div>
+        <div id="desafio-aceptando" class="hidden-view">
+          <p style="color:var(--text-soft);">Confirmando tu participación...</p>
+        </div>
+        <div id="desafio-armar-equipo" class="hidden-view">
+          <p style="color:var(--text-soft);margin-bottom:12px;">Este desafío es <strong id="desafio-formato-2"></strong>: armá tu equipo completo y volvé a este mismo link (o pegá el código <strong id="desafio-codigo-texto"></strong> en "Aceptar Desafío" desde tu panel) para arrancar.</p>
+          <button onclick="mostrarVista('view-dashboard'); cargarDashboard();" class="btn btn-accent btn-block">Armar mi equipo</button>
+        </div>
+        <div id="desafio-ya-aceptado" class="hidden-view">
+          <p style="color:var(--primary);font-weight:600;margin-bottom:16px;">¡Desafío aceptado! 🎉</p>
+          <button onclick="mostrarVista('view-dashboard'); cargarDashboard();" class="btn btn-accent btn-block">Ir al partido</button>
+        </div>
+        <p id="desafio-msg" class="tv-msg"></p>
+      </div>
+    </div>
+
   </main>
 
   <footer class="credit">IdEclesia ©Matías Brizzio</footer>
@@ -341,6 +372,8 @@
     let partidoActual = null;
     let invitacionVersusActual = null;
     let pendingInviteCode = null;
+    let desafioActual = null; // { codigo, partidoId, equipoRivalId, equipoRivalNombre, tamano }
+    let pendingChallengeCode = null;
     let modoSeleccionado = 7; // formato elegido al crear equipo: 7 (7v7), 3 (3v3) o 1 (1v1)
 
     function textoFormato(tamano){
@@ -370,7 +403,7 @@
     }
 
     function mostrarVista(id){
-      ['view-menu','view-login','view-registro','view-dashboard','view-unirse'].forEach(v => {
+      ['view-menu','view-login','view-registro','view-dashboard','view-unirse','view-desafio'].forEach(v => {
         document.getElementById(v).classList.toggle('hidden-view', v !== id);
       });
       document.getElementById('btn-home').classList.toggle('hidden-view', !currentUser);
@@ -401,6 +434,7 @@
       if (error) { msg.textContent = 'No se pudo ingresar: ' + error.message; msg.className = 'tv-msg error'; return; }
       currentUser = data.user;
       currentPerfil = await cargarPerfil(currentUser.id);
+      if (pendingChallengeCode) { mostrarVista('view-desafio'); await cargarVistaDesafio(pendingChallengeCode); return; }
       if (pendingInviteCode) { mostrarVista('view-unirse'); await cargarVistaUnirse(pendingInviteCode); return; }
       mostrarVista('view-dashboard'); await cargarDashboard();
     });
@@ -435,6 +469,7 @@
 
       currentUser = data.user;
       currentPerfil = { id: data.user.id, correo: email, nombre_apellido: nombre, pais, ciudad, iglesia };
+      if (pendingChallengeCode) { mostrarVista('view-desafio'); await cargarVistaDesafio(pendingChallengeCode); return; }
       if (pendingInviteCode) { mostrarVista('view-unirse'); await cargarVistaUnirse(pendingInviteCode); return; }
       mostrarVista('view-dashboard'); await cargarDashboard();
     });
@@ -448,6 +483,8 @@
 
     document.getElementById('btn-unirse-registro').addEventListener('click', () => mostrarVista('view-registro'));
     document.getElementById('btn-unirse-login').addEventListener('click', () => mostrarVista('view-login'));
+    document.getElementById('btn-desafio-registro').addEventListener('click', () => mostrarVista('view-registro'));
+    document.getElementById('btn-desafio-login').addEventListener('click', () => mostrarVista('view-login'));
 
     // ===================== CREAR EQUIPO =====================
     function generarCodigoEquipoVs(nombreEquipo){
@@ -462,23 +499,24 @@
       return base + '-' + Math.floor(1000 + Math.random() * 9000);
     }
 
+    async function buscarMiEquipoVersus(){
+      const { data: comoCapitan } = await supabaseClient
+        .from('versus_equipos').select('*').eq('admin_perfil_id', currentUser.id).maybeSingle();
+      if (comoCapitan) return comoCapitan;
+      const { data: comoMiembro } = await supabaseClient
+        .from('versus_miembros')
+        .select('*, versus_equipos(*)')
+        .eq('perfil_id', currentUser.id)
+        .eq('estado', 'aceptada')
+        .maybeSingle();
+      if (comoMiembro && comoMiembro.versus_equipos) return comoMiembro.versus_equipos;
+      return null;
+    }
+
     async function cargarDashboard(){
       renderizarInputsJugadores(modoSeleccionado);
 
-      miEquipoVersus = null;
-      const { data: comoCapitan } = await supabaseClient
-        .from('versus_equipos').select('*').eq('admin_perfil_id', currentUser.id).maybeSingle();
-      if (comoCapitan) {
-        miEquipoVersus = comoCapitan;
-      } else {
-        const { data: comoMiembro } = await supabaseClient
-          .from('versus_miembros')
-          .select('*, versus_equipos(*)')
-          .eq('perfil_id', currentUser.id)
-          .eq('estado', 'aceptada')
-          .maybeSingle();
-        if (comoMiembro && comoMiembro.versus_equipos) miEquipoVersus = comoMiembro.versus_equipos;
-      }
+      miEquipoVersus = await buscarMiEquipoVersus();
 
       if (!miEquipoVersus) {
         document.getElementById('vs-sin-equipo').classList.remove('hidden-view');
@@ -493,6 +531,7 @@
 
       await cargarMiembrosVersus(miEquipoVersus.id, currentUser.id === miEquipoVersus.admin_perfil_id);
       await cargarEstadoPartido();
+      await intentarCompletarDesafioPendiente();
     }
 
     // Ajusta textos y visibilidad de la UI según el formato (1v1 no tiene
@@ -710,8 +749,17 @@
     function compartirDesafio(){
       if (!partidoActual) return;
       const formato = textoFormato(miEquipoVersus.tamano_equipo || 7);
-      const mensaje = `¡El equipo "${miEquipoVersus.nombre}" te desafía a un Versus bíblico (${formato})! Armá tu equipo en ${VERSUS_URL} y aceptá con el código: ${partidoActual.codigo_desafio}`;
+      const link = `${VERSUS_URL}?vista=desafio&codigo=${partidoActual.codigo_desafio}`;
+      const mensaje = `¡El equipo "${miEquipoVersus.nombre}" te desafía a un Versus bíblico (${formato})! Entrá acá para aceptar: ${link}`;
       window.open('https://wa.me/?text=' + encodeURIComponent(mensaje), '_blank', 'noopener');
+    }
+
+    async function finalizarAceptacionDesafio(partidoId, equipoId){
+      const { error } = await supabaseClient
+        .from('versus_partidos')
+        .update({ equipo_b_id: equipoId, estado: 'en_juego' })
+        .eq('id', partidoId).eq('estado', 'esperando_rival');
+      return error;
     }
 
     async function aceptarDesafio(){
@@ -745,12 +793,112 @@
         return;
       }
 
-      const { error } = await supabaseClient
-        .from('versus_partidos')
-        .update({ equipo_b_id: miEquipoVersus.id, estado: 'en_juego' })
-        .eq('id', partido.id).eq('estado', 'esperando_rival');
+      const error = await finalizarAceptacionDesafio(partido.id, miEquipoVersus.id);
       if (error) { msg.textContent = 'No se pudo aceptar: ' + error.message; msg.className = 'tv-msg error'; return; }
+      pendingChallengeCode = null;
       await cargarEstadoPartido();
+    }
+
+    // ===================== VISTA "TE DESAFIARON" (link directo, para enganchar gente nueva) =====================
+    async function cargarVistaDesafio(codigo){
+      pendingChallengeCode = codigo;
+      const cargando = document.getElementById('desafio-cargando');
+      const invalido = document.getElementById('desafio-invalido');
+      const info = document.getElementById('desafio-info');
+      cargando.classList.remove('hidden-view'); invalido.classList.add('hidden-view'); info.classList.add('hidden-view');
+
+      const { data: partido } = await supabaseClient
+        .from('versus_partidos').select('*').eq('codigo_desafio', codigo).maybeSingle();
+
+      cargando.classList.add('hidden-view');
+      if (!partido) { invalido.classList.remove('hidden-view'); return; }
+
+      const { data: equipoRival } = await supabaseClient
+        .from('versus_equipos').select('nombre, tamano_equipo').eq('id', partido.equipo_a_id).maybeSingle();
+      const tamano = (equipoRival && equipoRival.tamano_equipo) || 7;
+      desafioActual = { codigo, partidoId: partido.id, equipoRivalId: partido.equipo_a_id,
+        equipoRivalNombre: equipoRival ? equipoRival.nombre : 'Alguien', tamano };
+
+      document.getElementById('desafio-nombre-rival').textContent = desafioActual.equipoRivalNombre;
+      document.getElementById('desafio-formato').textContent = textoFormato(tamano);
+      document.getElementById('desafio-formato-2').textContent = textoFormato(tamano);
+      document.getElementById('desafio-codigo-texto').textContent = codigo;
+      info.classList.remove('hidden-view');
+
+      const necesitaLogin = document.getElementById('desafio-necesita-login');
+      const aceptando = document.getElementById('desafio-aceptando');
+      const armarEquipo = document.getElementById('desafio-armar-equipo');
+      const yaAceptado = document.getElementById('desafio-ya-aceptado');
+      const msg = document.getElementById('desafio-msg');
+      [necesitaLogin, aceptando, armarEquipo, yaAceptado].forEach(d => d.classList.add('hidden-view'));
+      msg.textContent = ''; msg.className = 'tv-msg';
+
+      if (partido.estado !== 'esperando_rival') {
+        if (partido.equipo_b_id) { yaAceptado.classList.remove('hidden-view'); }
+        else { msg.textContent = 'Este desafío ya no está disponible.'; msg.className = 'tv-msg error'; }
+        return;
+      }
+
+      if (!currentUser) { necesitaLogin.classList.remove('hidden-view'); return; }
+      await intentarAceptarDesafioDeEntrada(partido, tamano);
+    }
+
+    // Si el que entra por el link ya tiene sesión (o recién se registró/logueó):
+    // si ya tiene un equipo completo del mismo formato, acepta directo; si no
+    // tiene equipo o le falta gente, lo manda a armarlo y deja el código
+    // guardado para usarlo apenas esté completo.
+    async function intentarAceptarDesafioDeEntrada(partido, tamano){
+      const aceptando = document.getElementById('desafio-aceptando');
+      const armarEquipo = document.getElementById('desafio-armar-equipo');
+      const yaAceptado = document.getElementById('desafio-ya-aceptado');
+      const msg = document.getElementById('desafio-msg');
+
+      const miEquipo = await buscarMiEquipoVersus();
+
+      if (miEquipo && miEquipo.id === partido.equipo_a_id) {
+        msg.textContent = 'Este es tu propio desafío — no podés aceptarlo vos mismo.';
+        msg.className = 'tv-msg error';
+        return;
+      }
+
+      if (miEquipo && (miEquipo.tamano_equipo || 7) === tamano) {
+        const aceptados = await contarMiembrosAceptados(miEquipo.id);
+        if (aceptados >= (miEquipo.tamano_equipo || 7)) {
+          aceptando.classList.remove('hidden-view');
+          const error = await finalizarAceptacionDesafio(partido.id, miEquipo.id);
+          aceptando.classList.add('hidden-view');
+          if (error) { msg.textContent = 'No se pudo aceptar: ' + error.message; msg.className = 'tv-msg error'; return; }
+          pendingChallengeCode = null;
+          yaAceptado.classList.remove('hidden-view');
+          return;
+        }
+      }
+
+      // No tiene todavía un equipo del formato correcto y completo:
+      // lo mandamos a armarlo, ya con el formato correcto preseleccionado.
+      vsSeleccionarModo(tamano);
+      armarEquipo.classList.remove('hidden-view');
+    }
+
+    // Se llama al final de cargarDashboard() cuando hay un código de desafío
+    // pendiente: si el equipo recién armado (o que ya tenía) ya está completo,
+    // acepta el desafío automáticamente sin que el usuario tenga que volver
+    // a pegar el código a mano.
+    async function intentarCompletarDesafioPendiente(){
+      if (!pendingChallengeCode || !miEquipoVersus) return;
+      const { data: partido } = await supabaseClient
+        .from('versus_partidos').select('*').eq('codigo_desafio', pendingChallengeCode).maybeSingle();
+      if (!partido || partido.estado !== 'esperando_rival') { pendingChallengeCode = null; return; }
+      if (partido.equipo_a_id === miEquipoVersus.id) { pendingChallengeCode = null; return; }
+
+      const total = miEquipoVersus.tamano_equipo || 7;
+      const aceptados = await contarMiembrosAceptados(miEquipoVersus.id);
+      const input = document.getElementById('vs-codigo-aceptar');
+      if (input) input.value = pendingChallengeCode;
+      if (aceptados < total) return; // todavía faltan compañeros por confirmar
+
+      const error = await finalizarAceptacionDesafio(partido.id, miEquipoVersus.id);
+      if (!error) { pendingChallengeCode = null; await cargarEstadoPartido(); }
     }
 
     // ===================== ESTADO DEL PARTIDO =====================
@@ -1045,6 +1193,13 @@
         const codigoInv = params.get('codigo');
         mostrarVista('view-unirse');
         if (codigoInv) await cargarVistaUnirse(codigoInv);
+        return;
+      }
+
+      if (vistaPedida === 'desafio') {
+        const codigoDes = params.get('codigo');
+        mostrarVista('view-desafio');
+        if (codigoDes) await cargarVistaDesafio(codigoDes);
         return;
       }
 
