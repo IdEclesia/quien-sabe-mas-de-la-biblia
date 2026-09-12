@@ -1647,8 +1647,12 @@ function closeTorneoRanking(){
 }
 
 // El logo del sistema (LOGO_URL) está en formato webp; jsPDF no siempre
-// soporta ese formato, así que lo convertimos una vez a PNG en memoria,
-// guardando también su ancho/alto real para no deformarlo al insertarlo.
+// soporta ese formato, así que lo convertimos una vez a JPEG en memoria
+// (con fondo blanco, porque JPEG no admite transparencia), guardando
+// también su ancho/alto real para no deformarlo al insertarlo.
+// Nota: exportamos como JPEG y no PNG porque jsPDF 2.5.1 tiene un bug
+// conocido ("Incomplete or corrupt PNG file") al decodificar ciertos
+// PNG generados por canvas; JPEG evita ese problema.
 let logoPngCache = null;
 function getLogoPngParaPDF(){
   return new Promise((resolve, reject) => {
@@ -1659,8 +1663,11 @@ function getLogoPngParaPDF(){
       const canvas = document.createElement('canvas');
       canvas.width = img.naturalWidth;
       canvas.height = img.naturalHeight;
-      canvas.getContext('2d').drawImage(img, 0, 0);
-      logoPngCache = { dataUrl: canvas.toDataURL('image/png'), width: img.naturalWidth, height: img.naturalHeight };
+      const c = canvas.getContext('2d');
+      c.fillStyle = '#ffffff';
+      c.fillRect(0, 0, canvas.width, canvas.height);
+      c.drawImage(img, 0, 0);
+      logoPngCache = { dataUrl: canvas.toDataURL('image/jpeg', 0.95), width: img.naturalWidth, height: img.naturalHeight };
       resolve(logoPngCache);
     };
     img.onerror = reject;
@@ -1669,15 +1676,27 @@ function getLogoPngParaPDF(){
 }
 
 // Dibuja un gráfico de barras usando Chart.js sobre un canvas fuera de pantalla
-// y devuelve la imagen como PNG, lista para insertar en el PDF.
+// y devuelve la imagen como JPEG (con fondo blanco), lista para insertar en el PDF.
+// Se usa JPEG en vez de PNG por el mismo motivo que con el logo (ver arriba).
 function renderChartToImage(config, width, height){
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const chart = new Chart(canvas.getContext('2d'), Object.assign({
+    plugins: [{
+      id: 'fondoBlancoParaPDF',
+      beforeDraw: (c) => {
+        const ctx = c.canvas.getContext('2d');
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-over';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, c.width, c.height);
+        ctx.restore();
+      }
+    }],
     options: { responsive: false, animation: false, plugins: { legend: { display: false } } }
   }, config));
-  const dataUrl = canvas.toDataURL('image/png');
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
   chart.destroy();
   return dataUrl;
 }
@@ -1721,7 +1740,7 @@ async function descargarListaCompletaPDF(){
   function dibujarLogo(x, yLogo, altoLogo){
     if (!logo) return;
     const anchoLogo = altoLogo * (logo.width / logo.height);
-    try { doc.addImage(logo.dataUrl, 'PNG', x, yLogo, anchoLogo, altoLogo); } catch(e){ console.error('No se pudo dibujar el logo en el PDF:', e); }
+    try { doc.addImage(logo.dataUrl, 'JPEG', x, yLogo, anchoLogo, altoLogo); } catch(e){ console.error('No se pudo dibujar el logo en el PDF:', e); }
   }
 
   function dibujarEncabezado(){
@@ -1818,7 +1837,7 @@ async function descargarListaCompletaPDF(){
       },
       options: { scales: { y: { beginAtZero: true, suggestedMax: 20 } } }
     }, 700, 420);
-    doc.addImage(imgCategorias, 'PNG', margin, y + 4, anchoGrafico, altoGrafico);
+    doc.addImage(imgCategorias, 'JPEG', margin, y + 4, anchoGrafico, altoGrafico);
   } else {
     doc.setFontSize(9);
     doc.setFont(undefined, 'normal');
@@ -1838,7 +1857,7 @@ async function descargarListaCompletaPDF(){
       },
       options: { scales: { y: { beginAtZero: true } } }
     }, 700, 420);
-    doc.addImage(imgHorario, 'PNG', xGrafico2, y + 4, anchoGrafico, altoGrafico);
+    doc.addImage(imgHorario, 'JPEG', xGrafico2, y + 4, anchoGrafico, altoGrafico);
   } else {
     doc.setFontSize(9);
     doc.setFont(undefined, 'normal');
