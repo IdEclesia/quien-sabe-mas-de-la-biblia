@@ -73,6 +73,9 @@
   .vs-badge-estado{font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:999px;}
   .vs-badge-estado.confirmado{background:#d4edda;color:#1d6b3a;}
   .vs-badge-estado.pendiente{background:#F7E2B8;color:#7a5714;}
+  .vs-selector-modo{display:flex;gap:8px;margin-bottom:14px;}
+  .vs-modo-btn{flex:1;background:#fff;border:2px solid #DCE9F5;padding:10px 6px;border-radius:var(--radius-md);cursor:pointer;font-weight:800;font-size:.82rem;color:var(--primary);font-family:inherit;}
+  .vs-modo-btn.activo{background:var(--vs-red);color:#fff;border-color:var(--vs-red);}
 
   /* --- Motor de juego (idéntico look al de mundial) --- */
   .tv-selector-idiomas{display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px;}
@@ -118,7 +121,7 @@
     <div id="view-menu" class="w-full max-w-md tv-card p-8 text-center">
       <span class="vs-badge">⚔️ EQUIPO CONTRA EQUIPO</span>
       <h1 class="text-3xl mt-3 mb-2">Versus</h1>
-      <p class="mb-8" style="color:var(--text-soft);">Armá tu equipo de 7, desafiá a otro y que gane el mejor</p>
+      <p class="mb-8" style="color:var(--text-soft);">Armá tu equipo (7 vs 7, 3 vs 3 o 1 vs 1), desafiá a otro y que gane el mejor</p>
       <div class="space-y-4">
         <button onclick="mostrarVista('view-login')" class="btn btn-outline btn-block">Iniciar sesión</button>
         <button onclick="mostrarVista('view-registro')" class="btn btn-accent btn-block">Crear cuenta y armar equipo</button>
@@ -167,10 +170,15 @@
       <!-- Sin equipo: crearlo -->
       <div id="vs-sin-equipo">
         <h2 class="text-2xl mb-2 text-center">Armá tu equipo</h2>
-        <p class="text-sm mb-4 text-center" style="color:var(--text-soft);">Vos sos el capitán. Anotá a tus 6 compañeros (7 en total).</p>
+        <p class="text-sm mb-3 text-center" style="color:var(--text-soft);">Elegí el formato:</p>
+        <div class="vs-selector-modo">
+          <button type="button" class="vs-modo-btn activo" data-modo="7" onclick="vsSeleccionarModo(7)">7 vs 7</button>
+          <button type="button" class="vs-modo-btn" data-modo="3" onclick="vsSeleccionarModo(3)">3 vs 3</button>
+          <button type="button" class="vs-modo-btn" data-modo="1" onclick="vsSeleccionarModo(1)">1 vs 1</button>
+        </div>
+        <p class="text-sm mb-4 text-center" id="vs-crear-jugadores-label" style="color:var(--text-soft);">Vos sos el capitán. Anotá a tus 6 compañeros (7 en total).</p>
         <label class="tv-label" for="vs-crear-nombre">Nombre del equipo</label>
         <input type="text" id="vs-crear-nombre" placeholder="Ej: Guerreros de la Fe" class="tv-input mb-3">
-        <label class="tv-label">Tus 6 compañeros</label>
         <div id="vs-crear-jugadores" class="space-y-2 mb-3"></div>
         <button onclick="crearEquipoVersus()" id="btn-crear-equipo-vs" class="btn btn-accent btn-block">Crear equipo</button>
         <p id="vs-crear-msg" class="tv-msg"></p>
@@ -183,22 +191,28 @@
           <p class="font-bold text-lg" style="color:var(--primary-dark);" id="vs-equipo-nombre"></p>
         </div>
 
-        <h3 class="font-bold mb-2" style="color:var(--primary-dark);">Plantilla (<span id="vs-cupo-actual">0</span>/7 aceptados)</h3>
+        <h3 class="font-bold mb-2" style="color:var(--primary-dark);">Plantilla (<span id="vs-cupo-actual">0</span>/<span id="vs-cupo-total">7</span> aceptados)</h3>
         <ul id="vs-lista-miembros" class="vs-lista-miembros mb-4"></ul>
 
         <!-- Sin partido: crear desafío o unirse a uno -->
         <div id="vs-sin-partido">
-          <div style="margin-top:10px;">
-            <button onclick="crearDesafio()" id="btn-crear-desafio" class="btn btn-primary btn-block">⚔️ Crear un Desafío</button>
+          <div id="vs-equipo-incompleto" class="hidden-view tv-card p-4" style="background:var(--secondary);">
+            <p class="text-sm font-bold mb-1" style="color:var(--primary-dark);">Esperando que confirme todo el equipo</p>
+            <p class="text-sm" style="color:var(--text-soft);">Necesitás que los <span id="vs-incompleto-total"></span> jugadores confirmen su participación para poder desafiar o aceptar un desafío (<span id="vs-incompleto-actual"></span>/<span id="vs-incompleto-total-2"></span> confirmados).</p>
           </div>
-          <div class="relative flex py-3 items-center">
-            <div class="flex-grow border-t" style="border-color:#DCE9F5;"></div>
-            <span class="flex-shrink-0 mx-4 text-sm" style="color:var(--text-soft);">o</span>
-            <div class="flex-grow border-t" style="border-color:#DCE9F5;"></div>
+          <div id="vs-equipo-completo-acciones">
+            <div style="margin-top:10px;">
+              <button onclick="crearDesafio()" id="btn-crear-desafio" class="btn btn-primary btn-block">⚔️ Crear un Desafío</button>
+            </div>
+            <div class="relative flex py-3 items-center">
+              <div class="flex-grow border-t" style="border-color:#DCE9F5;"></div>
+              <span class="flex-shrink-0 mx-4 text-sm" style="color:var(--text-soft);">o</span>
+              <div class="flex-grow border-t" style="border-color:#DCE9F5;"></div>
+            </div>
+            <label class="tv-label" for="vs-codigo-aceptar">Código de desafío recibido</label>
+            <input type="text" id="vs-codigo-aceptar" placeholder="Ej: GUER-4821" style="text-transform:uppercase;" class="tv-input mb-2">
+            <button onclick="aceptarDesafio()" class="btn btn-outline btn-block">Aceptar Desafío</button>
           </div>
-          <label class="tv-label" for="vs-codigo-aceptar">Código de desafío recibido</label>
-          <input type="text" id="vs-codigo-aceptar" placeholder="Ej: GUER-4821" style="text-transform:uppercase;" class="tv-input mb-2">
-          <button onclick="aceptarDesafio()" class="btn btn-outline btn-block">Aceptar Desafío</button>
           <p id="vs-partido-msg" class="tv-msg"></p>
         </div>
 
@@ -323,6 +337,33 @@
     let partidoActual = null;
     let invitacionVersusActual = null;
     let pendingInviteCode = null;
+    let modoSeleccionado = 7; // formato elegido al crear equipo: 7 (7v7), 3 (3v3) o 1 (1v1)
+
+    function textoFormato(tamano){
+      return tamano === 1 ? '1 contra 1' : `${tamano} contra ${tamano}`;
+    }
+
+    function vsSeleccionarModo(modo){
+      modoSeleccionado = modo;
+      document.querySelectorAll('.vs-modo-btn').forEach(b => {
+        b.classList.toggle('activo', Number(b.dataset.modo) === modo);
+      });
+      renderizarInputsJugadores(modo);
+    }
+
+    function renderizarInputsJugadores(modo){
+      const jugadoresDiv = document.getElementById('vs-crear-jugadores');
+      const label = document.getElementById('vs-crear-jugadores-label');
+      const cantidadCompaneros = modo - 1;
+      if (cantidadCompaneros === 0){
+        jugadoresDiv.innerHTML = '';
+        label.textContent = 'Jugás vos solo — es 1 contra 1, no hace falta invitar a nadie.';
+      } else {
+        jugadoresDiv.innerHTML = Array.from({length: cantidadCompaneros}, (_, i) => `
+          <input type="text" class="tv-input vs-jugador-input" placeholder="Nombre y apellido del jugador ${i+2}">`).join('');
+        label.textContent = `Vos sos el capitán. Anotá a tus ${cantidadCompaneros} compañero${cantidadCompaneros === 1 ? '' : 's'} (${modo} en total).`;
+      }
+    }
 
     function mostrarVista(id){
       ['view-menu','view-login','view-registro','view-dashboard','view-unirse'].forEach(v => {
@@ -418,11 +459,7 @@
     }
 
     async function cargarDashboard(){
-      const jugadoresDiv = document.getElementById('vs-crear-jugadores');
-      if (jugadoresDiv.children.length === 0) {
-        jugadoresDiv.innerHTML = Array.from({length: 6}, (_, i) => `
-          <input type="text" class="tv-input vs-jugador-input" placeholder="Nombre y apellido del jugador ${i+1}">`).join('');
-      }
+      renderizarInputsJugadores(modoSeleccionado);
 
       miEquipoVersus = null;
       const { data: comoCapitan } = await supabaseClient
@@ -462,7 +499,15 @@
       const msg = document.getElementById('vs-crear-msg');
       msg.textContent = ''; msg.className = 'tv-msg';
       if (!nombreEquipo) { msg.textContent = 'Escribí un nombre para el equipo'; msg.className = 'tv-msg error'; return; }
-      if (nombresJugadores.length === 0) { msg.textContent = 'Anotá al menos a un compañero de equipo'; msg.className = 'tv-msg error'; return; }
+
+      const cantidadCompaneros = modoSeleccionado - 1;
+      if (nombresJugadores.length !== cantidadCompaneros) {
+        msg.textContent = cantidadCompaneros === 0
+          ? 'Este formato es 1 contra 1: no hace falta anotar compañeros.'
+          : `Tenés que anotar exactamente a ${cantidadCompaneros} compañero${cantidadCompaneros === 1 ? '' : 's'} (equipo completo de ${modoSeleccionado}).`;
+        msg.className = 'tv-msg error';
+        return;
+      }
 
       btn.disabled = true;
       let intentos = 0, insertado = null, ultimoError = null;
@@ -470,7 +515,7 @@
         const codigo = generarCodigoEquipoVs(nombreEquipo);
         const { data, error } = await supabaseClient
           .from('versus_equipos')
-          .insert({ nombre: nombreEquipo, codigo, capitan_id: currentUser.id })
+          .insert({ nombre: nombreEquipo, codigo, capitan_id: currentUser.id, tamano_equipo: modoSeleccionado })
           .select().single();
         if (!error) { insertado = data; } else { ultimoError = error; if (error.code !== '23505') break; }
         intentos++;
@@ -507,6 +552,7 @@
 
       const lista = document.getElementById('vs-lista-miembros');
       const cupo = document.getElementById('vs-cupo-actual');
+      document.getElementById('vs-cupo-total').textContent = miEquipoVersus.tamano_equipo || 7;
       if (!data) { lista.innerHTML = '<li>No se pudo cargar la plantilla.</li>'; return; }
 
       cupo.textContent = data.filter(m => m.estado === 'aceptada').length;
@@ -605,6 +651,16 @@
       const msg = document.getElementById('vs-partido-msg');
       btn.disabled = true; msg.textContent = ''; msg.className = 'tv-msg';
 
+      const total = miEquipoVersus.tamano_equipo || 7;
+      const aceptados = await contarMiembrosAceptados(miEquipoVersus.id);
+      if (aceptados < total) {
+        btn.disabled = false;
+        msg.textContent = `Todavía no podés desafiar: necesitás que los ${total} jugadores confirmen su participación (${aceptados}/${total}).`;
+        msg.className = 'tv-msg error';
+        await actualizarEstadoConfirmacionEquipo();
+        return;
+      }
+
       const fecha = await obtenerProximaFechaVersus();
       let intentos = 0, insertado = null, ultimoError = null;
       while (intentos < 4 && !insertado) {
@@ -623,7 +679,8 @@
 
     function compartirDesafio(){
       if (!partidoActual) return;
-      const mensaje = `¡El equipo "${miEquipoVersus.nombre}" te desafía a un Versus bíblico! Armá tu equipo de 7 en ${VERSUS_URL} y aceptá con el código: ${partidoActual.codigo_desafio}`;
+      const formato = textoFormato(miEquipoVersus.tamano_equipo || 7);
+      const mensaje = `¡El equipo "${miEquipoVersus.nombre}" te desafía a un Versus bíblico (${formato})! Armá tu equipo en ${VERSUS_URL} y aceptá con el código: ${partidoActual.codigo_desafio}`;
       window.open('https://wa.me/?text=' + encodeURIComponent(mensaje), '_blank', 'noopener');
     }
 
@@ -634,11 +691,29 @@
       msg.textContent = ''; msg.className = 'tv-msg';
       if (!codigo) { msg.textContent = 'Ingresá el código del desafío'; msg.className = 'tv-msg error'; return; }
 
+      const totalMiEquipo = miEquipoVersus.tamano_equipo || 7;
+      const aceptadosMiEquipo = await contarMiembrosAceptados(miEquipoVersus.id);
+      if (aceptadosMiEquipo < totalMiEquipo) {
+        msg.textContent = `Todavía no podés aceptar desafíos: necesitás que los ${totalMiEquipo} jugadores confirmen su participación (${aceptadosMiEquipo}/${totalMiEquipo}).`;
+        msg.className = 'tv-msg error';
+        await actualizarEstadoConfirmacionEquipo();
+        return;
+      }
+
       const { data: partido } = await supabaseClient
         .from('versus_partidos').select('*').eq('codigo_desafio', codigo).maybeSingle();
       if (!partido) { msg.textContent = 'Código no encontrado'; msg.className = 'tv-msg error'; return; }
       if (partido.estado !== 'esperando_rival') { msg.textContent = 'Este desafío ya no está disponible'; msg.className = 'tv-msg error'; return; }
       if (partido.equipo_a_id === miEquipoVersus.id) { msg.textContent = 'No podés aceptar tu propio desafío'; msg.className = 'tv-msg error'; return; }
+
+      const { data: equipoRival } = await supabaseClient
+        .from('versus_equipos').select('tamano_equipo').eq('id', partido.equipo_a_id).maybeSingle();
+      const totalRival = (equipoRival && equipoRival.tamano_equipo) || 7;
+      if (totalRival !== totalMiEquipo) {
+        msg.textContent = `Ese desafío es ${textoFormato(totalRival)} y tu equipo es ${textoFormato(totalMiEquipo)}. Necesitás un equipo del mismo formato para aceptarlo.`;
+        msg.className = 'tv-msg error';
+        return;
+      }
 
       const { error } = await supabaseClient
         .from('versus_partidos')
@@ -649,6 +724,24 @@
     }
 
     // ===================== ESTADO DEL PARTIDO =====================
+    async function contarMiembrosAceptados(equipoId){
+      const { count } = await supabaseClient
+        .from('versus_miembros').select('id', { count: 'exact', head: true }).eq('equipo_id', equipoId).eq('estado', 'aceptada');
+      return count || 0;
+    }
+
+    async function actualizarEstadoConfirmacionEquipo(){
+      const total = miEquipoVersus.tamano_equipo || 7;
+      const aceptados = await contarMiembrosAceptados(miEquipoVersus.id);
+      const completo = aceptados >= total;
+      document.getElementById('vs-equipo-incompleto').classList.toggle('hidden-view', completo);
+      document.getElementById('vs-equipo-completo-acciones').classList.toggle('hidden-view', !completo);
+      document.getElementById('vs-incompleto-actual').textContent = aceptados;
+      document.getElementById('vs-incompleto-total').textContent = total;
+      document.getElementById('vs-incompleto-total-2').textContent = total;
+      return completo;
+    }
+
     async function cargarEstadoPartido(){
       const { data: comoA } = await supabaseClient
         .from('versus_partidos').select('*').eq('equipo_a_id', miEquipoVersus.id)
@@ -667,7 +760,7 @@
       const finalizado = document.getElementById('vs-finalizado');
       [sinPartido, esperando, enJuego, finalizado].forEach(d => d.classList.add('hidden-view'));
 
-      if (!partidoActual) { sinPartido.classList.remove('hidden-view'); return; }
+      if (!partidoActual) { sinPartido.classList.remove('hidden-view'); await actualizarEstadoConfirmacionEquipo(); return; }
 
       if (partidoActual.estado === 'esperando_rival') {
         esperando.classList.remove('hidden-view');
