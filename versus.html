@@ -187,12 +187,14 @@
       <!-- Con equipo -->
       <div id="vs-con-equipo" class="hidden-view">
         <div class="tv-card p-4 mb-4" style="background:var(--secondary);">
-          <p class="text-xs" style="color:var(--text-soft);">Tu equipo</p>
+          <p class="text-xs" id="vs-equipo-etiqueta" style="color:var(--text-soft);">Tu equipo</p>
           <p class="font-bold text-lg" style="color:var(--primary-dark);" id="vs-equipo-nombre"></p>
         </div>
 
-        <h3 class="font-bold mb-2" style="color:var(--primary-dark);">Plantilla (<span id="vs-cupo-actual">0</span>/<span id="vs-cupo-total">7</span> aceptados)</h3>
-        <ul id="vs-lista-miembros" class="vs-lista-miembros mb-4"></ul>
+        <div id="vs-plantilla-section">
+          <h3 class="font-bold mb-2" style="color:var(--primary-dark);">Plantilla (<span id="vs-cupo-actual">0</span>/<span id="vs-cupo-total">7</span> aceptados)</h3>
+          <ul id="vs-lista-miembros" class="vs-lista-miembros mb-4"></ul>
+        </div>
 
         <!-- Sin partido: crear desafío o unirse a uno -->
         <div id="vs-sin-partido">
@@ -201,6 +203,7 @@
             <p class="text-sm" style="color:var(--text-soft);">Necesitás que los <span id="vs-incompleto-total"></span> jugadores confirmen su participación para poder desafiar o aceptar un desafío (<span id="vs-incompleto-actual"></span>/<span id="vs-incompleto-total-2"></span> confirmados).</p>
           </div>
           <div id="vs-equipo-completo-acciones">
+            <p class="text-sm mb-3" id="vs-texto-explicacion-desafio" style="color:var(--text-soft);">Creá un desafío y compartí el código con el equipo rival, o pegá acá el código que te pasaron para aceptar uno.</p>
             <div style="margin-top:10px;">
               <button onclick="crearDesafio()" id="btn-crear-desafio" class="btn btn-primary btn-block">⚔️ Crear un Desafío</button>
             </div>
@@ -211,7 +214,7 @@
             </div>
             <label class="tv-label" for="vs-codigo-aceptar">Código de desafío recibido</label>
             <input type="text" id="vs-codigo-aceptar" placeholder="Ej: GUER-4821" style="text-transform:uppercase;" class="tv-input mb-2">
-            <button onclick="aceptarDesafio()" class="btn btn-outline btn-block">Aceptar Desafío</button>
+            <button onclick="aceptarDesafio()" id="btn-aceptar-desafio" class="btn btn-outline btn-block">Aceptar Desafío</button>
           </div>
           <p id="vs-partido-msg" class="tv-msg"></p>
         </div>
@@ -485,9 +488,23 @@
       document.getElementById('vs-sin-equipo').classList.add('hidden-view');
       document.getElementById('vs-con-equipo').classList.remove('hidden-view');
       document.getElementById('vs-equipo-nombre').textContent = miEquipoVersus.nombre;
+      aplicarCopyPorFormato(miEquipoVersus.tamano_equipo || 7);
 
       await cargarMiembrosVersus(miEquipoVersus.id, currentUser.id === miEquipoVersus.admin_perfil_id);
       await cargarEstadoPartido();
+    }
+
+    // Ajusta textos y visibilidad de la UI según el formato (1v1 no tiene
+    // "plantilla" que armar: el rival se consigue directo con el desafío).
+    function aplicarCopyPorFormato(tamano){
+      const esIndividual = tamano === 1;
+      document.getElementById('vs-plantilla-section').classList.toggle('hidden-view', esIndividual);
+      document.getElementById('vs-equipo-etiqueta').textContent = esIndividual ? 'Estás jugando como' : 'Tu equipo';
+      document.getElementById('btn-crear-desafio').textContent = esIndividual ? '⚔️ Desafiar a otro jugador' : '⚔️ Crear un Desafío';
+      document.getElementById('btn-aceptar-desafio').textContent = esIndividual ? 'Aceptar un desafío' : 'Aceptar Desafío';
+      document.getElementById('vs-texto-explicacion-desafio').textContent = esIndividual
+        ? 'Generá un código y compartíselo a la persona que querés desafiar 1 contra 1 — cuando lo acepte con su propio perfil, arranca el partido. O pegá acá abajo el código que te pasaron para aceptar un desafío.'
+        : 'Creá un desafío y compartí el código con el equipo rival, o pegá acá el código que te pasaron para aceptar uno.';
     }
 
     async function crearEquipoVersus(){
