@@ -177,8 +177,10 @@
           <button type="button" class="vs-modo-btn" data-modo="1" onclick="vsSeleccionarModo(1)">1 vs 1</button>
         </div>
         <p class="text-sm mb-4 text-center" id="vs-crear-jugadores-label" style="color:var(--text-soft);">Vos sos el capitán. Anotá a tus 6 compañeros (7 en total).</p>
-        <label class="tv-label" for="vs-crear-nombre">Nombre del equipo</label>
-        <input type="text" id="vs-crear-nombre" placeholder="Ej: Guerreros de la Fe" class="tv-input mb-3">
+        <div id="vs-crear-nombre-section">
+          <label class="tv-label" for="vs-crear-nombre">Nombre del equipo</label>
+          <input type="text" id="vs-crear-nombre" placeholder="Ej: Guerreros de la Fe" class="tv-input mb-3">
+        </div>
         <div id="vs-crear-jugadores" class="space-y-2 mb-3"></div>
         <button onclick="crearEquipoVersus()" id="btn-crear-equipo-vs" class="btn btn-accent btn-block">Crear equipo</button>
         <p id="vs-crear-msg" class="tv-msg"></p>
@@ -188,7 +190,10 @@
       <div id="vs-con-equipo" class="hidden-view">
         <div class="tv-card p-4 mb-4" style="background:var(--secondary);">
           <p class="text-xs" id="vs-equipo-etiqueta" style="color:var(--text-soft);">Tu equipo</p>
-          <p class="font-bold text-lg" style="color:var(--primary-dark);" id="vs-equipo-nombre"></p>
+          <p class="font-bold text-lg" style="color:var(--primary-dark);display:flex;align-items:center;gap:8px;">
+            <span id="vs-equipo-nombre"></span>
+            <button onclick="editarNombreEquipoVersus()" id="btn-editar-nombre-equipo" class="hidden-view" style="background:none;border:none;cursor:pointer;font-size:.9rem;" title="Cambiar nombre">✏️</button>
+          </p>
         </div>
 
         <div id="vs-plantilla-section">
@@ -204,6 +209,8 @@
           </div>
           <div id="vs-equipo-completo-acciones">
             <p class="text-sm mb-3" id="vs-texto-explicacion-desafio" style="color:var(--text-soft);">Creá un desafío y compartí el código con el equipo rival, o pegá acá el código que te pasaron para aceptar uno.</p>
+            <label class="tv-label" for="vs-titulo-desafio">Título del enfrentamiento (opcional)</label>
+            <input type="text" id="vs-titulo-desafio" placeholder="Ej: La Batalla de Jericó" class="tv-input mb-2">
             <div style="margin-top:10px;">
               <button onclick="crearDesafio()" id="btn-crear-desafio" class="btn btn-primary btn-block">⚔️ Crear un Desafío</button>
             </div>
@@ -222,6 +229,7 @@
         <!-- Partido esperando rival -->
         <div id="vs-esperando-rival" class="hidden-view">
           <div class="tv-card p-4" style="background:var(--secondary);">
+            <p class="text-lg font-bold text-center mb-2" id="vs-esperando-nombre-partido" style="color:var(--vs-red);"></p>
             <p class="text-sm font-bold mb-2" id="vs-esperando-titulo" style="color:var(--primary-dark);">Esperando que un equipo acepte tu desafío</p>
             <p class="text-xs mb-3" id="vs-esperando-subtitulo" style="color:var(--text-soft);">Compartí este código con el capitán rival:</p>
             <p class="text-2xl font-bold text-center mb-3" id="vs-mi-codigo-desafio" style="color:var(--vs-red);"></p>
@@ -232,6 +240,7 @@
 
         <!-- Partido en juego -->
         <div id="vs-en-juego" class="hidden-view">
+          <p class="text-lg font-bold text-center mb-2" id="vs-en-juego-nombre-partido" style="color:var(--vs-red);"></p>
           <div class="vs-enfrentamiento">
             <div class="vs-equipo-chip a" id="vs-chip-equipo-a"></div>
             <div class="vs-vs-letras">VS</div>
@@ -254,6 +263,7 @@
         <!-- Partido finalizado -->
         <div id="vs-finalizado" class="hidden-view">
           <div class="tv-card p-6 text-center" style="background:var(--secondary);">
+            <p class="text-sm font-bold" id="vs-final-nombre-partido" style="color:var(--vs-red);"></p>
             <p class="text-sm font-bold mb-1" id="vs-resultado-titulo" style="color:var(--primary-dark);"></p>
             <div class="vs-enfrentamiento">
               <div class="vs-equipo-chip a" id="vs-final-equipo-a"></div>
@@ -328,6 +338,7 @@
       </div>
       <div id="desafio-info" class="hidden-view">
         <h2 class="text-2xl mb-2">⚔️ Te desafiaron</h2>
+        <p class="text-lg font-bold mb-2" id="desafio-titulo-partido" style="color:var(--vs-red);"></p>
         <p style="color:var(--text-soft);margin-bottom:6px;"><strong id="desafio-nombre-rival" style="color:var(--primary-dark);"></strong> te desafía a un Versus bíblico</p>
         <p class="text-sm mb-6" style="color:var(--text-soft);">Formato: <strong id="desafio-formato"></strong></p>
         <div id="desafio-necesita-login">
@@ -391,11 +402,15 @@
     function renderizarInputsJugadores(modo){
       const jugadoresDiv = document.getElementById('vs-crear-jugadores');
       const label = document.getElementById('vs-crear-jugadores-label');
+      const nombreSection = document.getElementById('vs-crear-nombre-section');
       const cantidadCompaneros = modo - 1;
       if (cantidadCompaneros === 0){
         jugadoresDiv.innerHTML = '';
-        label.textContent = 'Jugás vos solo — es 1 contra 1, no hace falta invitar a nadie.';
+        nombreSection.classList.add('hidden-view');
+        const nombrePerfil = currentPerfil ? currentPerfil.nombre_apellido : 'vos';
+        label.textContent = `Jugás vos solo (como ${nombrePerfil}) — es 1 contra 1, no hace falta invitar a nadie ni inventar un nombre de equipo.`;
       } else {
+        nombreSection.classList.remove('hidden-view');
         jugadoresDiv.innerHTML = Array.from({length: cantidadCompaneros}, (_, i) => `
           <input type="text" class="tv-input vs-jugador-input" placeholder="Nombre y apellido del jugador ${i+2}">`).join('');
         label.textContent = `Vos sos el capitán. Anotá a tus ${cantidadCompaneros} compañero${cantidadCompaneros === 1 ? '' : 's'} (${modo} en total).`;
@@ -499,6 +514,15 @@
       return base + '-' + Math.floor(1000 + Math.random() * 9000);
     }
 
+    // Título gracioso para el enfrentamiento cuando el usuario no escribe uno.
+    function generarTituloDesafio(){
+      const inicios = ['La Batalla de', 'El Desafío de', 'La Gran Prueba de', 'El Duelo de', 'La Contienda de', 'El Enfrentamiento de'];
+      const lugares = ['Jericó', 'el Jordán', 'Getsemaní', 'el Sinaí', 'Betania', 'Corinto', 'Éfeso', 'Antioquía', 'Nazaret', 'Belén'];
+      const i = inicios[Math.floor(Math.random() * inicios.length)];
+      const l = lugares[Math.floor(Math.random() * lugares.length)];
+      return `${i} ${l}`;
+    }
+
     async function buscarMiEquipoVersus(){
       const { data: comoCapitan } = await supabaseClient
         .from('versus_equipos').select('*').eq('admin_perfil_id', currentUser.id).maybeSingle();
@@ -527,6 +551,7 @@
       document.getElementById('vs-sin-equipo').classList.add('hidden-view');
       document.getElementById('vs-con-equipo').classList.remove('hidden-view');
       document.getElementById('vs-equipo-nombre').textContent = miEquipoVersus.nombre;
+      document.getElementById('btn-editar-nombre-equipo').classList.toggle('hidden-view', currentUser.id !== miEquipoVersus.admin_perfil_id);
       aplicarCopyPorFormato(miEquipoVersus.tamano_equipo || 7);
 
       await cargarMiembrosVersus(miEquipoVersus.id, currentUser.id === miEquipoVersus.admin_perfil_id);
@@ -547,9 +572,27 @@
         : 'Creá un desafío y compartí el código con el equipo rival, o pegá acá el código que te pasaron para aceptar uno.';
     }
 
+    async function editarNombreEquipoVersus(){
+      if (!miEquipoVersus) return;
+      const nuevoNombre = prompt('Nuevo nombre:', miEquipoVersus.nombre);
+      if (nuevoNombre === null) return;
+      const limpio = nuevoNombre.trim();
+      if (!limpio) return;
+      const { error } = await supabaseClient
+        .from('versus_equipos')
+        .update({ nombre: limpio })
+        .eq('id', miEquipoVersus.id).eq('admin_perfil_id', currentUser.id);
+      if (error) { alert('No se pudo cambiar el nombre: ' + error.message); return; }
+      miEquipoVersus.nombre = limpio;
+      document.getElementById('vs-equipo-nombre').textContent = limpio;
+    }
+
     async function crearEquipoVersus(){
+      const cantidadCompaneros = modoSeleccionado - 1;
       const nombreInput = document.getElementById('vs-crear-nombre');
-      const nombreEquipo = nombreInput.value.trim();
+      const nombreEquipo = cantidadCompaneros === 0
+        ? (currentPerfil ? currentPerfil.nombre_apellido : 'Jugador')
+        : nombreInput.value.trim();
       const nombresJugadores = Array.from(document.querySelectorAll('.vs-jugador-input'))
         .map(inp => inp.value.trim()).filter(Boolean);
       const btn = document.getElementById('btn-crear-equipo-vs');
@@ -557,7 +600,6 @@
       msg.textContent = ''; msg.className = 'tv-msg';
       if (!nombreEquipo) { msg.textContent = 'Escribí un nombre para el equipo'; msg.className = 'tv-msg error'; return; }
 
-      const cantidadCompaneros = modoSeleccionado - 1;
       if (nombresJugadores.length !== cantidadCompaneros) {
         msg.textContent = cantidadCompaneros === 0
           ? 'Este formato es 1 contra 1: no hace falta anotar compañeros.'
@@ -719,18 +761,21 @@
       }
 
       const fecha = await obtenerProximaFechaVersus();
+      const tituloInput = document.getElementById('vs-titulo-desafio');
+      const titulo = (tituloInput.value.trim()) || generarTituloDesafio();
       let intentos = 0, insertado = null, ultimoError = null;
       while (intentos < 4 && !insertado) {
         const codigo = generarCodigoDesafio(miEquipoVersus.nombre);
         const { data, error } = await supabaseClient
           .from('versus_partidos')
-          .insert({ codigo_desafio: codigo, equipo_a_id: miEquipoVersus.id, fecha_asignada: fecha, estado: 'esperando_rival' })
+          .insert({ codigo_desafio: codigo, equipo_a_id: miEquipoVersus.id, fecha_asignada: fecha, estado: 'esperando_rival', titulo })
           .select().single();
         if (!error) { insertado = data; } else { ultimoError = error; if (error.code !== '23505') break; }
         intentos++;
       }
       btn.disabled = false;
       if (!insertado) { msg.textContent = 'No se pudo crear el desafío: ' + (ultimoError ? ultimoError.message : ''); msg.className = 'tv-msg error'; return; }
+      tituloInput.value = '';
       await cargarEstadoPartido();
     }
 
@@ -750,7 +795,8 @@
       if (!partidoActual) return;
       const formato = textoFormato(miEquipoVersus.tamano_equipo || 7);
       const link = `${VERSUS_URL}?vista=desafio&codigo=${partidoActual.codigo_desafio}`;
-      const mensaje = `¡El equipo "${miEquipoVersus.nombre}" te desafía a un Versus bíblico (${formato})! Entrá acá para aceptar: ${link}`;
+      const encabezado = partidoActual.titulo ? `"${partidoActual.titulo}" — ` : '';
+      const mensaje = `¡${encabezado}el equipo "${miEquipoVersus.nombre}" te desafía a un Versus bíblico (${formato})! Entrá acá para aceptar: ${link}`;
       window.open('https://wa.me/?text=' + encodeURIComponent(mensaje), '_blank', 'noopener');
     }
 
@@ -819,6 +865,7 @@
       desafioActual = { codigo, partidoId: partido.id, equipoRivalId: partido.equipo_a_id,
         equipoRivalNombre: equipoRival ? equipoRival.nombre : 'Alguien', tamano };
 
+      document.getElementById('desafio-titulo-partido').textContent = partido.titulo || '';
       document.getElementById('desafio-nombre-rival').textContent = desafioActual.equipoRivalNombre;
       document.getElementById('desafio-formato').textContent = textoFormato(tamano);
       document.getElementById('desafio-formato-2').textContent = textoFormato(tamano);
@@ -943,6 +990,7 @@
       if (partidoActual.estado === 'esperando_rival') {
         esperando.classList.remove('hidden-view');
         const esIndividual1 = (miEquipoVersus.tamano_equipo || 7) === 1;
+        document.getElementById('vs-esperando-nombre-partido').textContent = partidoActual.titulo || '';
         document.getElementById('vs-esperando-titulo').textContent = esIndividual1
           ? 'Esperando que alguien acepte tu desafío' : 'Esperando que un equipo acepte tu desafío';
         document.getElementById('vs-esperando-subtitulo').textContent = esIndividual1
@@ -958,6 +1006,7 @@
 
       if (partidoActual.estado === 'finalizado') {
         finalizado.classList.remove('hidden-view');
+        document.getElementById('vs-final-nombre-partido').textContent = partidoActual.titulo || '';
         const { data: sumaA } = await supabaseClient.from('versus_resultados').select('puntaje_total').eq('partido_id', partidoActual.id).eq('equipo_id', partidoActual.equipo_a_id);
         const { data: sumaB } = await supabaseClient.from('versus_resultados').select('puntaje_total').eq('partido_id', partidoActual.id).eq('equipo_id', partidoActual.equipo_b_id);
         const totalA = (sumaA || []).reduce((a, r) => a + (r.puntaje_total || 0), 0);
@@ -972,6 +1021,7 @@
 
       // en_juego
       enJuego.classList.remove('hidden-view');
+      document.getElementById('vs-en-juego-nombre-partido').textContent = partidoActual.titulo || '';
       document.getElementById('vs-chip-equipo-a').textContent = nombreA;
       document.getElementById('vs-chip-equipo-b').textContent = nombreB;
       document.getElementById('vs-fecha-numero').textContent = partidoActual.fecha_asignada;
