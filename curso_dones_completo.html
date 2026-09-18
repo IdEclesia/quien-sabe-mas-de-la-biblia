@@ -30,12 +30,31 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
 
+    html, body {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
     body {
       background-color: var(--bg); color: var(--text-main);
       display: flex; justify-content: center; padding: 20px 10px; min-height: 100vh;
     }
 
+    img { max-width: 100%; height: auto; }
+
     .app-container { max-width: 500px; width: 100%; display: flex; flex-direction: column; gap: 20px; }
+
+    /* Botón Regresar */
+    .back-bar { width: 100%; }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--card-bg); color: var(--primary);
+      border: 1px solid var(--border-color); border-radius: 12px;
+      padding: 10px 16px; font-weight: 700; font-size: 0.9rem;
+      text-decoration: none; cursor: pointer; transition: all 0.2s;
+    }
+    .back-btn:hover { background: var(--primary-light); border-color: var(--primary); }
 
     /* Barra Superior */
     .top-bar { display: flex; align-items: center; gap: 15px; }
@@ -164,6 +183,11 @@
 <body>
 
 <div class="app-container">
+
+  <!-- Botón Regresar -->
+  <div class="back-bar">
+    <a href="torneos.html" class="back-btn">⬅ Regresar</a>
+  </div>
 
   <!-- Header de marca -->
   <div class="course-header">
@@ -1200,6 +1224,11 @@
     document.getElementById('pdf-don').innerText = finalPrimaryGift.toUpperCase();
     addXP(500);
   }
+
+</script>
+
+</body>
+</html>
 
 </script>
 
