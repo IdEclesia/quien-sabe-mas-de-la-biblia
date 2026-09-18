@@ -184,6 +184,14 @@
 
     <div id="view-participar" class="hidden-view w-full max-w-md tv-card p-8">
       <h2 class="text-2xl mb-6 text-center">Unirse a un Torneo</h2>
+
+      <div style="background:var(--primary-light); border:1px dashed var(--primary); border-radius:14px; padding:16px; margin-bottom:20px; text-align:center;">
+        <strong style="color:var(--primary-dark); display:block; margin-bottom:6px;">✨ Descubre tus dones espirituales</strong>
+        <button type="button" onclick="mostrarVista('view-registro')" class="btn btn-accent btn-block">
+          Comenzar el Curso Gratis
+        </button>
+      </div>
+
       <form id="form-participar" class="space-y-4">
         <div>
           <label class="tv-label" for="invitado-nombre">Nombre y Apellido</label>
@@ -357,7 +365,7 @@
     </div>
 
     <div id="view-registro" class="hidden-view w-full max-w-md tv-card p-8">
-      <h2 class="text-2xl mb-6 text-center">Registro de Organizador</h2>
+      <h2 class="text-2xl mb-6 text-center">Registro para acceder a Cursos y Torneos</h2>
       <form id="form-registro" class="space-y-3">
         <input type="text" id="reg-nombre" placeholder="Nombre y Apellido" class="tv-input" required>
         <select id="reg-pais" class="tv-input" required>
@@ -442,7 +450,7 @@
     <div id="view-dashboard" class="hidden-view w-full max-w-4xl bg-transparent">
       <div class="mb-6 flex justify-between items-end flex-wrap gap-3">
         <div>
-          <h1 class="text-3xl">Mi Panel de Torneos</h1>
+          <h1 class="text-3xl">Mi Panel de Cursos y Torneos</h1>
           <p style="color:var(--text-soft);" id="dashboard-saludo">Creá competencias y desafiá a tu comunidad.</p>
         </div>
         <button onclick="mostrarVista('view-participar')" class="btn btn-outline" style="white-space:nowrap;">
@@ -451,6 +459,10 @@
       </div>
 
       <div id="carruselAuspiciantes" style="display:none;margin-bottom:22px;"></div>
+
+      <button onclick="location.href='curso_dones_completo.html'" class="btn btn-accent btn-block" style="margin-bottom:22px;">
+        📖 Comenzar el Curso Dones Espirituales
+      </button>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="col-span-1 tv-card p-6 h-fit">
