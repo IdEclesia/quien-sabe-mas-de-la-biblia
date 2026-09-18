@@ -837,8 +837,8 @@
         console.error('Error registrando descarga del libro:', e);
       }
     }
-    // TODO: reemplazar por la URL real del PDF del libro cuando esté disponible
-    alert('Aquí irá el enlace de descarga del libro «Dones Espirituales. Invertir para edificar» en PDF.');
+    const LIBRO_DONES_PDF_URL = "https://wfwmyuuxceyulmkhogqr.supabase.co/storage/v1/object/public/recursos-publicos/Dones_Espirituales_Material_con_Espacio_de_Trabajo.pdf.pdf";
+    window.open(LIBRO_DONES_PDF_URL, '_blank');
   }
 
   let xp = 0;
