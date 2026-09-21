@@ -179,6 +179,7 @@
     .course-header .course-title { font-size:0.78rem; color: var(--text-muted); }
     .course-footer { text-align:center; font-size:0.72rem; color: var(--text-muted); padding: 4px 0 18px; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -761,7 +762,7 @@
       <div>
         <strong style="color:var(--text-main); font-size:0.9rem;">Sigue invirtiendo tu don</strong>
         <p style="font-size:0.8rem; margin-top:2px;">Continúa profundizando con el libro "Dones Espirituales. Invertir para edificar".</p>
-        <a class="btn-book" href="#" onclick="descargarLibroDones(); return false;">Descargar libro en PDF ⬇</a>
+        <a id="btnLibro" class="btn-book" href="#" target="_blank" rel="noopener" onclick="return descargarLibro(event)">Descargar libro en PDF ⬇</a>
       </div>
     </div>
 
@@ -773,73 +774,111 @@
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
   // ==========================================
-  // CONEXIÓN A SUPABASE (mismas credenciales que torneos.html / index.html)
+  // CONEXIÓN A SUPABASE
+  // Usa la sesión iniciada en torneos.html (mismo origen → misma sesión).
+  // Si no hay sesión o falla la red, el curso funciona igual; solo no guarda.
+  // Tablas (ver supabase_curso_dones.sql): curso_dones, planes_accion, libro_descargas
   // ==========================================
   const SUPABASE_URL = "https://wfwmyuuxceyulmkhogqr.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_hrR11nillC0GtzH50LqQfQ_qEqX9FX6";
-  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const LIBRO_URL = "";                       // ← pegar aquí el link público del PDF del libro
+  const LIBRO_ID  = "dones-espirituales";     // identificador del libro en libro_descargas
 
-  let perfilIdActual = null; // id del perfil logueado (si existe sesión activa)
+  const supabaseClient = (window.supabase && window.supabase.createClient)
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
 
-  async function inicializarPerfilCurso() {
+  let _cursoUid = null;
+  async function cursoUid() {
+    if (_cursoUid) return _cursoUid;
+    if (!supabaseClient) return null;
     try {
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      perfilIdActual = session?.user?.id || null;
-    } catch (e) {
-      console.error('No se pudo obtener la sesión de Supabase:', e);
-      perfilIdActual = null;
-    }
+      const { data } = await supabaseClient.auth.getSession();
+      _cursoUid = (data && data.session) ? data.session.user.id : null;
+    } catch (e) { console.warn('Curso: no se pudo leer la sesión', e); }
+    return _cursoUid;
   }
-  inicializarPerfilCurso();
 
-  // Guarda don primario/secundario y área de influencia en la tabla perfiles
-  async function guardarResultadosDones() {
-    if (!perfilIdActual) return; // el curso puede abrirse sin sesión activa; en ese caso no se guarda
+  // Crea o actualiza la fila del usuario (1 fila por perfil_id) en la tabla indicada
+  async function cursoGuardar(tabla, fila) {
     try {
+      const uid = await cursoUid();
+      if (!uid) { console.info('Curso: sin sesión, no se guarda en Supabase'); return; }
       const { error } = await supabaseClient
-        .from('perfiles')
-        .update({
-          don_primario: finalPrimaryGift,
-          don_secundario: finalSecondaryGift,
-          area_influencia: finalWinnerTitleArea
-        })
-        .eq('id', perfilIdActual);
-      if (error) console.error('Error guardando resultados de dones:', error);
-    } catch (e) {
-      console.error('Error guardando resultados de dones:', e);
-    }
+        .from(tabla)
+        .upsert({ perfil_id: uid, ...fila }, { onConflict: 'perfil_id' });
+      if (error) console.error('Curso: error guardando en ' + tabla, error);
+    } catch (e) { console.error('Curso: error guardando en ' + tabla, e); }
   }
 
-  // Marca el Plan de Acción como completado
-  async function guardarPlanAccionCompletado() {
-    if (!perfilIdActual) return;
+  // 1) Área de impacto (fin de la Fase 1). Limpia los dones por si repite el test.
+  function guardarAreaImpacto() {
+    cursoGuardar('curso_dones', {
+      area_impacto: finalWinnerArea,
+      area_titulo: finalWinnerTitleArea,
+      puntajes_area: { ...radarScores },
+      don_principal: null, don_secundario: null, puntajes_dones: null,
+      completado_at: null,
+      xp: xp
+    });
+  }
+
+  // 2) Dones (fin de la Fase 2)
+  function guardarDones(principal, secundario) {
+    cursoGuardar('curso_dones', {
+      don_principal: principal,
+      don_secundario: secundario,
+      puntajes_dones: { ...scannerScores },
+      xp: xp
+    });
+  }
+
+  // 3) Plan de acción (paso 26): compromisos del checklist + marca el curso como completado
+  function guardarPlanAccion() {
     try {
-      const { error } = await supabaseClient
-        .from('perfiles')
-        .update({ plan_accion_completado: true })
-        .eq('id', perfilIdActual);
-      if (error) console.error('Error guardando plan de acción:', error);
-    } catch (e) {
-      console.error('Error guardando plan de acción:', e);
-    }
+      const compromisos = [];
+      document.querySelectorAll('#checklist-container .checklist-item').forEach(el => {
+        const t = el.querySelector('strong');
+        compromisos.push({
+          titulo: t ? t.textContent.replace(/^\d+\.\s*/, '').trim() : '',
+          cumplido: el.classList.contains('checked')
+        });
+      });
+      cursoGuardar('planes_accion', {
+        area_impacto: finalWinnerArea,
+        area_titulo: finalWinnerTitleArea,
+        don_principal: finalPrimaryGift,
+        compromisos: compromisos,
+        generado_at: new Date().toISOString()
+      });
+      cursoGuardar('curso_dones', { completado_at: new Date().toISOString(), xp: xp });
+    } catch (e) { console.error('Curso: error preparando el plan de acción', e); }
   }
 
-  // Contador de descargas del libro "Dones Espirituales. Invertir para edificar"
-  async function descargarLibroDones() {
-    if (perfilIdActual) {
-      try {
-        const { error } = await supabaseClient.rpc('incrementar_descarga_libro_dones');
-        if (error) console.error('Error registrando descarga del libro:', error);
-      } catch (e) {
-        console.error('Error registrando descarga del libro:', e);
-      }
-    }
-    const LIBRO_DONES_PDF_URL = "https://wfwmyuuxceyulmkhogqr.supabase.co/storage/v1/object/public/recursos-publicos/Dones_Espirituales_Material_con_Espacio_de_Trabajo.pdf.pdf";
-    window.open(LIBRO_DONES_PDF_URL, '_blank');
+  // 4) Descarga del libro: una fila por click en libro_descargas (el contador es un count)
+  async function registrarDescargaLibro() {
+    try {
+      const uid = await cursoUid();
+      if (!uid) return;
+      const { error } = await supabaseClient
+        .from('libro_descargas')
+        .insert({ perfil_id: uid, libro: LIBRO_ID });
+      if (error) console.error('Curso: error registrando la descarga', error);
+    } catch (e) { console.error('Curso: error registrando la descarga', e); }
   }
+
+  function descargarLibro(ev) {
+    if (!LIBRO_URL) {
+      alert('Aquí irá el enlace de descarga del libro «Dones Espirituales. Invertir para edificar» en PDF.');
+      ev.preventDefault();
+      return false;
+    }
+    registrarDescargaLibro();   // no bloquea: el link se abre normalmente
+    return true;
+  }
+  if (LIBRO_URL) document.getElementById('btnLibro').href = LIBRO_URL;
 
   let xp = 0;
   function addXP(amount) {
@@ -1077,6 +1116,7 @@
     }
 
     addXP(150);
+    guardarAreaImpacto();
     nextStep(15);
   }
 
@@ -1139,7 +1179,6 @@
   let activeScannerQuestions = [];
   let scannerScores = {}; 
   let finalPrimaryGift = ''; 
-  let finalSecondaryGift = '';
 
   function renderScannerQuestion() {
     if (currentScannerIndex === 0) {
@@ -1179,15 +1218,13 @@
     const primaryGift = sortedGifts[0];
     const secondaryGift = sortedGifts[1];
     finalPrimaryGift = primaryGift; 
-    finalSecondaryGift = secondaryGift;
 
     document.getElementById('scanner-winner-1').innerText = `Don de ${primaryGift}`;
     document.getElementById('scanner-winner-2').innerText = `Don de ${secondaryGift}`;
     document.getElementById('wa-preview-text').innerText = `"¡Hola! Acabo de hacer el Test de Dones en IdEclesia y mi perfil principal es el don de ${primaryGift.toUpperCase()}. Como me conoces, ¿ves estas características en mi vida?"`;
 
-    guardarResultadosDones();
-
     addXP(250);
+    guardarDones(primaryGift, secondaryGift);
     nextStep(18); 
   }
 
@@ -1293,7 +1330,7 @@
     document.getElementById('pdf-area').innerText = finalWinnerTitleArea.toUpperCase();
     document.getElementById('pdf-don').innerText = finalPrimaryGift.toUpperCase();
     addXP(500);
-    guardarPlanAccionCompletado();
+    guardarPlanAccion();
   }
 
 </script>
