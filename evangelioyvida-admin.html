@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow"><title>Admin · Evangelio & Vida</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--g:#8B894C;--gd:#5E5C2F;--bg:#F7F4EA;--bd:#E3DFC9;--mut:#666}
+*{box-sizing:border-box;margin:0;padding:0}[hidden]{display:none!important}
+body{font-family:'Poppins',system-ui,sans-serif;background:var(--bg);color:#1d1d1b;font-size:14px}
+header{background:#fff;border-bottom:2px solid var(--g);padding:10px 24px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+header img{height:40px}main{max-width:1150px;margin:0 auto;padding:20px}
+.card{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:18px;margin-bottom:16px}
+input,select,textarea{font:inherit;padding:8px 10px;border:1px solid #ccc;border-radius:6px;background:#fff}
+.btn{background:var(--g);color:#fff;border:none;border-radius:6px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--gd)}.btn.o{background:#fff;color:var(--gd);border:1px solid var(--g)}.btn.s{padding:4px 10px;font-size:.8rem}
+.tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}.tabs .btn{background:#fff;color:var(--gd);border:1px solid var(--bd)}.tabs .btn.on{background:var(--g);color:#fff}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:14px}.kpi b{display:block;font-size:1.7rem;color:var(--gd)}.kpi span{color:var(--mut);font-size:.8rem}
+.bar{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center}.bar input[type=search]{flex:1;min-width:200px}
+.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px;border-bottom:1px solid var(--bd);vertical-align:top}
+th{font-size:.75rem;text-transform:uppercase;color:var(--mut)}small{color:var(--mut)}
+.prog{height:6px;background:#eee;border-radius:3px;min-width:70px;margin-top:4px}.prog i{display:block;height:100%;background:var(--g);border-radius:3px}
+.resp{border-left:4px solid var(--g);background:#fbfaf3;padding:10px 14px;margin-bottom:10px;border-radius:0 8px 8px 0}.resp .q{font-weight:600;color:var(--gd);font-size:.8rem}.resp p{white-space:pre-wrap;margin-top:4px}
+.tag{display:inline-block;background:#eee;border-radius:12px;padding:2px 10px;font-size:.8rem;margin:2px}.tag.ok{background:#d5f5e3;color:#1e8449}
+.login{max-width:360px;margin:80px auto;text-align:center}.login input{width:100%;margin-bottom:10px}.err{color:#b03a2e;min-height:1.3em;margin-top:8px}
+</style></head><body>
+
+<section id="s-login" class="login card"><h2 style="color:var(--gd);margin-bottom:14px">Admin · Evangelio & Vida</h2>
+  <input type="email" id="em" placeholder="Correo"><input type="password" id="pw" placeholder="Contraseña">
+  <button class="btn" style="width:100%" onclick="entrar()">Ingresar</button><p class="err" id="err"></p></section>
+
+<section id="s-app" hidden>
+<header><img src="logo-evangelio-vida.png" alt="Evangelio & Vida"><div><b>Panel del curso</b> · <button class="btn o s" onclick="cargar()">↻ Actualizar</button> <button class="btn o s" onclick="salir()">Salir</button></div></header>
+<main>
+<div class="kpis" id="kpis"></div>
+<div class="tabs"><button class="btn on" data-t="personas">👥 Personas</button><button class="btn" data-t="respuestas">📝 Respuestas</button><button class="btn" data-t="foro">💬 Foro</button><button class="btn" data-t="grupos">🧩 Grupos</button></div>
+
+<div id="t-personas" class="card"><div class="bar"><input type="search" id="q" placeholder="Buscar por nombre, correo o iglesia…">
+  <label><input type="checkbox" id="activos" checked> Solo con actividad en el curso</label><button class="btn" onclick="cargarPersonas()">Buscar</button></div>
+  <div class="scroll"><table><thead><tr><th>Persona</th><th>Avance</th><th>Respuestas</th><th>Mensajes</th><th>Grupo</th><th>Última actividad</th><th></th></tr></thead><tbody id="tb-personas"></tbody></table></div></div>
+
+<div id="t-respuestas" class="card" hidden><div class="bar"><input type="search" id="fr" placeholder="Filtrar por persona, iglesia o texto…" oninput="pintarResp()"><button class="btn o" onclick="csv()">⬇ Descargar CSV</button></div><div id="lista-resp"></div></div>
+<div id="t-foro" class="card" hidden><div class="scroll"><table><thead><tr><th>Fecha</th><th>Paso</th><th>Canal</th><th>Autor</th><th>Mensaje</th></tr></thead><tbody id="tb-foro"></tbody></table></div></div>
+<div id="t-grupos" hidden><div class="card"><div class="bar"><input id="ng" placeholder="Nombre del nuevo grupo (ej. Grupo 1)"><button class="btn" onclick="crearGrupo()">+ Crear grupo</button></div>
+  <small>Para meter a alguien en un grupo, hazlo desde la pestaña Personas (columna Grupo).</small></div><div id="lista-grupos"></div></div>
+</main></section>
+
+<script>
+const sb=window.supabase.createClient("https://wfwmyuuxceyulmkhogqr.supabase.co","sb_publishable_hrR11nillC0GtzH50LqQfQ_qEqX9FX6");
+const CURSO='vida-centrada-evangelio',TAREA='gran-historia',PASOS=5;
+let personas=[],grupos=[],resp=[];
+const $=i=>document.getElementById(i);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fecha=d=>d?new Date(d).toLocaleString([],{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
+const LBL={intro_q1:'Punto de partida',micro_historia:'Taller · Mi micro-historia',cambio_perspectiva:'Taller · Cambio de perspectiva'};
+const label=k=>LBL[k]||k.replace(/^acto(\d)_q(\d)$/,'Acto $1 · Pregunta $2');
+async function rpc(n,a){const {data,error}=await sb.rpc(n,a);if(error){alert(error.message);throw error;}return data;}
+
+async function entrar(){$('err').textContent='';
+  const {error}=await sb.auth.signInWithPassword({email:$('em').value.trim(),password:$('pw').value});
+  if(error)return $('err').textContent='No pudimos ingresar: '+error.message;init();}
+async function salir(){await sb.auth.signOut();$('s-app').hidden=true;$('s-login').hidden=false;}
+async function init(){
+  const {data:s}=await sb.auth.getSession();if(!s.session)return;
+  const {data:ok}=await sb.rpc('ev_es_admin');
+  if(!ok){$('err').textContent='Tu cuenta no tiene permiso de administrador.';return;}
+  $('s-login').hidden=true;$('s-app').hidden=false;cargar();}
+document.querySelectorAll('.tabs .btn').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabs .btn').forEach(x=>x.classList.toggle('on',x===b));
+  ['personas','respuestas','foro','grupos'].forEach(t=>$('t-'+t).hidden=t!==b.dataset.t);});
+function tab(t){document.querySelector('[data-t="'+t+'"]').click();}
+
+async function cargar(){await cargarGrupos();await cargarPersonas();
+  resp=await rpc('ev_admin_respuestas',{p_curso:CURSO});pintarResp();
+  const f=await rpc('ev_admin_foro',{p_curso:CURSO});
+  $('tb-foro').innerHTML=f.map(m=>'<tr><td>'+fecha(m.created_at)+'</td><td>'+m.paso+'</td><td>'+(m.grupo?'🔒 '+esc(m.grupo):'General')+'</td><td>'+esc(m.autor_nombre)+'<br><small>'+esc(m.autor_iglesia)+'</small></td><td style="white-space:pre-wrap">'+esc(m.mensaje)+'</td></tr>').join('')||'<tr><td colspan="5"><small>Sin mensajes todavía.</small></td></tr>';}
+
+async function cargarPersonas(){
+  personas=await rpc('ev_admin_personas',{p_curso:CURSO,p_q:$('q').value.trim(),p_solo_activos:$('activos').checked});
+  const av=p=>p.completado?100:Math.round(p.paso_max/PASOS*100),act=personas.filter(p=>p.paso_max>0||p.n_resp>0);
+  const prom=act.length?Math.round(act.reduce((a,p)=>a+av(p),0)/act.length):0;
+  $('kpis').innerHTML=[[personas.length,'personas listadas'],[act.length,'con actividad'],[personas.filter(p=>p.completado).length,'terminaron la semana'],[prom+'%','avance promedio'],[personas.reduce((a,p)=>a+Number(p.n_msgs),0),'mensajes en el foro'],[personas.filter(p=>p.grupo_id).length,'en un grupo']].map(k=>'<div class="kpi"><b>'+k[0]+'</b><span>'+k[1]+'</span></div>').join('');
+  const opts=g=>'<option value="">— Sin grupo —</option>'+grupos.map(x=>'<option value="'+x.id+'"'+(x.id===g?' selected':'')+'>'+esc(x.nombre)+'</option>').join('');
+  $('tb-personas').innerHTML=personas.map(p=>'<tr><td><b>'+esc(p.nombre)+'</b><br><small>'+esc(p.iglesia)+' · '+esc([p.barrio,p.ciudad,p.pais].filter(Boolean).join(', '))+'<br>'+esc(p.correo)+'</small></td>'+
+    '<td>'+av(p)+'%'+(p.completado?' ✅':'')+'<div class="prog"><i style="width:'+av(p)+'%"></i></div></td><td>'+p.n_resp+'</td><td>'+p.n_msgs+'</td>'+
+    '<td><select onchange="asignar(\''+p.id+'\',this.value)">'+opts(p.grupo_id)+'</select></td><td>'+fecha(p.ultima)+'</td>'+
+    '<td><button class="btn o s" onclick="verResp(\''+p.id+'\')">Ver respuestas</button></td></tr>').join('')||'<tr><td colspan="7"><small>Nadie coincide con la búsqueda.</small></td></tr>';}
+async function asignar(id,g){try{await rpc('ev_admin_asignar',{p_curso:CURSO,p_perfil:id,p_grupo:g||null});}catch(e){}await cargarGrupos();await cargarPersonas();}
+function verResp(id){const p=personas.find(x=>x.id===id);$('fr').value=p.nombre;pintarResp();tab('respuestas');}
+
+function pintarResp(){
+  const f=$('fr').value.toLowerCase().trim();
+  const r=resp.filter(x=>!f||(x.nombre+' '+(x.iglesia||'')+' '+x.texto).toLowerCase().includes(f));
+  const claves=[...new Set(r.map(x=>x.clave))].sort((a,b)=>label(a).localeCompare(label(b),'es',{numeric:true}));
+  $('lista-resp').innerHTML=claves.map(k=>'<h3 style="margin:14px 0 8px;color:var(--gd)">'+esc(label(k))+'</h3>'+
+    r.filter(x=>x.clave===k).map(x=>'<div class="resp"><div class="q">'+esc(x.nombre)+' · '+esc(x.iglesia)+' · '+fecha(x.updated_at)+'</div><p>'+esc(x.texto)+'</p></div>').join('')).join('')||'<small>Sin respuestas para este filtro.</small>';}
+function csv(){
+  const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  const t='\ufeff'+['Nombre,Iglesia,Pregunta,Respuesta,Fecha'].concat(resp.map(x=>[x.nombre,x.iglesia,label(x.clave),x.texto,x.updated_at].map(q).join(','))).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/csv;charset=utf-8'}));a.download='respuestas-evangelio-y-vida.csv';a.click();}
+
+async function cargarGrupos(){grupos=await rpc('ev_admin_grupos',{p_curso:CURSO,p_tarea:TAREA});
+  $('lista-grupos').innerHTML=grupos.map(g=>'<div class="card"><div class="bar"><h3 style="flex:1;color:var(--gd)">'+esc(g.nombre)+' '+(g.aprobado?'<span class="tag ok">🔒 Aprobado</span>':'<span class="tag">✏️ En edición</span>')+'</h3>'+
+    (g.aprobado?'<button class="btn o s" onclick="reabrir(\''+g.id+'\')">Reabrir texto</button>':'')+'</div>'+
+    (g.miembros.map(m=>'<span class="tag'+(m.firmado?' ok':'')+'">'+(m.firmado?'✅ ':'')+esc(m.nombre)+' <a href="#" onclick="asignar(\''+m.perfil_id+'\',\'\');return false" title="Quitar del grupo">✕</a></span>').join('')||'<small>Sin integrantes todavía.</small>')+
+    '<details style="margin-top:10px"><summary>Ver texto del grupo</summary><p style="white-space:pre-wrap;margin-top:8px">'+(esc(g.contenido)||'<small>Aún no escribieron nada.</small>')+'</p></details></div>').join('')||'<div class="card"><small>Todavía no hay grupos. Crea el primero arriba.</small></div>';}
+async function crearGrupo(){const n=$('ng').value.trim();if(!n)return;await rpc('ev_admin_crear_grupo',{p_curso:CURSO,p_nombre:n});$('ng').value='';await cargarGrupos();await cargarPersonas();}
+async function reabrir(id){if(!confirm('Se borran las firmas y el grupo podrá editar de nuevo. ¿Continuar?'))return;await rpc('ev_admin_reabrir',{p_grupo:id,p_tarea:TAREA});await cargarGrupos();}
+init();
+</script></body></html>
