@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iglesia Evangelio & Vida · Cursos</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+
+        :root {
+            --primary-green: #7A8B5B;
+            --dark-green: #4A5A35;
+            --light-bg: #F9F9F6;
+            --border-color: #E0E4D8;
+            --text-main: #333333;
+            --text-muted: #666666;
+            --white: #FFFFFF;
+            --action-blue: #3498db;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: system-ui, -apple-system, sans-serif; background-color: var(--light-bg); color: var(--text-main); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+        header { background-color: var(--white); padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary-green); box-shadow: 0 2px 10px rgba(0,0,0,0.05); z-index: 10; }
+        header img { height: 45px; max-width: 100%; object-fit: contain; }
+        header h1 { font-size: 1.2rem; color: var(--dark-green); font-weight: 600; text-align: right;}
+
+        .main-container { display: flex; flex: 1; overflow: hidden; position: relative; }
+
+        .lesson-panel { flex: 7; padding: 40px; overflow-y: auto; background-color: var(--white); height: 100%; }
+        .step-content { display: none; max-width: 900px; margin: 0 auto; animation: fadeIn 0.4s ease; padding-bottom: 60px; }
+        .step-content.active { display: block; }
+        
+        .lesson-panel h2 { color: var(--dark-green); font-size: 2rem; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; line-height: 1.2;}
+        .lesson-panel h3 { margin-top: 25px; margin-bottom: 15px; color: var(--dark-green); }
+        .lesson-panel p, .lesson-panel ul { font-size: 1.1rem; line-height: 1.7; margin-bottom: 20px; color: #444; }
+        .lesson-panel ul { margin-left: 20px; }
+        .lesson-panel img.historia-grafica { width: 100%; border-radius: 8px; margin: 20px 0; border: 1px solid var(--border-color); }
+        
+        .reflection-box { background-color: #F4F6F0; border-left: 4px solid var(--primary-green); padding: 20px; margin-top: 30px; border-radius: 0 8px 8px 0; }
+        .question-group { margin-bottom: 20px; }
+        .question-group label { display: block; font-weight: 500; margin-bottom: 10px; color: var(--text-main); font-size: 0.95rem; }
+        
+        textarea, input[type="text"] { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #ccc; font-family: inherit; font-size: 16px; }
+        textarea { resize: vertical; min-height: 100px; }
+        textarea:focus, input[type="text"]:focus { outline: none; border-color: var(--primary-green); box-shadow: 0 0 5px rgba(122, 139, 91, 0.3); }
+
+        .forum-panel { flex: 3; display: flex; flex-direction: column; background-color: #FAFAFA; border-left: 1px solid var(--border-color); padding: 20px; height: 100%; transition: transform 0.3s ease; }
+        .forum-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .forum-header h3 { color: var(--dark-green); margin: 0; }
+        .close-forum-btn { display: none; background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; }
+        
+        .forum-prompt { background-color: var(--white); padding: 15px; border-radius: 8px; border: 1px solid var(--primary-green); font-size: 0.95rem; line-height: 1.5; color: var(--dark-green); font-weight: 500; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        
+        .chat-messages { flex: 1; overflow-y: auto; background: var(--white); border-radius: 8px; border: 1px solid #eee; padding: 15px; margin-bottom: 15px; }
+        .message { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #f0f0f0; }
+        .message .meta { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px; }
+        .message .meta strong { color: var(--dark-green); }
+        .message .body { font-size: 0.95rem; }
+        
+        .chat-input-area { display: flex; flex-direction: column; gap: 10px; }
+        
+        .btn { background-color: var(--primary-green); color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s; font-size: 1rem; }
+        .btn:hover { background-color: var(--dark-green); }
+        .btn-secondary { background-color: transparent; color: var(--primary-green); border: 1px solid var(--primary-green); }
+        .btn-secondary:hover { background-color: #F4F6F0; }
+        .btn-blue { background-color: var(--action-blue); }
+        .btn-blue:hover { background-color: #2980b9; }
+
+        .navigation-bar { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;}
+        .navigation-bar .btn { flex: 1; text-align: center;}
+
+        .mobile-fab {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--primary-green);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 15px 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 99;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .mobile-fab:active { transform: scale(0.95); }
+
+        @media (max-width: 850px) {
+            header { flex-direction: column; gap: 10px; text-align: center; padding: 15px; }
+            header h1 { text-align: center; font-size: 1.1rem; }
+            .lesson-panel { flex: 100%; padding: 20px; width: 100%; }
+            .forum-panel { 
+                position: fixed; 
+                bottom: 0; left: 0; right: 0; 
+                height: 85vh; 
+                border-top-left-radius: 20px; 
+                border-top-right-radius: 20px;
+                box-shadow: 0 -5px 20px rgba(0,0,0,0.2);
+                transform: translateY(100%); 
+                z-index: 1000;
+            }
+            .forum-panel.open { transform: translateY(0); }
+            .close-forum-btn { display: block; }
+            .mobile-fab { display: block; }
+            .navigation-bar { flex-direction: column; }
+        }
+
+        /* ESTILOS DEL NUEVO TALLER SEMANAL */
+        .taller-title { text-align: center; color: #2c3e50; border-bottom: 3px solid #2c3e50; padding-bottom: 10px; margin-bottom: 30px; font-size: 1.8rem; }
+        
+        .task-card { margin-bottom: 40px; padding: 25px; border: 1px solid #ddd; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); background: white;}
+        .task-card h3 { padding-bottom: 12px; margin-top: 0; margin-bottom: 20px; font-size: 1.4rem; display: flex; align-items: center; gap: 10px;}
+        
+        /* Tarea Individual */
+        .task-individual { border-top: 5px solid #e67e22; }
+        .task-individual h3 { color: #d35400; border-bottom: 1px solid #f9e7d9; }
+        .personal-case { background-color: #fdf6f0; border-left: 4px solid #e67e22; padding: 20px; border-radius: 0 8px 8px 0; }
+        
+        /* Tarea Grupal */
+        .task-group { border-top: 5px solid var(--action-blue); }
+        .task-group h3 { color: #2980b9; border-bottom: 1px solid #e1f0fa; }
+        
+        .group-selector { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .btn-group-sel { background-color: #f0f4f8; color: #333; border: 1px solid #ccc; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+        .btn-group-sel:hover { background-color: #e1f0fa; border-color: var(--action-blue); }
+        
+        /* Editor Colaborativo */
+        .collab-editor-area { display: none; background-color: #f8fbfe; border: 1px solid #bce0f9; border-radius: 8px; padding: 20px; animation: fadeIn 0.4s ease; }
+        .collab-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        .collab-editor-area textarea { min-height: 200px; border: 2px solid var(--action-blue); font-size: 1.05rem; line-height: 1.6; }
+        
+        .approval-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #d0e7f7; display: flex; flex-direction: column; gap: 15px; }
+        .approval-list { display: flex; gap: 10px; flex-wrap: wrap; }
+        .badge-member { background-color: #eee; padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; color: #555; display: flex; align-items: center; gap: 5px; }
+        .badge-member.approved { background-color: #d5f5e3; color: #1e8449; border: 1px solid #abebc6; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+:root{--primary-green:#8B894C;--dark-green:#5E5C2F;--light-bg:#F7F4EA;--border-color:#E3DFC9;--text-main:#1d1d1b}
+[hidden]{display:none!important}
+body{display:block;height:auto;overflow:auto;font-family:'Poppins',system-ui,sans-serif}
+.lesson-panel p,.lesson-panel ul{font-family:'Lora',Georgia,serif}
+.vista{min-height:100vh}
+#view-curso{height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.wrap{max-width:460px;margin:0 auto;padding:28px 20px}
+.logo{display:block;max-width:300px;width:80%;margin:0 auto 20px}
+.card{background:#fff;border:1px solid var(--border-color);border-radius:14px;padding:24px;box-shadow:0 4px 18px rgba(0,0,0,.04)}
+.card h2{color:var(--dark-green);font-size:1.3rem;margin-bottom:6px;text-align:center}
+.card .sub{text-align:center;color:var(--text-muted);font-size:.9rem;margin-bottom:16px}
+.card input,.card select{width:100%;padding:12px;margin-bottom:10px;border:1px solid #ccc;border-radius:6px;font:inherit;font-size:16px;background:#fff}
+.card label{display:block;font-size:.8rem;color:var(--text-muted);margin:4px 0 2px}
+.card .btn{width:100%}
+.tabs{display:flex;gap:8px;margin-bottom:16px}.tabs .btn{flex:1;padding:10px}
+.msg{font-size:.9rem;margin:8px 0;min-height:1.2em;text-align:center;color:#b03a2e}.msg.ok{color:#1e8449}
+.curso-card{display:flex;gap:14px;align-items:center;cursor:pointer;border-left:5px solid var(--primary-green);margin-bottom:14px;padding:18px}
+.curso-card h3{margin:0 0 4px;color:var(--dark-green);font-size:1.05rem}
+.curso-card p{font-size:.85rem;color:var(--text-muted);margin:0}
+.barra{height:6px;background:#eee;border-radius:3px;margin-top:8px;overflow:hidden}.barra i{display:block;height:100%;background:var(--primary-green)}
+.top{display:flex;justify-content:space-between;align-items:center;font-size:.85rem;margin-bottom:14px}
+.link{background:none;border:none;color:var(--dark-green);cursor:pointer;font:inherit;text-decoration:underline}
+header .link{font-size:.85rem}#guardado{font-size:.8rem;color:var(--text-muted);margin-right:12px}
+.badge-member.approved{background:#d5f5e3}
+.message .body{white-space:pre-wrap}
+</style>
+</head>
+<body>
+
+<!-- AUTH -->
+<div class="vista" id="view-auth"><div class="wrap">
+  <img class="logo" src="logo-evangelio-vida.png" alt="Iglesia Evangelio & Vida">
+  <div class="card">
+    <div class="tabs"><button class="btn" id="tab-login" onclick="tab('login')">Ingresar</button><button class="btn btn-secondary" id="tab-reg" onclick="tab('reg')">Registrarme</button></div>
+    <form id="f-login">
+      <input type="email" id="l-email" placeholder="Correo electrónico" required>
+      <input type="password" id="l-pass" placeholder="Contraseña" required>
+      <button class="btn">Ingresar</button>
+    </form>
+    <form id="f-reg" hidden>
+      <input id="r-nombre" placeholder="Nombre y apellido" required>
+      <input id="r-iglesia" placeholder="Iglesia" required>
+      <select id="r-pais" required><option value="">Selecciona tu País</option>
+          <option>Argentina</option>
+          <option>Bolivia</option>
+          <option>Brasil</option>
+          <option>Chile</option>
+          <option>Colombia</option>
+          <option>Costa Rica</option>
+          <option>Cuba</option>
+          <option>Ecuador</option>
+          <option>El Salvador</option>
+          <option>España</option>
+          <option>Estados Unidos</option>
+          <option>Guatemala</option>
+          <option>Guinea Ecuatorial</option>
+          <option>Honduras</option>
+          <option>México</option>
+          <option>Nicaragua</option>
+          <option>Panamá</option>
+          <option>Paraguay</option>
+          <option>Perú</option>
+          <option>Puerto Rico</option>
+          <option>República Dominicana</option>
+          <option>Uruguay</option>
+          <option>Venezuela</option>
+          <option disabled>──────────</option>
+          <option>Alemania</option>
+          <option>Angola</option>
+          <option>Australia</option>
+          <option>Bélgica</option>
+          <option>Canadá</option>
+          <option>Corea del Sur</option>
+          <option>China</option>
+          <option>Dinamarca</option>
+          <option>Filipinas</option>
+          <option>Finlandia</option>
+          <option>Francia</option>
+          <option>Ghana</option>
+          <option>Haití</option>
+          <option>India</option>
+          <option>Indonesia</option>
+          <option>Irlanda</option>
+          <option>Israel</option>
+          <option>Italia</option>
+          <option>Jamaica</option>
+          <option>Japón</option>
+          <option>Kenia</option>
+          <option>Marruecos</option>
+          <option>Mozambique</option>
+          <option>Nigeria</option>
+          <option>Noruega</option>
+          <option>Nueva Zelanda</option>
+          <option>Países Bajos</option>
+          <option>Portugal</option>
+          <option>Reino Unido</option>
+          <option>República Democrática del Congo</option>
+          <option>Ruanda</option>
+          <option>Rusia</option>
+          <option>Sudáfrica</option>
+          <option>Sudán</option>
+          <option>Suecia</option>
+          <option>Suiza</option>
+          <option>Tailandia</option>
+          <option>Tanzania</option>
+          <option>Uganda</option>
+          <option>Ucrania</option>
+          <option>Zambia</option>
+          <option>Zimbabue</option>
+          <option>Otro</option>
+        </select>
+      <input id="r-ciudad" placeholder="Ciudad" required>
+      <input id="r-barrio" placeholder="Barrio" required>
+      <label>Fecha de nacimiento</label><input type="date" id="r-nac" required>
+      <input type="email" id="r-email" placeholder="Correo electrónico (para tu cuenta)" required>
+      <input type="password" id="r-pass" placeholder="Contraseña (mínimo 6 caracteres)" minlength="6" required>
+      <button class="btn">Crear mi cuenta</button>
+    </form>
+    <p class="msg" id="auth-msg"></p>
+  </div>
+</div></div>
+
+<!-- COMPLETAR DATOS (cuentas creadas en el Torneo) -->
+<div class="vista" id="view-completar" hidden><div class="wrap">
+  <img class="logo" src="logo-evangelio-vida.png" alt="Iglesia Evangelio & Vida">
+  <div class="card"><h2>Un último paso</h2><p class="sub">Completa estos datos para entrar a los cursos.</p>
+    <form id="f-comp">
+      <input id="c-barrio" placeholder="Barrio" required>
+      <label>Fecha de nacimiento</label><input type="date" id="c-nac" required>
+      <button class="btn">Guardar y continuar</button>
+    </form><p class="msg" id="comp-msg"></p></div>
+</div></div>
+
+<!-- LISTA DE CURSOS -->
+<div class="vista" id="view-cursos" hidden><div class="wrap">
+  <img class="logo" src="logo-evangelio-vida.png" alt="Iglesia Evangelio & Vida">
+  <div class="top"><span id="saludo"></span><button class="link" onclick="salir()">Salir</button></div>
+  <h2 style="color:var(--dark-green);margin-bottom:12px;font-size:1.2rem">Cursos disponibles</h2>
+  <div class="card curso-card" onclick="abrirCurso()">
+    <div style="font-size:2rem">🌳</div>
+    <div style="flex:1"><h3>La Vida Centrada en el Evangelio</h3><p>Módulo 1 · La Perspectiva General del Evangelio</p>
+      <div class="barra"><i id="barra-curso" style="width:0%"></i></div></div>
+  </div>
+</div></div>
+
+<!-- CURSO -->
+<div class="vista" id="view-curso" hidden>
+  <header>
+    <img src="logo-evangelio-vida.png" alt="Iglesia Evangelio & Vida">
+    <div style="display:flex;align-items:center"><span id="guardado"></span><button class="link" onclick="volver()">← Mis cursos</button></div>
+  </header>
+  <div class="main-container">
+    <div class="lesson-panel" id="lesson-panel">
+<!-- PASO 0: INTRODUCCIÓN -->
+            <div class="step-content active" id="step-0">
+                <h2>El Choque de Historias</h2>
+                <h3>La pequeña historia personal</h3>
+                <p>Todos nos levantamos cada mañana siendo los directores, guionistas y protagonistas de nuestra propia película. Vemos el mundo a través de una lente muy pequeña: nuestra carrera, nuestros traumas del pasado, nuestras metas financieras y nuestra búsqueda de felicidad. Vivimos nuestra «pequeña historia personal».</p>
+                <p>El problema de vivir en esta micro-narrativa es que, cuando las cosas salen mal (una enfermedad, una ruptura, una crisis económica o la muerte de un ser querido), nuestra película se desmorona. Nos sentimos perdidos porque nuestra pequeña historia es demasiado frágil para sostener el peso de nuestra existencia. En ocasiones intentamos usar la religión o la fe como un «personaje secundario» que solo sirve para ayudarnos a cumplir nuestros propios objetivos.</p>
+                
+                <h3>La Gran Historia de Dios</h3>
+                <p>Todos buscamos desesperadamente responder a las preguntas: ¿Quién soy?, ¿De dónde vengo? y ¿Hacia dónde voy?. Pero esta perspectiva solo responde conectando nuestra pequeña historia con la Gran Historia de Dios:</p>
+                <ul>
+                    <li><strong>El pasado:</strong> Vienes de un Dios que te creó con diseño y propósito (Creación).</li>
+                    <li><strong>El presente:</strong> Reconoces tu necesidad de ser rescatado y transformado (Redención).</li>
+                    <li><strong>El futuro:</strong> Tienes la esperanza viva de un mundo restaurado (Consumación).</li>
+                </ul>
+
+                <p><strong>Invita a la participación activa:</strong> No se trata de una historia de ficción para ser leída pasivamente. Al presentar a Dios como el protagonista que está redimiendo al mundo, se invita a las personas a formar parte del elenco. La fe se convierte en una respuesta de lealtad al Rey, donde el creyente se une a la misión de Dios para extender su amor, justicia y reconciliación en el mundo actual.</p>
+
+                <img src="evangelio-historia.jpg" alt="Gráfica Creación, Caída, Redención, Restauración" class="historia-grafica">
+
+                <div class="reflection-box">
+                    <h3>Punto de Partida</h3>
+                    <div class="question-group">
+                        <label>Cuando escuchas la palabra 'evangelio', ¿cuáles son las primeras tres palabras que vienen a tu mente? ¿Sientes que esas palabras aplican más a tu pasado, a tu presente o a tu futuro?</label>
+                        <textarea id="intro_q1" data-k="intro_q1" placeholder="Escribe tu respuesta aquí..."></textarea>
+                    </div>
+                </div>
+
+                <div class="navigation-bar">
+                    <button class="btn" onclick="nextStep(1)">Guardar y Continuar al Acto 1</button>
+                </div>
+            </div>
+
+            <!-- PASO 1: CREACIÓN -->
+            <div class="step-content" id="step-1">
+                <h2>Acto 1: Creación (Dios y la Humanidad)</h2>
+                <p>El evangelio es una historia maravillosamente real que comenzó con Dios, el único Señor de todo que existe en tres personas: Padre, Hijo y Espíritu Santo. Dios es infinitamente poderoso, glorioso, bueno y amoroso, y creó el universo entero y todo lo que hay en él para mostrar y compartir esa gloria. La base de esta historia se encuentra en los primeros capítulos de Génesis, donde se establecen los cimientos de nuestra identidad, nuestro propósito y nuestra conexión con Dios.</p>
+                <p>A diferencia del resto de la creación, Dios formó al hombre y a la mujer "a Su imagen" (Génesis 1:27). Esto significa que fuimos formados para ser Sus representantes y reflejar Su carácter en el mundo. Cuando Dios declaró en Génesis 1:31 que todo lo que había hecho era "bueno en gran manera", no solo se refería a que la creación carecía de maldad, sino a que existía en un estado de perfección absoluta, armonía y plenitud (un concepto que los hebreos llamaban Shalom).</p>
+                <p>Ese estado original definía cómo debían ser satisfechas nuestras necesidades más profundas a través de tres pilares:</p>
+                <ul>
+                    <li><strong>Comunión inquebrantable con Dios:</strong> No existía la barrera del pecado, la culpa ni el miedo. La humanidad fue diseñada para vivir confiando, adorando y "disfrutando a nuestro Creador".</li>
+                    <li><strong>Armonía perfecta entre las personas:</strong> Los primeros seres humanos fueron creados para "amar como Él ama" y para "vivir en santidad, sabiduría y verdad". Relacionalmente, vivían en total transparencia, sin egoísmo ni vergüenza.</li>
+                    <li><strong>Un propósito dignificante con el entorno:</strong> El trabajo no era una carga ligada al sudor y la frustración. Dios puso a la humanidad en el Edén con la vocación de "ayudar a cuidar del resto de Su mundo", una tarea que nos otorgaba "sentido y honor". El ser humano administraba la tierra con amor, no la explotaba.</li>
+                </ul>
+
+                <div class="reflection-box">
+                    <h3>Reflexión Personal Privada (Diario)</h3>
+                    <div class="question-group">
+                        <label>1. Considerando que fuimos diseñados originalmente para reflejar la gloria de Dios administrando Su creación, ¿de qué manera cambia esto la forma en que ves tu historia personal?</label>
+                        <textarea id="acto1_q1" data-k="acto1_q1"></textarea>
+                    </div>
+                    <div class="question-group">
+                        <label>2. ¿De qué manera cambia la forma en que ves tu trabajo diario, tus estudios o tu salud?</label>
+                        <textarea id="acto1_q2" data-k="acto1_q2"></textarea>
+                    </div>
+                    <div class="question-group">
+                        <label>3. ¿De qué manera cambia la forma en que te relacionas con tu familia, amigos y compañeros?</label>
+                        <textarea id="acto1_q3" data-k="acto1_q3"></textarea>
+                    </div>
+                </div>
+
+                <div class="navigation-bar">
+                    <button class="btn btn-secondary" onclick="nextStep(0)">Volver</button>
+                    <button class="btn" onclick="nextStep(2)">Guardar y Continuar al Acto 2</button>
+                </div>
+            </div>
+
+            <!-- PASO 2: CAÍDA -->
+            <div class="step-content" id="step-2">
+                <h2>Acto 2: Caída (Rebelión y Decadencia)</h2>
+                <p>Todo empezó a desmoronarse cuando la humanidad rechazó a Dios y Su bondad. La Caída no fue simplemente tropezar o cometer un error; fue un acto de rebelión donde decidimos que teníamos más conocimiento que Dios para dirigir nuestras propias vidas (Génesis 3). Al negarnos a amar, obedecer y confiar en Él, nuestra relación con el Creador y con los demás se rompió, y el mundo entero se hundió en la decadencia.</p>
+                <p>El estado en el que terminamos es grave: el pecado ya no es solo algo que hacemos, sino que "es ahora parte de lo que somos". Quedamos naturalmente inclinados a ponernos a nosotros mismos en primer lugar. Al perder nuestra comunión inquebrantable con Dios, quedamos insatisfechos y empezamos a buscar significado y honor en "pobres sustitutos". La Biblia llama a esto idolatría: poner en el centro de nuestras vidas cosas como nuestras reputaciones, comodidades, logros o incluso a nuestra familia, lo cual termina esclavizándonos. Finalmente, como Dios estableció que el pecado trae la muerte (Romanos 6:23), todos somos culpables y merecemos la separación eterna de Dios.</p>
+
+                <div class="reflection-box">
+                    <h3>Reflexión Personal Privada (Diario)</h3>
+                    <div class="question-group">
+                        <label>1. ¿De qué manera la realidad de la Caída y la naturaleza del pecado explican las frustraciones, vacíos o la constante búsqueda de aprobación en tu propia historia personal?</label>
+                        <textarea id="acto2_q1" data-k="acto2_q1"></textarea>
+                    </div>
+                    <div class="question-group">
+                        <label>2. Cuando enfrentas estrés o miedo en tu trabajo, tus estudios o tu salud, ¿a qué "pobres sustitutos" (ídolos) sueles recurrir para intentar recuperar el control o la paz que sientes que perdiste?</label>
+                        <textarea id="acto2_q2" data-k="acto2_q2"></textarea>
+                    </div>
+                    <div class="question-group">
+                        <label>3. ¿Cómo afecta tu tendencia natural al egoísmo (ponerte a ti mismo en primer lugar) la forma en que reaccionas cuando tu familia, amigos o compañeros no cumplen con tus expectativas?</label>
+                        <textarea id="acto2_q3" data-k="acto2_q3"></textarea>
+                    </div>
+                </div>
+
+                <div class="navigation-bar">
+                    <button class="btn btn-secondary" onclick="nextStep(1)">Volver</button>
+                    <button class="btn" onclick="nextStep(3)">Guardar y Continuar al Acto 3</button>
+                </div>
+            </div>
+
+            <!-- PASO 3: REDENCIÓN -->
+            <div class="step-content" id="step-3">
+                <h2>Acto 3: Redención (Jesús viene a amar)</h2>
+                <p>Desde el momento en que ocurrió el primer pecado, Dios mostró Su gracia y prometió enviar a un Salvador para derrotar el pecado y rescatarnos de la muerte. Ese Salvador es Jesús. Por amor, el Padre envió a Su Hijo a nacer como uno de nosotros, pero con una diferencia asombrosa: Él nunca pecó. Durante toda su vida, amó perfectamente a Dios y a los demás, siendo la única persona en la historia que no merecía el castigo ni la muerte.</p>
+                <p>La redención ocurre a través de un intercambio glorioso: Jesús tomó el castigo por el pecado que nosotros merecemos, sufrió en nuestro lugar (como nuestro sustituto en la cruz), y nos dio "el mérito de toda Su justicia". Siendo un sacrificio de valor infinito, Él nos salva por completo (Hebreos 7:25). ¿Cómo formamos parte de esta historia? No es por méritos religiosos. Somos salvados únicamente por la fe (dejando de confiar en nosotros mismos para confiar en Él) y el arrepentimiento (apartándonos de nuestras búsquedas inútiles). Para las personas con mentalidad religiosa, esto significa renunciar a la idea de ser "lo suficientemente buenos" para ganarse a Dios.</p>
+
+                <div class="reflection-box">
+                    <h3>Reflexión Personal Privada (Diario)</h3>
+                    <div class="question-group">
+                        <label>1. ¿De qué manera el saber que eres salvado y amado por los méritos perfectos de Cristo, y no por los tuyos, te libera del peso de tus fracasos pasados y de la necesidad de demostrar tu valor?</label>
+                        <textarea id="acto3_q1" data-k="acto3_q1"></textarea>
+                    </div>
+                    <div class="question-group">
+                        <label>2. ¿Cómo cambia tu motivación en tu trabajo diario o estudios el saber que ya tienes la aprobación máxima de Dios y no necesitas usar tus logros terrenales para justificarte o sentirte importante?</label>
+                        <textarea id="acto3_q2" data-k="acto3_q2"></textarea>
+                    </div>
+                    <div class="question-group">
+                        <label>3. Puesto que Jesús te amó y se entregó por ti cuando eras imperfecto y culpable, ¿cómo transforma esto tu capacidad para tener paciencia, perdonar y amar a tu familia y compañeros cuando te fallan?</label>
+                        <textarea id="acto3_q3" data-k="acto3_q3"></textarea>
+                    </div>
+                </div>
+
+                <div class="navigation-bar">
+                    <button class="btn btn-secondary" onclick="nextStep(2)">Volver</button>
+                    <button class="btn" onclick="nextStep(4)">Guardar y Continuar al Acto 4</button>
+                </div>
+            </div>
+
+            <!-- PASO 4: RESTAURACIÓN -->
+            <div class="step-content" id="step-4">
+                <h2>Acto 4: Restauración (Nuevas Criaturas y El Mundo Restaurado)</h2>
+                <p>La resurrección de Jesús demostró que el Padre aceptó Su sacrificio, dándole la victoria absoluta sobre el pecado, la muerte y todo mal. Al ser unidos a Cristo, nos convertimos en "nuevas criaturas". Ahora, como Su pueblo salvado, somos libres para unirnos a Su obra, difundiendo las buenas noticias y mostrando compasión "para llevar la sanidad al mundo".</p>
+                <p>Sin embargo, la Gran Historia aún tiene un capítulo final. Un día, Jesús volverá para hacer nuevas todas las cosas (Apocalipsis 21:5). El evangelio no se limita a salvar almas para llevarlas al cielo; incluye "la restauración de la gloria de toda la creación". Jesús juzgará el pecado, acabará con la opresión, la decadencia y el sufrimiento, resucitará a Su pueblo de entre los muertos y nos restaurará "a Dios y a los demás en relaciones perfectas". Esta es nuestra herencia futura garantizada.</p>
+
+                <div class="reflection-box">
+                    <h3>Reflexión Personal Privada (Diario)</h3>
+                    <div class="question-group">
+                        <label>1. Sabiendo que el sufrimiento, la enfermedad y la muerte no son el final de tu historia personal, ¿cómo te da esperanza y resistencia esta promesa frente a las pérdidas o dolores más profundos de tu vida?</label>
+                        <textarea id="acto4_q1" data-k="acto4_q1"></textarea>
+                    </div>
+                    <div class="question-group">
+                        <label>2. Si Jesús valora tanto la creación que un día la restaurará físicamente, ¿cómo le da esto un valor eterno a tu esfuerzo diario por traer orden, belleza, justicia o cuidado a tu entorno laboral, tus estudios y tu salud?</label>
+                        <textarea id="acto4_q2" data-k="acto4_q2"></textarea>
+                    </div>
+                    <div class="question-group">
+                        <label>3. ¿De qué manera la promesa de que un día seremos restaurados en "relaciones perfectas" te ayuda a perseverar, no rendirte y seguir amando a tu familia y amigos hoy, a pesar de las decepciones?</label>
+                        <textarea id="acto4_q3" data-k="acto4_q3"></textarea>
+                    </div>
+                </div>
+
+                <div class="navigation-bar">
+                    <button class="btn btn-secondary" onclick="nextStep(3)">Volver</button>
+                    <button class="btn" onclick="nextStep(5)">Finalizar Módulo e Ir al Taller Semanal</button>
+                </div>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- PASO 5: EL NUEVO TALLER SEMANAL Y APLICACIÓN   -->
+            <!-- ============================================== -->
+            <div class="step-content" id="step-5">
+                <h2 class="taller-title">Aplicación Práctica y Taller Semanal</h2>
+                <p style="text-align: center; margin-bottom: 30px; font-size: 1.1rem;">Bienvenido a la fase de aplicación. Primero realizarás un autoexamen personal y luego te unirás a tu equipo para el desafío colaborativo.</p>
+
+                <!-- 1. TAREA INDIVIDUAL -->
+                <div class="task-card task-individual">
+                    <h3>👤 Tarea Individual: El Rincón de la Micro-Historia</h3>
+                    <p>Audita tu propia vida esta semana. Escribe cómo se ve tu narrativa sin el evangelio, y luego aplica las verdades de la Gran Historia para cambiar tu enfoque.</p>
+                    
+                    <div class="personal-case">
+                        <div style="margin-bottom: 20px;">
+                            <label><strong>Mi micro-historia actual:</strong></label>
+                            <p style="font-size: 0.9rem; color: #666; margin-bottom: 8px;">Describe brevemente tus obsesiones, miedos, o la rutina en la que intentas ser el protagonista absoluto.</p>
+                            <textarea id="micro_historia" data-k="micro_historia" placeholder="Últimamente me he sentido ansioso por mi trabajo porque siento que todo depende de mí..."></textarea>
+                        </div>
+                        <div>
+                            <label><strong>El cambio de perspectiva:</strong></label>
+                            <p style="font-size: 0.9rem; color: #666; margin-bottom: 8px;">¿Cómo cambia tu paz y tus decisiones si entiendes que Dios es el verdadero Protagonista y ya aseguró tu redención?</p>
+                            <textarea id="cambio_perspectiva" data-k="cambio_perspectiva" placeholder="Si Dios ya aseguró mi futuro y valor, no necesito usar mi trabajo para justificarme..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. TAREA GRUPAL -->
+                <div class="task-card task-group">
+                    <h3>👥 Tarea Grupal: Escribiendo la Gran Historia</h3>
+                    <p>Trabajen juntos como equipo para redactar un párrafo unificado que explique la historia de Dios (Creación, Caída, Redención y Restauración) con sus propias palabras, de una manera que alguien que no va a la iglesia pueda entenderla. <strong>Tu grupo fue asignado por el administrador.</strong></p>
+                    
+                    <div id="grupo-box"></div>
+                </div>
+
+                <div class="navigation-bar">
+                    <button class="btn btn-secondary" onclick="nextStep(4)">Volver al Acto 4</button>
+                    <button class="btn" onclick="finalizarSemana()">Finalizar Semana 1</button>
+                </div>
+            </div>
+
+        
+    </div>
+    <button id="mobile-forum-btn" class="mobile-fab" onclick="toggleForum()">💬 Abrir Chat</button>
+    <div class="forum-panel" id="forum-panel">
+      <div class="forum-header"><h3 id="panel-title">💬 Foro de la Iglesia</h3><button class="close-forum-btn" onclick="toggleForum()">✖</button></div>
+      <div class="forum-prompt" id="forum-prompt-text"></div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-input-area"><textarea id="forum-input" placeholder="Escribe al grupo..."></textarea><button class="btn btn-blue" onclick="postToForum()">Enviar Mensaje</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const sb = window.supabase.createClient("https://wfwmyuuxceyulmkhogqr.supabase.co","sb_publishable_hrR11nillC0GtzH50LqQfQ_qEqX9FX6");
+const CURSO='vida-centrada-evangelio', TAREA='gran-historia', TOTAL_PASOS=5;
+const forumPrompts = [
+            "¡Bienvenido a la comunidad! Preséntate brevemente y comparte desde qué ciudad te estás conectando para estudiar esta Gran Historia.",
+            "Recordando que Dios es el protagonista de la Creación y nos diseñó para relacionarnos con Él, ¿cómo cambiaría la perspectiva de nuestra semana si dejáramos de ver a Dios como un 'asistente' para nuestros planes y comenzáramos a verlo como el Autor que ya diseñó nuestro propósito?",
+            "Recordando que todos buscamos significado en 'pobres sustitutos' cuando olvidamos el evangelio, ¿cómo podemos ayudarnos como comunidad a identificar compasivamente estas idolatrías sin juzgarnos, recordándonos mutuamente que solo Cristo puede darnos verdadera satisfacción?",
+            "Para nuestra mentalidad humana es difícil aceptar la gracia inmerecida; siempre queremos 'pagar' por lo que recibimos. Como iglesia, ¿de qué maneras prácticas podemos celebrar y mostrar la gracia de Dios para que nadie sienta que debe aparentar ser perfecto para pertenecer a nuestra comunidad?",
+            "El evangelio nos invita a unirnos a la obra de Jesús ahora, siendo un reflejo de Su compasión. ¿Qué acciones concretas podríamos tomar nosotros como iglesia esta semana para ser un pequeño 'anticipo' visible de ese mundo restaurado (donde hay justicia, provisión y sanidad) en nuestro barrio o ciudad?",
+            "<strong>Misión de Grupo Activa:</strong> Organízate con tu equipo utilizando este chat para debatir cómo redactarán y resumirán la Gran Historia antes de editar el documento colaborativo final."
+        ];
+let user=null, perfil=null, step=0, maxPaso=0, grupo=null, foroGrupo=null, canal=null, pollG=null, grupoSucio=false;
+const idsForo=new Set();
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function ver(id){document.querySelectorAll('.vista').forEach(v=>v.hidden=v.id!==id);window.scrollTo(0,0);}
+function msg(id,t,ok){const e=$(id);e.textContent=t||'';e.className='msg'+(ok?' ok':'');}
+
+// ---------- AUTH ----------
+function tab(t){const l=t==='login';$('f-login').hidden=!l;$('f-reg').hidden=l;
+  $('tab-login').className='btn'+(l?'':' btn-secondary');$('tab-reg').className='btn'+(l?' btn-secondary':'');msg('auth-msg');}
+$('f-login').addEventListener('submit',async e=>{e.preventDefault();msg('auth-msg');
+  const {data,error}=await sb.auth.signInWithPassword({email:$('l-email').value.trim(),password:$('l-pass').value});
+  if(error)return msg('auth-msg','No pudimos ingresar: '+error.message);
+  user=data.user;entrar();});
+$('f-reg').addEventListener('submit',async e=>{e.preventDefault();msg('auth-msg');
+  const d={nombre_apellido:$('r-nombre').value.trim(),iglesia:$('r-iglesia').value.trim(),pais:$('r-pais').value,
+    ciudad:$('r-ciudad').value.trim(),barrio:$('r-barrio').value.trim(),fecha_nacimiento:$('r-nac').value};
+  const {data,error}=await sb.auth.signUp({email:$('r-email').value.trim(),password:$('r-pass').value,options:{data:d}});
+  if(error)return msg('auth-msg','No pudimos crear la cuenta: '+error.message);
+  if(!data.session)return msg('auth-msg','Cuenta creada. Revisa tu correo para confirmarla y luego ingresa.',true);
+  user=data.user;entrar();});
+async function entrar(){
+  const {data}=await sb.from('perfiles').select('*').eq('id',user.id).single();perfil=data;
+  if(!perfil)return ver('view-auth'),msg('auth-msg','No encontramos tu perfil. Escríbenos para ayudarte.');
+  // barrio y fecha_nacimiento: el trigger de perfiles no los copia, así que los completamos desde los datos del registro
+  const m=user.user_metadata||{},up={};
+  if(!perfil.barrio&&m.barrio)up.barrio=m.barrio;
+  if(!perfil.fecha_nacimiento&&m.fecha_nacimiento)up.fecha_nacimiento=m.fecha_nacimiento;
+  if(Object.keys(up).length){const {error}=await sb.from('perfiles').update(up).eq('id',user.id);if(!error)Object.assign(perfil,up);}
+  if(!perfil.barrio||!perfil.fecha_nacimiento)return ver('view-completar');
+  irACursos();}
+$('f-comp').addEventListener('submit',async e=>{e.preventDefault();
+  const up={barrio:$('c-barrio').value.trim(),fecha_nacimiento:$('c-nac').value};
+  const {error}=await sb.from('perfiles').update(up).eq('id',user.id);
+  if(error)return msg('comp-msg','No se pudo guardar: '+error.message);
+  Object.assign(perfil,up);irACursos();});
+async function salir(){await sb.auth.signOut();user=perfil=null;ver('view-auth');}
+
+// ---------- CURSOS ----------
+async function cargarProgreso(){
+  const {data}=await sb.from('ev_progreso').select('*').eq('perfil_id',user.id).eq('curso',CURSO).maybeSingle();
+  step=data?.completado?0:(data?.paso_actual||0);maxPaso=data?.paso_max||0;return data;}
+async function irACursos(){
+  $('saludo').textContent=perfil.nombre_apellido+' · '+perfil.iglesia;ver('view-cursos');
+  const p=await cargarProgreso();$('barra-curso').style.width=(p?.completado?100:Math.round(maxPaso/TOTAL_PASOS*100))+'%';}
+function volver(){guardar();if(canal)sb.removeChannel(canal),canal=null;clearInterval(pollG);irACursos();}
+
+// ---------- CURSO: respuestas, progreso ----------
+const dirty=new Set();let tm;
+document.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.k;if(!k)return;
+  dirty.add(k);$('guardado').textContent='Guardando…';clearTimeout(tm);tm=setTimeout(guardar,800);
+  if(e.target.id==='shared-textarea')grupoSucio=true;});
+async function guardar(){
+  if(!dirty.size)return;const ks=[...dirty];dirty.clear();
+  const rows=ks.map(k=>({perfil_id:user.id,curso:CURSO,clave:k,texto:document.querySelector('[data-k="'+k+'"]').value,updated_at:new Date().toISOString()}));
+  const {error}=await sb.from('ev_respuestas').upsert(rows,{onConflict:'perfil_id,curso,clave'});
+  if(error){console.error(error);ks.forEach(k=>dirty.add(k));$('guardado').textContent='⚠ No se pudo guardar';}else $('guardado').textContent='Guardado ✓';}
+async function abrirCurso(){
+  ver('view-curso');await cargarProgreso();
+  const {data}=await sb.from('ev_respuestas').select('clave,texto').eq('perfil_id',user.id).eq('curso',CURSO);
+  document.querySelectorAll('[data-k]').forEach(t=>t.value='');
+  (data||[]).forEach(r=>{const t=document.querySelector('[data-k="'+r.clave+'"]');if(t)t.value=r.texto||'';});
+  const {data:g}=await sb.rpc('ev_mi_grupo',{p_curso:CURSO});grupo=(g&&g[0])||null;
+  canal=sb.channel('ev_foro_'+Date.now()).on('postgres_changes',{event:'INSERT',schema:'public',table:'ev_foro',filter:'curso=eq.'+CURSO},p=>{
+    const r=p.new;if(r.paso===step&&(r.grupo_id||null)===(foroGrupo||null))pintarMsg(r);}).subscribe();
+  mostrarPaso();}
+async function nextStep(i){
+  await guardar();step=i;maxPaso=Math.max(maxPaso,i);mostrarPaso();
+  sb.from('ev_progreso').upsert({perfil_id:user.id,curso:CURSO,paso_actual:i,paso_max:maxPaso,updated_at:new Date().toISOString()},{onConflict:'perfil_id,curso'}).then(()=>{});}
+function mostrarPaso(){
+  document.querySelectorAll('.step-content').forEach(el=>el.classList.remove('active'));
+  $('step-'+step).classList.add('active');$('lesson-panel').scrollTop=0;
+  $('forum-prompt-text').innerHTML=forumPrompts[step];
+  const enGrupo=step===5&&grupo;
+  $('panel-title').textContent=enGrupo?'👥 Chat Privado de Grupo':'💬 Foro de la Iglesia';
+  foroGrupo=enGrupo?grupo.id:null;cargarForo();
+  clearInterval(pollG);if(step===5)cargarGrupo();}
+async function finalizarSemana(){
+  await guardar();
+  await sb.from('ev_progreso').upsert({perfil_id:user.id,curso:CURSO,paso_actual:5,paso_max:5,completado:true,updated_at:new Date().toISOString()},{onConflict:'perfil_id,curso'});
+  alert('¡Has finalizado todas las tareas de la semana!');volver();}
+function toggleForum(){$('forum-panel').classList.toggle('open');}
+
+// ---------- FORO (todos ven los comentarios del paso) ----------
+function pintarMsg(r){
+  if(idsForo.has(r.id))return;idsForo.add(r.id);const box=$('chat-messages');
+  const h=new Date(r.created_at).toLocaleString([],{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  box.insertAdjacentHTML('beforeend','<div class="message"><div class="meta"><strong>'+esc(r.autor_nombre)+'</strong>'+(r.autor_iglesia?' · '+esc(r.autor_iglesia):'')+' • '+h+'</div><div class="body">'+esc(r.mensaje)+'</div></div>');
+  box.scrollTop=box.scrollHeight;}
+async function cargarForo(){
+  idsForo.clear();$('chat-messages').innerHTML='';
+  let q=sb.from('ev_foro').select('*').eq('curso',CURSO).eq('paso',step).order('created_at').limit(200);
+  q=foroGrupo?q.eq('grupo_id',foroGrupo):q.is('grupo_id',null);
+  const {data}=await q;(data||[]).forEach(pintarMsg);
+  if(!data||!data.length)$('chat-messages').innerHTML='<div class="message"><div class="body" style="color:#888">Aún no hay comentarios. ¡Sé el primero en escribir!</div></div>';}
+async function postToForum(){
+  const inp=$('forum-input'),t=inp.value.trim();if(!t)return;inp.value='';
+  const {data,error}=await sb.from('ev_foro').insert({curso:CURSO,paso:step,grupo_id:foroGrupo,perfil_id:user.id,
+    autor_nombre:perfil.nombre_apellido,autor_iglesia:perfil.iglesia,mensaje:t}).select().single();
+  if(error){inp.value=t;return alert('No se pudo enviar: '+error.message);}
+  const v=$('chat-messages').querySelector('.message .body[style]');if(v)v.parentNode.remove();pintarMsg(data);}
+
+// ---------- TAREA GRUPAL (el admin asigna los grupos) ----------
+async function cargarGrupo(){
+  const box=$('grupo-box');
+  if(!grupo){box.innerHTML='<div class="reflection-box"><p style="margin:0">Todavía no estás asignado a un grupo. Cuando el administrador te asigne uno, aquí aparecerá el editor compartido de tu equipo.</p></div>';return;}
+  await refrescarGrupo(true);clearInterval(pollG);pollG=setInterval(()=>refrescarGrupo(false),10000);}
+async function refrescarGrupo(forzar){
+  const {data:s,error}=await sb.rpc('ev_estado_grupo',{p_grupo:grupo.id,p_tarea:TAREA});
+  if(error)return console.error(error);
+  const box=$('grupo-box');
+  if(!$('shared-textarea')){
+    box.innerHTML='<div class="collab-editor-area" style="display:block"><div class="collab-header"><h4 style="color:var(--action-blue)">📝 Borrador compartido · '+esc(grupo.nombre)+'</h4><span id="g-estado" style="font-size:.85rem"></span></div>'+
+    '<p style="font-size:.9rem;color:#555;margin-bottom:10px"><em>Solo los miembros de tu grupo ven y editan este texto. Si alguien lo modifica, las firmas se reinician. Cuando todos firmen, el texto queda cerrado.</em></p>'+
+    '<textarea id="shared-textarea" data-k="_g" placeholder="Comiencen a escribir la Gran Historia aquí..."></textarea>'+
+    '<div class="approval-section"><strong style="font-size:.95rem">Firma del equipo:</strong><div class="approval-list" id="approval-list"></div>'+
+    '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-blue" id="btn-approve" onclick="firmar()"></button><button class="btn btn-secondary" id="btn-save" onclick="saveDraft()">💾 Guardar Borrador</button></div></div></div>';
+    $('shared-textarea').removeAttribute('data-k');
+    $('shared-textarea').addEventListener('input',()=>{grupoSucio=true;});
+  }
+  const ta=$('shared-textarea');
+  if(forzar||!grupoSucio)ta.value=s.contenido||'';
+  ta.disabled=s.aprobado;$('btn-save').hidden=s.aprobado;
+  const yo=s.miembros.find(m=>m.perfil_id===user.id);
+  $('approval-list').innerHTML=s.miembros.map(m=>'<div class="badge-member'+(m.firmado?' approved':'')+'">'+(m.firmado?'✅ ':'')+esc(m.nombre)+(m.firmado?' (Aprobó)':' (Pendiente)')+'</div>').join('');
+  const b=$('btn-approve');b.hidden=s.aprobado;b.textContent=yo&&yo.firmado?'↩ Retirar mi firma':'✅ Aprobar este texto final';b.dataset.firmado=yo&&yo.firmado?'1':'';
+  $('g-estado').textContent=s.aprobado?'🔒 Aprobado: texto cerrado':'✏️ En edición';}
+async function saveDraft(){
+  const t=$('shared-textarea').value;if(!t.trim())return alert('El borrador está vacío.');
+  const {error}=await sb.rpc('ev_guardar_texto_grupo',{p_grupo:grupo.id,p_tarea:TAREA,p_contenido:t});
+  if(error)return alert(error.message);grupoSucio=false;await refrescarGrupo(true);alert('Borrador guardado. Tu equipo verá esta versión.');}
+async function firmar(){
+  if(grupoSucio)return alert('Guarda tu borrador antes de firmar.');
+  const quitar=$('btn-approve').dataset.firmado==='1';
+  const {error}=await sb.rpc('ev_firmar_grupo',{p_grupo:grupo.id,p_tarea:TAREA,p_firmar:!quitar});
+  if(error)return alert(error.message);await refrescarGrupo(true);}
+
+// ---------- INICIO ----------
+sb.auth.getSession().then(({data})=>{if(data.session){user=data.session.user;entrar();}else ver('view-auth');});
+</script>
+</body>
+</html>
