@@ -35,6 +35,11 @@ th{font-size:.75rem;text-transform:uppercase;color:var(--mut)}small{color:var(--
   <input type="email" id="em" placeholder="Correo"><input type="password" id="pw" placeholder="Contraseña">
   <button class="btn" style="width:100%" onclick="entrar()">Ingresar</button><p class="err" id="err"></p></section>
 
+<section id="s-no" class="login card" hidden style="max-width:520px"><h2 style="color:var(--gd)">Falta un permiso</h2>
+  <p id="no-msg" style="margin:12px 0"></p><pre id="no-sql" style="text-align:left;white-space:pre-wrap;background:#f3f1e6;padding:10px;border-radius:6px;font-size:.8rem"></pre>
+  <button class="btn" style="margin-top:12px" onclick="location.reload()">Ya lo hice, reintentar</button>
+  <button class="btn o" style="margin-top:12px" onclick="sb.auth.signOut().then(()=>location.reload())">Entrar con otra cuenta</button></section>
+
 <section id="s-app" hidden>
 <header><img src="logo-evangelio-vida.png" alt="Evangelio & Vida"><div><b>Panel del curso</b> · <a class="btn o s" href="admin.html" style="text-decoration:none;display:inline-block">← Panel general</a> <button class="btn o s" onclick="cargar()">↻ Actualizar</button> <button class="btn o s" onclick="salir()">Salir</button></div></header>
 <main>
@@ -68,8 +73,10 @@ async function entrar(){$('err').textContent='';
 async function salir(){await sb.auth.signOut();$('s-app').hidden=true;$('s-login').hidden=false;}
 async function init(){
   const {data:s}=await sb.auth.getSession();if(!s.session)return;
-  const {data:ok}=await sb.rpc('ev_es_admin');
-  if(!ok){$('err').textContent='Tu cuenta no tiene permiso de administrador.';return;}
+  const {data:ok,error:e0}=await sb.rpc('ev_es_admin');
+  if(!ok){$('s-login').hidden=true;$('s-no').hidden=false;const m=s.session.user.email;
+    $('no-msg').innerHTML=e0?'No pude verificar tu permiso: <code>'+esc(e0.message)+'</code><br>Probablemente falta correr <b>evangelioyvida-admin.sql</b> en Supabase.':'Estás conectado como <b>'+esc(m)+'</b>, pero esta cuenta todavía no figura como administradora de este curso.<br>Corre esto una vez en el SQL Editor de Supabase:';
+    $('no-sql').textContent=e0?'':"insert into ev_admins (perfil_id) select id from perfiles where correo = '"+m.replace(/'/g,"''")+"' on conflict do nothing;";return;}
   $('s-login').hidden=true;$('s-app').hidden=false;cargar();}
 document.querySelectorAll('.tabs .btn').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.tabs .btn').forEach(x=>x.classList.toggle('on',x===b));
