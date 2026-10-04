@@ -28,6 +28,7 @@ th{font-size:.75rem;text-transform:uppercase;color:var(--mut)}small{color:var(--
 .prog{height:6px;background:#eee;border-radius:3px;min-width:70px;margin-top:4px}.prog i{display:block;height:100%;background:var(--g);border-radius:3px}
 .resp{border-left:4px solid var(--g);background:#fbfaf3;padding:10px 14px;margin-bottom:10px;border-radius:0 8px 8px 0}.resp .q{font-weight:600;color:var(--gd);font-size:.8rem}.resp p{white-space:pre-wrap;margin-top:4px}
 .tag{display:inline-block;background:#eee;border-radius:12px;padding:2px 10px;font-size:.8rem;margin:2px}.tag.ok{background:#d5f5e3;color:#1e8449}
+.btn.no{background:#b03a2e;color:#fff;border:none}.btn.no:hover{background:#8e2e24}
 .login{max-width:360px;margin:80px auto;text-align:center}.login input{width:100%;margin-bottom:10px}.err{color:#b03a2e;min-height:1.3em;margin-top:8px}
 </style></head><body>
 
@@ -44,16 +45,24 @@ th{font-size:.75rem;text-transform:uppercase;color:var(--mut)}small{color:var(--
 <header><img src="logo-evangelio-vida.png" alt="Evangelio & Vida"><div><b>Panel del curso</b> · <a class="btn o s" href="admin.html" style="text-decoration:none;display:inline-block">← Panel general</a> <button class="btn o s" onclick="cargar()">↻ Actualizar</button> <button class="btn o s" onclick="salir()">Salir</button></div></header>
 <main>
 <div class="kpis" id="kpis"></div>
-<div class="tabs"><button class="btn on" data-t="personas">👥 Personas</button><button class="btn" data-t="respuestas">📝 Respuestas</button><button class="btn" data-t="foro">💬 Foro</button><button class="btn" data-t="grupos">🧩 Grupos</button></div>
+<div class="tabs"><button class="btn on" data-t="personas">👥 Personas</button><button class="btn" data-t="respuestas">📝 Respuestas</button><button class="btn" data-t="foro">💬 Foro</button><button class="btn" data-t="grupos">🧩 Grupos</button><button class="btn" data-t="asistencia">✅ Asistencia</button></div>
 
 <div id="t-personas" class="card"><div class="bar"><input type="search" id="q" placeholder="Buscar por nombre, correo o iglesia…">
   <label><input type="checkbox" id="activos" checked> Solo con actividad en el curso</label><button class="btn" onclick="cargarPersonas()">Buscar</button></div>
-  <div class="scroll"><table><thead><tr><th>Persona</th><th>Avance</th><th>Respuestas</th><th>Mensajes</th><th>Grupo</th><th>Última actividad</th><th></th></tr></thead><tbody id="tb-personas"></tbody></table></div></div>
+  <div class="scroll"><table><thead><tr><th>Persona</th><th>Avance</th><th>Respuestas</th><th>Mensajes</th><th>Asistencia</th><th>Grupo</th><th>Última actividad</th><th></th></tr></thead><tbody id="tb-personas"></tbody></table></div></div>
 
 <div id="t-respuestas" class="card" hidden><div class="bar"><input type="search" id="fr" placeholder="Filtrar por persona, iglesia o texto…" oninput="pintarResp()"><button class="btn o" onclick="csv()">⬇ Descargar CSV</button></div><div id="lista-resp"></div></div>
 <div id="t-foro" class="card" hidden><div class="scroll"><table><thead><tr><th>Fecha</th><th>Paso</th><th>Canal</th><th>Autor</th><th>Mensaje</th></tr></thead><tbody id="tb-foro"></tbody></table></div></div>
 <div id="t-grupos" hidden><div class="card"><div class="bar"><input id="ng" placeholder="Nombre del nuevo grupo (ej. Grupo 1)"><button class="btn" onclick="crearGrupo()">+ Crear grupo</button></div>
   <small>Para meter a alguien en un grupo, hazlo desde la pestaña Personas (columna Grupo).</small></div><div id="lista-grupos"></div></div>
+<div id="t-asistencia" hidden>
+ <div class="card"><div class="bar"><b>Nueva clase</b><input type="date" id="nc-fecha"><input id="nc-tit" placeholder="Título (opcional, ej. Clase 1)"><button class="btn" onclick="crearClase()">+ Crear clase</button></div>
+  <div class="bar"><label>Asistencia mínima para aprobar: <input type="number" id="min-asis" min="0" max="100" style="width:70px"> %</label><button class="btn o s" onclick="guardarMin()">Guardar</button></div>
+  <small>El porcentaje se calcula sobre las clases donde ya marcaste a alguien. Quien no figura como "vino" en una clase tomada cuenta como ausente. La lista usa los filtros de la pestaña Personas (desmarca "Solo con actividad" para ver a todos).</small></div>
+ <div class="card"><div class="bar"><select id="sel-clase" onchange="claseSel=this.value;pintarAsistencia()"></select><button class="btn o s" onclick="borrarClase()">Eliminar clase</button>
+  <input type="search" id="fa" placeholder="Buscar persona…" oninput="pintarAsistencia()"><button class="btn s" onclick="todos(true)">Todos vinieron</button><button class="btn o s" onclick="todos(null)">Limpiar marcas</button></div>
+  <p id="res-asis" style="margin-bottom:10px;font-weight:600;color:var(--gd)"></p><div class="scroll" id="lista-asis"></div></div>
+</div>
 </main></section>
 
 <script>
@@ -80,24 +89,26 @@ async function init(){
   $('s-login').hidden=true;$('s-app').hidden=false;cargar();}
 document.querySelectorAll('.tabs .btn').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.tabs .btn').forEach(x=>x.classList.toggle('on',x===b));
-  ['personas','respuestas','foro','grupos'].forEach(t=>$('t-'+t).hidden=t!==b.dataset.t);});
+  ['personas','respuestas','foro','grupos','asistencia'].forEach(t=>$('t-'+t).hidden=t!==b.dataset.t);if(b.dataset.t==='personas'&&personas.length)pintarPersonas();});
 function tab(t){document.querySelector('[data-t="'+t+'"]').click();}
 
-async function cargar(){await cargarGrupos();await cargarPersonas();
+async function cargar(){await cargarGrupos();await cargarAsistencia();await cargarPersonas();
   resp=await rpc('ev_admin_respuestas',{p_curso:CURSO});pintarResp();
   const f=await rpc('ev_admin_foro',{p_curso:CURSO});
   $('tb-foro').innerHTML=f.map(m=>'<tr><td>'+fecha(m.created_at)+'</td><td>'+m.paso+'</td><td>'+(m.grupo?'🔒 '+esc(m.grupo):'General')+'</td><td>'+esc(m.autor_nombre)+'<br><small>'+esc(m.autor_iglesia)+'</small></td><td style="white-space:pre-wrap">'+esc(m.mensaje)+'</td></tr>').join('')||'<tr><td colspan="5"><small>Sin mensajes todavía.</small></td></tr>';}
 
 async function cargarPersonas(){
   personas=await rpc('ev_admin_personas',{p_curso:CURSO,p_q:$('q').value.trim(),p_solo_activos:$('activos').checked});
+  pintarPersonas();pintarAsistencia();}
+function pintarPersonas(){
   const av=p=>p.completado?100:Math.round(p.paso_max/PASOS*100),act=personas.filter(p=>p.paso_max>0||p.n_resp>0);
   const prom=act.length?Math.round(act.reduce((a,p)=>a+av(p),0)/act.length):0;
   $('kpis').innerHTML=[[personas.length,'personas listadas'],[act.length,'con actividad'],[personas.filter(p=>p.completado).length,'terminaron la semana'],[prom+'%','avance promedio'],[personas.reduce((a,p)=>a+Number(p.n_msgs),0),'mensajes en el foro'],[personas.filter(p=>p.grupo_id).length,'en un grupo']].map(k=>'<div class="kpi"><b>'+k[0]+'</b><span>'+k[1]+'</span></div>').join('');
   const opts=g=>'<option value="">— Sin grupo —</option>'+grupos.map(x=>'<option value="'+x.id+'"'+(x.id===g?' selected':'')+'>'+esc(x.nombre)+'</option>').join('');
   $('tb-personas').innerHTML=personas.map(p=>'<tr><td><b>'+esc(p.nombre)+'</b><br><small>'+esc(p.iglesia)+' · '+esc([p.barrio,p.ciudad,p.pais].filter(Boolean).join(', '))+'<br>'+esc(p.correo)+'</small></td>'+
-    '<td>'+av(p)+'%'+(p.completado?' ✅':'')+'<div class="prog"><i style="width:'+av(p)+'%"></i></div></td><td>'+p.n_resp+'</td><td>'+p.n_msgs+'</td>'+
+    '<td>'+av(p)+'%'+(p.completado?' ✅':'')+'<div class="prog"><i style="width:'+av(p)+'%"></i></div></td><td>'+p.n_resp+'</td><td>'+p.n_msgs+'</td><td>'+asisTxt(p.id)+'</td>'+
     '<td><select onchange="asignar(\''+p.id+'\',this.value)">'+opts(p.grupo_id)+'</select></td><td>'+fecha(p.ultima)+'</td>'+
-    '<td><button class="btn o s" onclick="verResp(\''+p.id+'\')">Ver respuestas</button></td></tr>').join('')||'<tr><td colspan="7"><small>Nadie coincide con la búsqueda.</small></td></tr>';}
+    '<td><button class="btn o s" onclick="verResp(\''+p.id+'\')">Ver respuestas</button></td></tr>').join('')||'<tr><td colspan="8"><small>Nadie coincide con la búsqueda.</small></td></tr>';}
 async function asignar(id,g){try{await rpc('ev_admin_asignar',{p_curso:CURSO,p_perfil:id,p_grupo:g||null});}catch(e){}await cargarGrupos();await cargarPersonas();}
 function verResp(id){const p=personas.find(x=>x.id===id);$('fr').value=p.nombre;pintarResp();tab('respuestas');}
 
@@ -119,5 +130,38 @@ async function cargarGrupos(){grupos=await rpc('ev_admin_grupos',{p_curso:CURSO,
     '<details style="margin-top:10px"><summary>Ver texto del grupo</summary><p style="white-space:pre-wrap;margin-top:8px">'+(esc(g.contenido)||'<small>Aún no escribieron nada.</small>')+'</p></details></div>').join('')||'<div class="card"><small>Todavía no hay grupos. Crea el primero arriba.</small></div>';}
 async function crearGrupo(){const n=$('ng').value.trim();if(!n)return;await rpc('ev_admin_crear_grupo',{p_curso:CURSO,p_nombre:n});$('ng').value='';await cargarGrupos();await cargarPersonas();}
 async function reabrir(id){if(!confirm('Se borran las firmas y el grupo podrá editar de nuevo. ¿Continuar?'))return;await rpc('ev_admin_reabrir',{p_grupo:id,p_tarea:TAREA});await cargarGrupos();}
+// ---------- ASISTENCIA ----------
+let asis={minimo:75,clases:[],marcas:[]},claseSel='';
+const marca=(c,p)=>asis.marcas.find(m=>m.clase_id===c&&m.perfil_id===p);
+const tomadas=()=>asis.clases.filter(c=>asis.marcas.some(m=>m.clase_id===c.id));
+function asisTxt(id){const t=tomadas();if(!t.length)return '<small>—</small>';
+  const n=t.filter(c=>{const m=marca(c.id,id);return m&&m.presente;}).length,pct=Math.round(n/t.length*100);
+  return '<span class="tag'+(pct>=asis.minimo?' ok':'')+'">'+pct+'%</span> <small>'+n+'/'+t.length+'</small>';}
+const fdia=d=>d.split('-').reverse().join('/');
+const listaAsis=()=>{const f=$('fa').value.toLowerCase().trim();return personas.filter(p=>!f||(p.nombre+' '+p.iglesia).toLowerCase().includes(f));};
+async function cargarAsistencia(){asis=await rpc('ev_admin_asistencia',{p_curso:CURSO});
+  if(!asis.clases.some(c=>c.id===claseSel))claseSel=asis.clases[0]?asis.clases[0].id:'';
+  $('min-asis').value=asis.minimo;pintarAsistencia();}
+function pintarAsistencia(){
+  $('sel-clase').innerHTML=asis.clases.map(c=>'<option value="'+c.id+'"'+(c.id===claseSel?' selected':'')+'>'+fdia(c.fecha)+(c.titulo?' · '+esc(c.titulo):'')+'</option>').join('')||'<option value="">— Sin clases —</option>';
+  const box=$('lista-asis');
+  if(!claseSel){$('res-asis').textContent='';box.innerHTML='<small>Crea la primera clase arriba para empezar a marcar la asistencia.</small>';return;}
+  let v=0,a=0,s=0;personas.forEach(p=>{const m=marca(claseSel,p.id);m?(m.presente?v++:a++):s++;});
+  $('res-asis').textContent=v+' vinieron · '+a+' no vinieron · '+s+' sin marcar';
+  box.innerHTML='<table><thead><tr><th>Persona</th><th>Esta clase</th><th>Asistencia total</th></tr></thead><tbody>'+listaAsis().map(p=>{const m=marca(claseSel,p.id);
+    return '<tr><td><b>'+esc(p.nombre)+'</b><br><small>'+esc(p.iglesia)+'</small></td><td><button class="btn s'+(m&&m.presente?'':' o')+'" onclick="marcar(\''+p.id+'\',true)">Vino</button> <button class="btn s'+(m&&!m.presente?' no':' o')+'" onclick="marcar(\''+p.id+'\',false)">No vino</button></td><td>'+asisTxt(p.id)+'</td></tr>';}).join('')+'</tbody></table>';}
+async function marcarVarios(ids,val){
+  try{await rpc('ev_admin_marcar',{p_clase:claseSel,p_perfiles:ids,p_presente:val});}catch(e){return;}
+  asis.marcas=asis.marcas.filter(m=>!(m.clase_id===claseSel&&ids.includes(m.perfil_id)));
+  if(val!==null)ids.forEach(i=>asis.marcas.push({clase_id:claseSel,perfil_id:i,presente:val}));pintarAsistencia();}
+function marcar(id,val){const m=marca(claseSel,id);marcarVarios([id],m&&m.presente===val?null:val);}
+function todos(val){const l=listaAsis();if(!l.length)return;if(val===null&&!confirm('Se quitan las marcas de '+l.length+' personas en esta clase. ¿Continuar?'))return;marcarVarios(l.map(p=>p.id),val);}
+async function crearClase(){const f=$('nc-fecha').value;if(!f)return alert('Elige la fecha de la clase.');
+  claseSel=await rpc('ev_admin_crear_clase',{p_curso:CURSO,p_fecha:f,p_titulo:$('nc-tit').value.trim()||null});$('nc-tit').value='';await cargarAsistencia();}
+async function borrarClase(){if(!claseSel||!confirm('Se elimina la clase y toda su asistencia. ¿Continuar?'))return;
+  await rpc('ev_admin_borrar_clase',{p_clase:claseSel});claseSel='';await cargarAsistencia();pintarPersonas();}
+async function guardarMin(){const n=parseInt($('min-asis').value,10);if(isNaN(n)||n<0||n>100)return alert('Escribe un porcentaje entre 0 y 100.');
+  await rpc('ev_admin_config_asistencia',{p_curso:CURSO,p_minimo:n});asis.minimo=n;pintarAsistencia();pintarPersonas();alert('Mínimo guardado: '+n+'%');}
+$('nc-fecha').value=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
 init();
 </script></body></html>
