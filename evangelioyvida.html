@@ -284,6 +284,7 @@ header .link{font-size:.85rem}#guardado{font-size:.8rem;color:var(--text-muted);
     <div style="flex:1"><h3>La Vida Centrada en el Evangelio</h3><p>Módulo 1 · La Perspectiva General del Evangelio</p>
       <div class="barra"><i id="barra-curso" style="width:0%"></i></div></div>
   </div>
+  <div class="card" id="asist" hidden></div>
 </div></div>
 
 <!-- CURSO -->
@@ -550,9 +551,19 @@ async function cargarProgreso(){
   const {data}=await sb.from('ev_progreso').select('*').eq('perfil_id',user.id).eq('curso',CURSO).maybeSingle();
   step=data?.completado?0:(data?.paso_actual||0);maxPaso=data?.paso_max||0;return data;}
 async function irACursos(){
-  $('saludo').textContent=perfil.nombre_apellido+' · '+perfil.iglesia;ver('view-cursos');
+  $('saludo').textContent=perfil.nombre_apellido+' · '+perfil.iglesia;ver('view-cursos');cargarAsistencia();
   const p=await cargarProgreso();$('barra-curso').style.width=(p?.completado?100:Math.round(maxPaso/TOTAL_PASOS*100))+'%';}
 function volver(){guardar();if(canal)sb.removeChannel(canal),canal=null;clearInterval(pollG);irACursos();}
+
+async function cargarAsistencia(){
+  const box=$('asist');const {data,error}=await sb.rpc('ev_mi_asistencia',{p_curso:CURSO});
+  if(error||!data){box.hidden=true;return;}
+  box.hidden=false;const h='<h3 style="color:var(--dark-green);margin-bottom:8px">Mi asistencia</h3>';
+  if(!data.total){box.innerHTML=h+'<p style="font-size:.9rem;color:var(--text-muted)">Todavía no se registraron clases. Aquí verás si asististe.</p>';return;}
+  const pct=Math.round(data.presentes/data.total*100),ok=pct>=data.minimo;
+  box.innerHTML=h+'<p><b style="font-size:1.6rem">'+pct+'%</b> <small>'+data.presentes+' de '+data.total+' clases</small></p><div class="barra"><i style="width:'+pct+'%"></i></div>'+
+    '<p style="margin:10px 0;font-size:.9rem">'+(ok?'✅ Tu asistencia alcanza el mínimo para aprobar ('+data.minimo+'%).':'Para aprobar necesitas al menos '+data.minimo+'% de asistencia.')+'</p>'+
+    data.clases.map(c=>'<span style="display:inline-block;margin:2px;padding:3px 10px;border-radius:12px;font-size:.8rem;'+(c.presente?'background:#d5f5e3;color:#1e8449':'background:#fadbd8;color:#b03a2e')+'">'+(c.presente?'✅ ':'❌ ')+c.fecha.split('-').reverse().join('/')+(c.titulo?' · '+esc(c.titulo):'')+'</span>').join('');}
 
 // ---------- CURSO: respuestas, progreso ----------
 const dirty=new Set();let tm;
@@ -565,7 +576,9 @@ async function guardar(){
   const {error}=await sb.from('ev_respuestas').upsert(rows,{onConflict:'perfil_id,curso,clave'});
   if(error){console.error(error);ks.forEach(k=>dirty.add(k));$('guardado').textContent='⚠ No se pudo guardar';}else $('guardado').textContent='Guardado ✓';}
 async function abrirCurso(){
-  ver('view-curso');await cargarProgreso();
+  ver('view-curso');
+  await sb.from('ev_progreso').upsert({perfil_id:user.id,curso:CURSO},{onConflict:'perfil_id,curso',ignoreDuplicates:true});
+  await cargarProgreso();
   const {data}=await sb.from('ev_respuestas').select('clave,texto').eq('perfil_id',user.id).eq('curso',CURSO);
   document.querySelectorAll('[data-k]').forEach(t=>t.value='');
   (data||[]).forEach(r=>{const t=document.querySelector('[data-k="'+r.clave+'"]');if(t)t.value=r.texto||'';});
