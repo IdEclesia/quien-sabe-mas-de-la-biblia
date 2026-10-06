@@ -115,7 +115,7 @@ async function asignar(id,g){try{await rpc('ev_admin_asignar',{p_curso:CURSO,p_p
 async function resetPass(id){
   const p=personas.find(x=>x.id===id);if(!p)return;
   if(!confirm('Se reemplazará la contraseña de '+p.nombre+' ('+p.correo+') por una temporal.\nLa persona deberá cambiarla al entrar. ¿Continuar?'))return;
-  const {data,error}=await sb.functions.invoke('admin-reset-password',{body:{perfil_id:id}});
+  const {data,error}=await sb.functions.invoke('smooth-responder',{body:{perfil_id:id}});
   if(error||!data||!data.password){let m=error?error.message:'Respuesta inválida';try{const j=await error.context.json();if(j.error)m=j.error;}catch(_){}return alert('No se pudo restablecer: '+m);}
   prompt('Contraseña temporal de '+p.nombre+'.\nCópiala y envíasela por un canal privado (WhatsApp):',data.password);}
 function verResp(id){const p=personas.find(x=>x.id===id);$('fr').value=p.nombre;pintarResp();tab('respuestas');}
