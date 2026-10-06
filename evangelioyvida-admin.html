@@ -110,8 +110,14 @@ function pintarPersonas(){
   $('tb-personas').innerHTML=personas.map(p=>'<tr><td><b>'+esc(p.nombre)+'</b><br><small>'+esc(p.iglesia)+' · '+esc([p.barrio,p.ciudad,p.pais].filter(Boolean).join(', '))+'<br>'+esc(p.correo)+'</small></td>'+
     '<td>'+av(p)+'%'+(p.completado?' ✅':'')+'<div class="prog"><i style="width:'+av(p)+'%"></i></div></td><td>'+p.n_resp+'</td><td>'+p.n_msgs+'</td><td>'+asisTxt(p.id)+'</td>'+
     '<td><select onchange="asignar(\''+p.id+'\',this.value)">'+opts(p.grupo_id)+'</select></td><td>'+fecha(p.ultima)+'</td>'+
-    '<td><button class="btn o s" onclick="verResp(\''+p.id+'\')">Ver respuestas</button></td></tr>').join('')||'<tr><td colspan="8"><small>Nadie coincide con la búsqueda.</small></td></tr>';}
+    '<td><button class="btn o s" onclick="verResp(\''+p.id+'\')">Ver respuestas</button><br><button class="btn o s" style="margin-top:6px" onclick="resetPass(\''+p.id+'\')" title="Último recurso: genera una contraseña temporal">🔑 Contraseña</button></td></tr>').join('')||'<tr><td colspan="8"><small>Nadie coincide con la búsqueda.</small></td></tr>';}
 async function asignar(id,g){try{await rpc('ev_admin_asignar',{p_curso:CURSO,p_perfil:id,p_grupo:g||null});}catch(e){}await cargarGrupos();await cargarPersonas();}
+async function resetPass(id){
+  const p=personas.find(x=>x.id===id);if(!p)return;
+  if(!confirm('Se reemplazará la contraseña de '+p.nombre+' ('+p.correo+') por una temporal.\nLa persona deberá cambiarla al entrar. ¿Continuar?'))return;
+  const {data,error}=await sb.functions.invoke('admin-reset-password',{body:{perfil_id:id}});
+  if(error||!data||!data.password){let m=error?error.message:'Respuesta inválida';try{const j=await error.context.json();if(j.error)m=j.error;}catch(_){}return alert('No se pudo restablecer: '+m);}
+  prompt('Contraseña temporal de '+p.nombre+'.\nCópiala y envíasela por un canal privado (WhatsApp):',data.password);}
 function verResp(id){const p=personas.find(x=>x.id===id);$('fr').value=p.nombre;pintarResp();tab('respuestas');}
 
 function pintarResp(){
