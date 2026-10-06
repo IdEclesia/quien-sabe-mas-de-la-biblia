@@ -179,6 +179,7 @@ header .link{font-size:.85rem}#guardado{font-size:.8rem;color:var(--text-muted);
       <input type="email" id="l-email" placeholder="Correo electrónico" required>
       <input type="password" id="l-pass" placeholder="Contraseña" required>
       <button class="btn">Ingresar</button>
+      <p style="text-align:center;margin-top:10px"><a href="#" id="l-olvide" style="font-size:.9rem">¿Olvidaste tu contraseña?</a></p>
     </form>
     <form id="f-reg" hidden>
       <input id="r-nombre" placeholder="Nombre y apellido" required>
@@ -264,6 +265,16 @@ header .link{font-size:.85rem}#guardado{font-size:.8rem;color:var(--text-muted);
 </div></div>
 
 <!-- COMPLETAR DATOS (cuentas creadas en el Torneo) -->
+<div class="vista" id="view-nueva-pass" hidden><div class="wrap">
+  <img class="logo" src="logo-evangelio-vida.png" alt="Iglesia Evangelio & Vida">
+  <div class="card"><h2>Crea tu nueva contraseña</h2><p class="sub">Elige una contraseña que puedas recordar.</p>
+    <form id="f-nueva-pass">
+      <input type="password" id="np-pass" placeholder="Nueva contraseña (mínimo 6 caracteres)" minlength="6" required autocomplete="new-password">
+      <input type="password" id="np-pass2" placeholder="Repite la nueva contraseña" minlength="6" required autocomplete="new-password">
+      <button class="btn">Guardar y entrar</button>
+    </form><p class="msg" id="np-msg"></p></div>
+</div></div>
+
 <div class="vista" id="view-completar" hidden><div class="wrap">
   <img class="logo" src="logo-evangelio-vida.png" alt="Iglesia Evangelio & Vida">
   <div class="card"><h2>Un último paso</h2><p class="sub">Completa estos datos para entrar a los cursos.</p>
@@ -498,6 +509,8 @@ header .link{font-size:.85rem}#guardado{font-size:.8rem;color:var(--text-muted);
 </div>
 
 <script>
+const EN_RECUPERACION = /type=recovery/.test(location.hash + location.search);
+const ENLACE_VENCIDO = /error_code=otp_expired|error=access_denied/.test(location.hash + location.search);
 const sb = window.supabase.createClient("https://wfwmyuuxceyulmkhogqr.supabase.co","sb_publishable_hrR11nillC0GtzH50LqQfQ_qEqX9FX6");
 const CURSO='vida-centrada-evangelio', TAREA='gran-historia', TOTAL_PASOS=5;
 const forumPrompts = [
@@ -529,7 +542,21 @@ $('f-reg').addEventListener('submit',async e=>{e.preventDefault();msg('auth-msg'
   if(error)return msg('auth-msg','No pudimos crear la cuenta: '+error.message);
   if(!data.session)return msg('auth-msg','Cuenta creada. Revisa tu correo para confirmarla y luego ingresa.',true);
   user=data.user;entrar();});
+$('l-olvide').addEventListener('click',async e=>{e.preventDefault();
+  const email=$('l-email').value.trim();
+  if(!email)return msg('auth-msg','Escribe tu correo arriba y vuelve a tocar el enlace.');
+  const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+  msg('auth-msg',error?'No pudimos enviar el correo: '+error.message+'. Escríbenos y te ayudamos a recuperar el acceso.':'Si el correo está registrado, te enviamos un enlace para crear una nueva contraseña. Revisa también spam.',!error);});
+sb.auth.onAuthStateChange((evt,ses)=>{if(evt==='PASSWORD_RECOVERY'){user=ses&&ses.user;ver('view-nueva-pass');}});
+$('f-nueva-pass').addEventListener('submit',async e=>{e.preventDefault();msg('np-msg');
+  const a=$('np-pass').value,b=$('np-pass2').value;
+  if(a!==b)return msg('np-msg','Las contraseñas no coinciden.');
+  const {data,error}=await sb.auth.updateUser({password:a,data:{must_change_password:false}});
+  if(error)return msg('np-msg','No se pudo guardar: '+error.message);
+  user=data.user;entrar();});
 async function entrar(){
+  // contraseña temporal puesta por un administrador: obligar a cambiarla
+  if(user&&user.user_metadata&&user.user_metadata.must_change_password)return ver('view-nueva-pass');
   const {data}=await sb.from('perfiles').select('*').eq('id',user.id).single();perfil=data;
   if(!perfil)return ver('view-auth'),msg('auth-msg','No encontramos tu perfil. Escríbenos para ayudarte.');
   // barrio y fecha_nacimiento: el trigger de perfiles no los copia, así que los completamos desde los datos del registro
@@ -658,7 +685,10 @@ async function firmar(){
   if(error)return alert(error.message);await refrescarGrupo(true);}
 
 // ---------- INICIO ----------
-sb.auth.getSession().then(({data})=>{if(data.session){user=data.session.user;entrar();}else ver('view-auth');});
+sb.auth.getSession().then(({data})=>{
+  if(EN_RECUPERACION){ if(data.session){user=data.session.user;} return ver('view-nueva-pass'); }
+  if(data.session){user=data.session.user;entrar();}
+  else{ver('view-auth');if(ENLACE_VENCIDO)msg('auth-msg','El enlace venció o ya se usó. Toca "¿Olvidaste tu contraseña?" para pedir uno nuevo.');}});
 </script>
 </body>
 </html>
