@@ -55,7 +55,11 @@ th{font-size:.75rem;text-transform:uppercase;color:var(--mut)}small{color:var(--
   <div class="scroll"><table><thead><tr><th>Persona</th><th>Avance</th><th>Respuestas</th><th>Mensajes</th><th>Asistencia</th><th>Grupo</th><th>Última actividad</th><th></th></tr></thead><tbody id="tb-personas"></tbody></table></div></div>
 
 <div id="t-respuestas" class="card" hidden><div class="bar"><input type="search" id="fr" placeholder="Filtrar por persona, iglesia o texto…" oninput="pintarResp()"><button class="btn o" onclick="csv()">⬇ Descargar CSV</button></div><div id="lista-resp"></div></div>
-<div id="t-foro" class="card" hidden><div class="scroll"><table><thead><tr><th>Fecha</th><th>Paso</th><th>Canal</th><th>Autor</th><th>Mensaje</th></tr></thead><tbody id="tb-foro"></tbody></table></div></div>
+<div id="t-foro" class="card" hidden>
+  <div class="bar" style="margin-bottom:10px"><select id="foro-canal" onchange="pintarForo()"></select>
+    <label><input type="checkbox" id="foro-ocultos" onchange="pintarForo()"> Mostrar ocultos</label>
+    <input id="foro-q" placeholder="Buscar texto o autor…" oninput="pintarForo()" style="flex:1;min-width:160px"></div>
+  <div class="scroll"><table><thead><tr><th>Fecha</th><th>Paso</th><th>Canal</th><th>Autor</th><th>Mensaje</th><th></th></tr></thead><tbody id="tb-foro"></tbody></table></div></div>
 <div id="t-grupos" hidden><div class="card"><div class="bar"><input id="ng" placeholder="Nombre del nuevo grupo (ej. Grupo 1)"><button class="btn" onclick="crearGrupo()">+ Crear grupo</button></div>
   <small>Para meter a alguien en un grupo, hazlo desde la pestaña Personas (columna Grupo).</small></div><div id="lista-grupos"></div></div>
 <div id="t-asistencia" hidden>
@@ -70,7 +74,7 @@ th{font-size:.75rem;text-transform:uppercase;color:var(--mut)}small{color:var(--
 <script>
 const sb=window.supabase.createClient("https://wfwmyuuxceyulmkhogqr.supabase.co","sb_publishable_hrR11nillC0GtzH50LqQfQ_qEqX9FX6");
 const CURSO='vida-centrada-evangelio',TAREA='gran-historia',PASOS=5;
-let personas=[],grupos=[],resp=[];
+let personas=[],grupos=[],resp=[],foro=[];
 const $=i=>document.getElementById(i);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fecha=d=>d?new Date(d).toLocaleString([],{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
@@ -96,8 +100,20 @@ function tab(t){document.querySelector('[data-t="'+t+'"]').click();}
 
 async function cargar(){await cargarGrupos();await cargarAsistencia();await cargarPersonas();
   resp=await rpc('ev_admin_respuestas',{p_curso:CURSO});pintarResp();
-  const f=await rpc('ev_admin_foro',{p_curso:CURSO});
-  $('tb-foro').innerHTML=f.map(m=>'<tr><td>'+fecha(m.created_at)+'</td><td>'+m.paso+'</td><td>'+(m.grupo?'🔒 '+esc(m.grupo):'General')+'</td><td>'+esc(m.autor_nombre)+'<br><small>'+esc(m.autor_iglesia)+'</small></td><td style="white-space:pre-wrap">'+esc(m.mensaje)+'</td></tr>').join('')||'<tr><td colspan="5"><small>Sin mensajes todavía.</small></td></tr>';}
+  foro=await rpc('ev_admin_foro_mod',{p_curso:CURSO});pintarForo();}
+const nomGrupo=id=>{const g=grupos.find(x=>x.id===id);return g?g.nombre:'Grupo';};
+function pintarForo(){
+  const sel=$('foro-canal'),act=sel.value||'todos';
+  sel.innerHTML='<option value="todos">Todos los canales</option><option value="general">💬 Foro general</option>'+grupos.map(g=>'<option value="'+g.id+'">🔒 '+esc(g.nombre)+'</option>').join('');
+  sel.value=[...sel.options].some(o=>o.value===act)?act:'todos';
+  const c=sel.value,verOc=$('foro-ocultos').checked,q=$('foro-q').value.trim().toLowerCase();
+  const l=foro.filter(m=>(verOc||!m.oculto)&&(c==='todos'||(c==='general'?!m.grupo_id:m.grupo_id===c))&&(!q||((m.mensaje||'')+' '+(m.autor_nombre||'')).toLowerCase().includes(q)));
+  $('tb-foro').innerHTML=l.map(m=>'<tr'+(m.oculto?' style="opacity:.55"':'')+'><td>'+fecha(m.created_at)+'</td><td>'+m.paso+'</td><td>'+(m.grupo_id?'🔒 '+esc(nomGrupo(m.grupo_id)):'General')+'</td><td>'+esc(m.autor_nombre)+'<br><small>'+esc(m.autor_iglesia)+'</small></td><td style="white-space:pre-wrap'+(m.oculto?';text-decoration:line-through':'')+'">'+esc(m.mensaje)+'</td><td>'+
+    (m.oculto?'<button class="btn o s" onclick="modForo(\''+m.id+'\',false)">↩ Restaurar</button>':'<button class="btn o s" onclick="modForo(\''+m.id+'\',true)">🗑 Ocultar</button>')+'</td></tr>').join('')||'<tr><td colspan="6"><small>Sin mensajes.</small></td></tr>';}
+async function modForo(id,ocultar){
+  if(ocultar&&!confirm('El mensaje dejará de verse para los participantes. Podrás restaurarlo. ¿Ocultar?'))return;
+  await rpc('ev_admin_ocultar_mensaje',{p_id:String(id),p_ocultar:ocultar});
+  const m=foro.find(x=>String(x.id)===String(id));if(m)m.oculto=ocultar;pintarForo();}
 
 async function cargarPersonas(){
   personas=await rpc('ev_admin_personas',{p_curso:CURSO,p_q:$('q').value.trim(),p_solo_activos:$('activos').checked});
