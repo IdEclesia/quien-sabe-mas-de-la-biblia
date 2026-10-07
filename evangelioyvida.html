@@ -611,7 +611,9 @@ async function abrirCurso(){
   (data||[]).forEach(r=>{const t=document.querySelector('[data-k="'+r.clave+'"]');if(t)t.value=r.texto||'';});
   const {data:g}=await sb.rpc('ev_mi_grupo',{p_curso:CURSO});grupo=(g&&g[0])||null;
   canal=sb.channel('ev_foro_'+Date.now()).on('postgres_changes',{event:'INSERT',schema:'public',table:'ev_foro',filter:'curso=eq.'+CURSO},p=>{
-    const r=p.new;if(r.paso===step&&(r.grupo_id||null)===(foroGrupo||null))pintarMsg(r);}).subscribe();
+    const r=p.new;if(!r.oculto&&r.paso===step&&(r.grupo_id||null)===(foroGrupo||null))pintarMsg(r);})
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'ev_foro',filter:'curso=eq.'+CURSO},p=>{
+    const r=p.new;if(r.oculto){const el=document.querySelector('#chat-messages .message[data-id="'+r.id+'"]');if(el)el.remove();}}).subscribe();
   mostrarPaso();}
 async function nextStep(i){
   await guardar();step=i;maxPaso=Math.max(maxPaso,i);mostrarPaso();
@@ -634,11 +636,11 @@ function toggleForum(){$('forum-panel').classList.toggle('open');}
 function pintarMsg(r){
   if(idsForo.has(r.id))return;idsForo.add(r.id);const box=$('chat-messages');
   const h=new Date(r.created_at).toLocaleString([],{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-  box.insertAdjacentHTML('beforeend','<div class="message"><div class="meta"><strong>'+esc(r.autor_nombre)+'</strong>'+(r.autor_iglesia?' · '+esc(r.autor_iglesia):'')+' • '+h+'</div><div class="body">'+esc(r.mensaje)+'</div></div>');
+  box.insertAdjacentHTML('beforeend','<div class="message" data-id="'+r.id+'"><div class="meta"><strong>'+esc(r.autor_nombre)+'</strong>'+(r.autor_iglesia?' · '+esc(r.autor_iglesia):'')+' • '+h+'</div><div class="body">'+esc(r.mensaje)+'</div></div>');
   box.scrollTop=box.scrollHeight;}
 async function cargarForo(){
   idsForo.clear();$('chat-messages').innerHTML='';
-  let q=sb.from('ev_foro').select('*').eq('curso',CURSO).eq('paso',step).order('created_at').limit(200);
+  let q=sb.from('ev_foro').select('*').eq('curso',CURSO).eq('paso',step).eq('oculto',false).order('created_at').limit(200);
   q=foroGrupo?q.eq('grupo_id',foroGrupo):q.is('grupo_id',null);
   const {data}=await q;(data||[]).forEach(pintarMsg);
   if(!data||!data.length)$('chat-messages').innerHTML='<div class="message"><div class="body" style="color:#888">Aún no hay comentarios. ¡Sé el primero en escribir!</div></div>';}
