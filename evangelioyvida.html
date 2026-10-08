@@ -49,6 +49,12 @@
         .forum-panel { flex: 3; display: flex; flex-direction: column; background-color: #FAFAFA; border-left: 1px solid var(--border-color); padding: 20px; height: 100%; transition: transform 0.3s ease; }
         .forum-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .forum-header h3 { color: var(--dark-green); margin: 0; }
+        .stepper { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 22px; padding-bottom: 14px; border-bottom: 1px solid var(--border-color); }
+        .stepper button { padding: 7px 12px; border-radius: 999px; border: 1.5px solid var(--primary-green); background: var(--white); color: var(--dark-green); font-weight: 600; font-size: .88rem; font-family: inherit; cursor: pointer; }
+        .stepper button.on { background: var(--primary-green); color: #fff; }
+        .stepper button:disabled { opacity: .4; cursor: not-allowed; border-style: dashed; }
+        .equipo-box { background: #F1F4EA; border: 1px solid var(--primary-green); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; }
+        .equipo-box strong { display: block; margin-bottom: 8px; color: var(--dark-green); }
         .chat-tabs { display: flex; gap: 8px; flex: 1; }
         .chat-tab { flex: 1; padding: 10px 8px; border: 1.5px solid var(--primary-green); background: var(--white); color: var(--dark-green); border-radius: 8px; font-weight: 600; font-size: .95rem; font-family: inherit; cursor: pointer; }
         .chat-tab.on { background: var(--primary-green); color: #fff; }
@@ -298,7 +304,8 @@ header .link{font-size:.85rem}#guardado{font-size:.8rem;color:var(--text-muted);
   <div class="card curso-card" onclick="abrirCurso()">
     <div style="font-size:2rem">🌳</div>
     <div style="flex:1"><h3>La Vida Centrada en el Evangelio</h3><p>Módulo 1 · La Perspectiva General del Evangelio</p>
-      <div class="barra"><i id="barra-curso" style="width:0%"></i></div></div>
+      <div class="barra"><i id="barra-curso" style="width:0%"></i></div>
+      <button class="btn" id="btn-ir-tarea" hidden style="margin-top:12px" onclick="event.stopPropagation();abrirCurso(5)">📝 Ir directo a la tarea</button></div>
   </div>
   <div class="card" id="asist" hidden></div>
 </div></div>
@@ -311,6 +318,7 @@ header .link{font-size:.85rem}#guardado{font-size:.8rem;color:var(--text-muted);
   </header>
   <div class="main-container">
     <div class="lesson-panel" id="lesson-panel">
+<nav class="stepper" id="stepper" aria-label="Pasos del curso"></nav>
 <!-- PASO 0: INTRODUCCIÓN -->
             <div class="step-content active" id="step-0">
                 <h2>El Choque de Historias</h2>
@@ -526,7 +534,7 @@ const forumPrompts = [
             "El evangelio nos invita a unirnos a la obra de Jesús ahora, siendo un reflejo de Su compasión. ¿Qué acciones concretas podríamos tomar nosotros como iglesia esta semana para ser un pequeño 'anticipo' visible de ese mundo restaurado (donde hay justicia, provisión y sanidad) en nuestro barrio o ciudad?",
             "<strong>Misión de Grupo Activa:</strong> Organízate con tu equipo utilizando este chat para debatir cómo redactarán y resumirán la Gran Historia antes de editar el documento colaborativo final."
         ];
-let canalSel='comunidad';
+let canalSel='comunidad', terminado=false, equipo=[];
 let user=null, perfil=null, step=0, maxPaso=0, grupo=null, foroGrupo=null, canal=null, pollG=null, grupoSucio=false;
 const idsForo=new Set();
 const $=id=>document.getElementById(id);
@@ -582,10 +590,12 @@ async function salir(){await sb.auth.signOut();user=perfil=null;ver('view-auth')
 // ---------- CURSOS ----------
 async function cargarProgreso(){
   const {data}=await sb.from('ev_progreso').select('*').eq('perfil_id',user.id).eq('curso',CURSO).maybeSingle();
-  step=data?.completado?0:(data?.paso_actual||0);maxPaso=data?.paso_max||0;return data;}
+  terminado=!!data?.completado;step=terminado?0:(data?.paso_actual||0);maxPaso=data?.paso_max||0;return data;}
+const tope=()=>Math.max(maxPaso,terminado?TOTAL_PASOS:0);
 async function irACursos(){
   $('saludo').textContent=perfil.nombre_apellido+' · '+perfil.iglesia;ver('view-cursos');cargarAsistencia();
-  const p=await cargarProgreso();$('barra-curso').style.width=(p?.completado?100:Math.round(maxPaso/TOTAL_PASOS*100))+'%';}
+  const p=await cargarProgreso();$('barra-curso').style.width=(p?.completado?100:Math.round(maxPaso/TOTAL_PASOS*100))+'%';
+  $('btn-ir-tarea').hidden=tope()<TOTAL_PASOS;}
 function volver(){guardar();if(canal)sb.removeChannel(canal),canal=null;clearInterval(pollG);irACursos();}
 
 async function cargarAsistencia(){
@@ -608,14 +618,15 @@ async function guardar(){
   const rows=ks.map(k=>({perfil_id:user.id,curso:CURSO,clave:k,texto:document.querySelector('[data-k="'+k+'"]').value,updated_at:new Date().toISOString()}));
   const {error}=await sb.from('ev_respuestas').upsert(rows,{onConflict:'perfil_id,curso,clave'});
   if(error){console.error(error);ks.forEach(k=>dirty.add(k));$('guardado').textContent='⚠ No se pudo guardar';}else $('guardado').textContent='Guardado ✓';}
-async function abrirCurso(){
+async function abrirCurso(irA){
   ver('view-curso');
   await sb.from('ev_progreso').upsert({perfil_id:user.id,curso:CURSO},{onConflict:'perfil_id,curso',ignoreDuplicates:true});
   await cargarProgreso();
   const {data}=await sb.from('ev_respuestas').select('clave,texto').eq('perfil_id',user.id).eq('curso',CURSO);
   document.querySelectorAll('[data-k]').forEach(t=>t.value='');
   (data||[]).forEach(r=>{const t=document.querySelector('[data-k="'+r.clave+'"]');if(t)t.value=r.texto||'';});
-  const {data:g}=await sb.rpc('ev_mi_grupo',{p_curso:CURSO});grupo=(g&&g[0])||null;
+  const {data:g}=await sb.rpc('ev_mi_grupo',{p_curso:CURSO});grupo=(g&&g[0])||null;cargarEquipo();
+  if(typeof irA==='number'&&irA<=tope())step=irA;
   canal=sb.channel('ev_foro_'+Date.now()).on('postgres_changes',{event:'INSERT',schema:'public',table:'ev_foro',filter:'curso=eq.'+CURSO},p=>{
     const r=p.new;if(!r.oculto&&r.paso===pasoChat()&&(r.grupo_id||null)===(foroGrupo||null))pintarMsg(r);})
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'ev_foro',filter:'curso=eq.'+CURSO},p=>{
@@ -624,7 +635,11 @@ async function abrirCurso(){
 async function nextStep(i){
   await guardar();step=i;maxPaso=Math.max(maxPaso,i);mostrarPaso();
   sb.from('ev_progreso').upsert({perfil_id:user.id,curso:CURSO,paso_actual:i,paso_max:maxPaso,updated_at:new Date().toISOString()},{onConflict:'perfil_id,curso'}).then(()=>{});}
+const ETIQ=['Inicio','Acto 1','Acto 2','Acto 3','Acto 4','📝 Tarea'];
+function pintarStepper(){
+  $('stepper').innerHTML=ETIQ.map((t,i)=>'<button'+(i===step?' class="on"':'')+(i>tope()?' disabled title="Completa los pasos anteriores"':'')+' onclick="nextStep('+i+')">'+t+'</button>').join('');}
 function mostrarPaso(){
+  pintarStepper();
   document.querySelectorAll('.step-content').forEach(el=>el.classList.remove('active'));
   $('step-'+step).classList.add('active');$('lesson-panel').scrollTop=0;
   if(step===5&&grupo)canalSel='grupo';else if(canalSel==='grupo'&&!grupo)canalSel='comunidad';
@@ -644,11 +659,11 @@ function pintarCanal(){
   $('forum-input').placeholder=canalSel==='grupo'?'Escribe a tu grupo...':'Escribe a la comunidad...';
   $('forum-input').disabled=sinGrupo;document.querySelector('.chat-input-area .btn').disabled=sinGrupo;
   $('forum-prompt-text').innerHTML=sinGrupo?'<strong>Todavía no tienes grupo.</strong> Cuando el administrador te asigne uno, podrás coordinar aquí con tu equipo.'
-    :canalSel==='grupo'?'<strong>Chat privado de '+esc(grupo.nombre||'tu grupo')+':</strong> solo lo ven los integrantes. Úsenlo para ponerse de acuerdo y presentar la tarea de la semana 1.'
+    :canalSel==='grupo'?'<strong>Chat privado de '+esc(grupo.nombre||'tu grupo')+':</strong> solo lo ven los integrantes. Úsenlo para ponerse de acuerdo y presentar la tarea de la semana 1.'+(equipo.length?'<div class="approval-list" style="margin-top:10px">'+chipsEquipo()+'</div>':'')
     :(step<5?forumPrompts[step]:'Comparte con toda la comunidad lo que Dios te ha mostrado esta semana y anima a otros con sus comentarios.');
   foroGrupo=canalSel==='grupo'&&tiene?grupo.id:null;}
 async function elegirCanal(c){
-  if(c==='grupo'&&!grupo){const {data:g}=await sb.rpc('ev_mi_grupo',{p_curso:CURSO});grupo=(g&&g[0])||null;}
+  if(c==='grupo'&&!grupo){const {data:g}=await sb.rpc('ev_mi_grupo',{p_curso:CURSO});grupo=(g&&g[0])||null;cargarEquipo();}
   canalSel=c;pintarCanal();cargarForo();}
 
 // ---------- FORO (todos ven los comentarios del paso) ----------
@@ -672,6 +687,11 @@ async function postToForum(){
   const v=$('chat-messages').querySelector('.message .body[style]');if(v)v.parentNode.remove();pintarMsg(data);}
 
 // ---------- TAREA GRUPAL (el admin asigna los grupos) ----------
+async function cargarEquipo(){
+  if(!grupo){equipo=[];return;}
+  const {data:s}=await sb.rpc('ev_estado_grupo',{p_grupo:grupo.id,p_tarea:TAREA});
+  equipo=(s&&s.miembros)||[];if(canalSel==='grupo')pintarCanal();}
+const chipsEquipo=()=>equipo.map(m=>'<div class="badge-member">👤 '+esc(m.nombre)+(m.perfil_id===user.id?' (tú)':'')+'</div>').join('');
 async function cargarGrupo(){
   const box=$('grupo-box');pintarCanal();
   if(!grupo){box.innerHTML='<div class="reflection-box"><p style="margin:0">Todavía no estás asignado a un grupo. Cuando el administrador te asigne uno, aquí aparecerá el editor compartido de tu equipo.</p></div>';return;}
@@ -681,7 +701,7 @@ async function refrescarGrupo(forzar){
   if(error)return console.error(error);
   const box=$('grupo-box');
   if(!$('shared-textarea')){
-    box.innerHTML='<div class="collab-editor-area" style="display:block"><div class="collab-header"><h4 style="color:var(--action-blue)">📝 Borrador compartido · '+esc(grupo.nombre)+'</h4><span id="g-estado" style="font-size:.85rem"></span></div>'+
+    box.innerHTML='<div class="equipo-box" id="equipo-box"></div><div class="collab-editor-area" style="display:block"><div class="collab-header"><h4 style="color:var(--action-blue)">📝 Borrador compartido · '+esc(grupo.nombre)+'</h4><span id="g-estado" style="font-size:.85rem"></span></div>'+
     '<p style="font-size:.9rem;color:#555;margin-bottom:10px"><em>Solo los miembros de tu grupo ven y editan este texto. Si alguien lo modifica, las firmas se reinician. Cuando todos firmen, el texto queda cerrado.</em></p>'+
     '<textarea id="shared-textarea" data-k="_g" placeholder="Comiencen a escribir la Gran Historia aquí..."></textarea>'+
     '<div class="approval-section"><strong style="font-size:.95rem">Firma del equipo:</strong><div class="approval-list" id="approval-list"></div>'+
@@ -693,6 +713,7 @@ async function refrescarGrupo(forzar){
   if(forzar||!grupoSucio)ta.value=s.contenido||'';
   ta.disabled=s.aprobado;$('btn-save').hidden=s.aprobado;
   const yo=s.miembros.find(m=>m.perfil_id===user.id);
+  equipo=s.miembros;$('equipo-box').innerHTML='<strong>👥 Tu equipo: '+esc(grupo.nombre)+'</strong><div class="approval-list">'+chipsEquipo()+'</div>';if(canalSel==='grupo')pintarCanal();
   $('approval-list').innerHTML=s.miembros.map(m=>'<div class="badge-member'+(m.firmado?' approved':'')+'">'+(m.firmado?'✅ ':'')+esc(m.nombre)+(m.firmado?' (Aprobó)':' (Pendiente)')+'</div>').join('');
   const b=$('btn-approve');b.hidden=s.aprobado;b.textContent=yo&&yo.firmado?'↩ Retirar mi firma':'✅ Aprobar este texto final';b.dataset.firmado=yo&&yo.firmado?'1':'';
   $('g-estado').textContent=s.aprobado?'🔒 Aprobado: texto cerrado':'✏️ En edición';}
