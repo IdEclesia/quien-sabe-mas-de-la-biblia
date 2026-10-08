@@ -49,6 +49,9 @@
         .forum-panel { flex: 3; display: flex; flex-direction: column; background-color: #FAFAFA; border-left: 1px solid var(--border-color); padding: 20px; height: 100%; transition: transform 0.3s ease; }
         .forum-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .forum-header h3 { color: var(--dark-green); margin: 0; }
+        .leccion h3 { color: var(--dark-green); margin-bottom: 6px; }
+        .leccion.bloq { opacity: .55; }
+        .leccion .acciones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
         .stepper { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 22px; padding-bottom: 14px; border-bottom: 1px solid var(--border-color); }
         .stepper button { padding: 7px 12px; border-radius: 999px; border: 1.5px solid var(--primary-green); background: var(--white); color: var(--dark-green); font-weight: 600; font-size: .88rem; font-family: inherit; cursor: pointer; }
         .stepper button.on { background: var(--primary-green); color: #fff; }
@@ -301,13 +304,21 @@ header .link{font-size:.85rem}#guardado{font-size:.8rem;color:var(--text-muted);
   <img class="logo" src="logo-evangelio-vida.png" alt="Iglesia Evangelio & Vida">
   <div class="top"><span id="saludo"></span><button class="link" onclick="salir()">Salir</button></div>
   <h2 style="color:var(--dark-green);margin-bottom:12px;font-size:1.2rem">Cursos disponibles</h2>
-  <div class="card curso-card" onclick="abrirCurso()">
+  <div class="card curso-card" onclick="abrirHub()">
     <div style="font-size:2rem">🌳</div>
-    <div style="flex:1"><h3>La Vida Centrada en el Evangelio</h3><p>Módulo 1 · La Perspectiva General del Evangelio</p>
-      <div class="barra"><i id="barra-curso" style="width:0%"></i></div>
-      <button class="btn" id="btn-ir-tarea" hidden style="margin-top:12px" onclick="event.stopPropagation();abrirCurso(5)">📝 Ir directo a la tarea</button></div>
+    <div style="flex:1"><h3>Una Vida Centrada en el Evangelio</h3><p>Introducción y 9 lecciones · una nueva lección cada semana</p>
+      <div class="barra"><i id="barra-curso" style="width:0%"></i></div></div>
   </div>
   <div class="card" id="asist" hidden></div>
+</div></div>
+
+<!-- LECCIONES -->
+<div class="vista" id="view-lecciones" hidden><div class="wrap">
+  <img class="logo" src="logo-evangelio-vida.png" alt="Iglesia Evangelio & Vida">
+  <div class="top"><button class="link" onclick="irACursos()">← Mis cursos</button><button class="link" onclick="salir()">Salir</button></div>
+  <h2 style="color:var(--dark-green);margin-bottom:4px;font-size:1.3rem">Una Vida Centrada en el Evangelio</h2>
+  <p style="margin-bottom:14px;color:var(--text-muted);font-size:.95rem">Cada semana se habilita una nueva lección.</p>
+  <div id="lista-lecc"></div>
 </div></div>
 
 <!-- CURSO -->
@@ -525,7 +536,7 @@ header .link{font-size:.85rem}#guardado{font-size:.8rem;color:var(--text-muted);
 const EN_RECUPERACION = /type=recovery/.test(location.hash + location.search);
 const ENLACE_VENCIDO = /error_code=otp_expired|error=access_denied/.test(location.hash + location.search);
 const sb = window.supabase.createClient("https://wfwmyuuxceyulmkhogqr.supabase.co","sb_publishable_hrR11nillC0GtzH50LqQfQ_qEqX9FX6");
-const CURSO='vida-centrada-evangelio', TAREA='gran-historia', TOTAL_PASOS=5;
+const BASE='vida-centrada-evangelio', TOTAL_PASOS=5; let CURSO=BASE, TAREA='gran-historia', LECC=0, CFG={foro:true,grupo:true}, LECS=[], INTRO=null;
 const forumPrompts = [
             "¡Bienvenido a la comunidad! Preséntate brevemente y comparte desde qué ciudad te estás conectando para estudiar esta Gran Historia.",
             "Recordando que Dios es el protagonista de la Creación y nos diseñó para relacionarnos con Él, ¿cómo cambiaría la perspectiva de nuestra semana si dejáramos de ver a Dios como un 'asistente' para nuestros planes y comenzáramos a verlo como el Autor que ya diseñó nuestro propósito?",
@@ -593,10 +604,8 @@ async function cargarProgreso(){
   terminado=!!data?.completado;step=terminado?0:(data?.paso_actual||0);maxPaso=data?.paso_max||0;return data;}
 const tope=()=>Math.max(maxPaso,terminado?TOTAL_PASOS:0);
 async function irACursos(){
-  $('saludo').textContent=perfil.nombre_apellido+' · '+perfil.iglesia;ver('view-cursos');cargarAsistencia();
-  const p=await cargarProgreso();$('barra-curso').style.width=(p?.completado?100:Math.round(maxPaso/TOTAL_PASOS*100))+'%';
-  $('btn-ir-tarea').hidden=tope()<TOTAL_PASOS;}
-function volver(){guardar();if(canal)sb.removeChannel(canal),canal=null;clearInterval(pollG);irACursos();}
+  $('saludo').textContent=perfil.nombre_apellido+' · '+perfil.iglesia;ver('view-cursos');}
+function volver(){guardar();if(canal)sb.removeChannel(canal),canal=null;clearInterval(pollG);abrirHub();}
 
 async function cargarAsistencia(){
   const box=$('asist');const {data,error}=await sb.rpc('ev_mi_asistencia',{p_curso:CURSO});
@@ -635,7 +644,7 @@ async function abrirCurso(irA){
 async function nextStep(i){
   await guardar();step=i;maxPaso=Math.max(maxPaso,i);mostrarPaso();
   sb.from('ev_progreso').upsert({perfil_id:user.id,curso:CURSO,paso_actual:i,paso_max:maxPaso,updated_at:new Date().toISOString()},{onConflict:'perfil_id,curso'}).then(()=>{});}
-const ETIQ=['Inicio','Acto 1','Acto 2','Acto 3','Acto 4','📝 Tarea'];
+const ETIQ0=['Inicio','Acto 1','Acto 2','Acto 3','Acto 4','📝 Tarea'];let ETIQ=ETIQ0;
 function pintarStepper(){
   $('stepper').innerHTML=ETIQ.map((t,i)=>'<button'+(i===step?' class="on"':'')+(i>tope()?' disabled title="Completa los pasos anteriores"':'')+' onclick="nextStep('+i+')">'+t+'</button>').join('');}
 function mostrarPaso(){
@@ -653,12 +662,12 @@ function toggleForum(){$('forum-panel').classList.toggle('open');}
 // Dos chats: 'grupo' (hilo único del equipo, paso 5) y 'comunidad' (un hilo por paso)
 const pasoChat=()=>canalSel==='grupo'?5:step;
 function pintarCanal(){
-  const tiene=!!grupo,sinGrupo=canalSel==='grupo'&&!tiene;
+  const off=canalSel==='grupo'?!CFG.grupo:!CFG.foro,tiene=!!grupo,sinGrupo=canalSel==='grupo'&&!tiene;
   $('tab-grupo').classList.toggle('on',canalSel==='grupo');$('tab-comunidad').classList.toggle('on',canalSel==='comunidad');
   $('tab-grupo').classList.toggle('sin-grupo',!tiene);
   $('forum-input').placeholder=canalSel==='grupo'?'Escribe a tu grupo...':'Escribe a la comunidad...';
-  $('forum-input').disabled=sinGrupo;document.querySelector('.chat-input-area .btn').disabled=sinGrupo;
-  $('forum-prompt-text').innerHTML=sinGrupo?'<strong>Todavía no tienes grupo.</strong> Cuando el administrador te asigne uno, podrás coordinar aquí con tu equipo.'
+  $('forum-input').disabled=sinGrupo||off;document.querySelector('.chat-input-area .btn').disabled=sinGrupo||off;
+  $('forum-prompt-text').innerHTML=off?'<strong>Este chat no está habilitado esta semana.</strong> Lo activaremos cuando la tarea lo necesite.':sinGrupo?'<strong>Todavía no tienes grupo.</strong> Cuando el administrador te asigne uno, podrás coordinar aquí con tu equipo.'
     :canalSel==='grupo'?'<strong>Chat privado de '+esc(grupo.nombre||'tu grupo')+':</strong> solo lo ven los integrantes. Úsenlo para ponerse de acuerdo y presentar la tarea de la semana 1.'+(equipo.length?'<div class="approval-list" style="margin-top:10px">'+chipsEquipo()+'</div>':'')
     :(step<5?forumPrompts[step]:'Comparte con toda la comunidad lo que Dios te ha mostrado esta semana y anima a otros con sus comentarios.');
   foroGrupo=canalSel==='grupo'&&tiene?grupo.id:null;}
@@ -674,7 +683,7 @@ function pintarMsg(r){
   box.scrollTop=box.scrollHeight;}
 async function cargarForo(){
   idsForo.clear();$('chat-messages').innerHTML='';
-  if(canalSel==='grupo'&&!grupo)return;
+  if((canalSel==='grupo'&&!grupo)||(canalSel==='grupo'?!CFG.grupo:!CFG.foro))return;
   let q=sb.from('ev_foro').select('*').eq('curso',CURSO).eq('paso',pasoChat()).eq('oculto',false).order('created_at').limit(200);
   q=foroGrupo?q.eq('grupo_id',foroGrupo):q.is('grupo_id',null);
   const {data}=await q;(data||[]).forEach(pintarMsg);
@@ -727,11 +736,104 @@ async function firmar(){
   const {error}=await sb.rpc('ev_firmar_grupo',{p_grupo:grupo.id,p_tarea:TAREA,p_firmar:!quitar});
   if(error)return alert(error.message);await refrescarGrupo(true);}
 
+
+// ---------- LECCIONES ----------
+const TIT={0:'Introducción: El Choque de Historias',1:'Lección 1: El Marco del Evangelio'};
+const claveL=n=>n===0?BASE:BASE+'-l'+n;
+async function abrirHub(){
+  ver('view-lecciones');const box=$('lista-lecc');box.innerHTML='<p>Cargando…</p>';
+  const {data}=await sb.from('ev_lecciones').select('*').order('id');const m={};(data||[]).forEach(r=>m[r.id]=r);
+  LECS=[0,1,2,3,4,5,6,7,8,9].map(i=>Object.assign({id:i,titulo:TIT[i]||'Lección '+i,abierta:(!data||!data.length)&&i===0,foro:true,grupo:true},m[i]||{}));
+  const {data:pr}=await sb.from('ev_progreso').select('curso,paso_max,completado').eq('perfil_id',user.id).in('curso',LECS.map(l=>claveL(l.id)));
+  const P={};(pr||[]).forEach(r=>P[r.curso]=r);
+  const A={};await Promise.all(LECS.filter(l=>l.abierta).map(async l=>{const {data:a}=await sb.rpc('ev_mi_asistencia',{p_curso:claveL(l.id)});A[l.id]=a;}));
+  box.innerHTML=LECS.map(l=>{
+    const r=P[claveL(l.id)],pct=r?(r.completado?100:Math.round((r.paso_max||0)/TOTAL_PASOS*100)):0,a=A[l.id];
+    if(!l.abierta)return '<div class="card leccion bloq"><h3>🔒 '+esc(l.titulo)+'</h3><p style="font-size:.9rem">Se habilitará en su semana.</p></div>';
+    const llego=r&&(r.completado||(r.paso_max||0)>=TOTAL_PASOS);
+    return '<div class="card leccion"><h3>'+esc(l.titulo)+'</h3><div class="barra"><i style="width:'+pct+'%"></i></div>'+
+      '<p style="font-size:.9rem;margin-top:6px">Avance: <b>'+pct+'%</b>'+(r&&r.completado?' · ✅ Finalizada':'')+(a&&a.total?' · Asistencia: <b>'+a.presentes+' de '+a.total+'</b> clases':'')+'</p>'+
+      '<div class="acciones"><button class="btn" onclick="abrirLeccion('+l.id+')">'+(r?'Continuar':'Comenzar')+'</button>'+(llego?'<button class="btn btn-secondary" onclick="abrirLeccion('+l.id+',5)">📝 Ir a la tarea</button>':'')+'</div></div>';}).join('');}
+async function abrirLeccion(n,irA){
+  const L=LECS.find(x=>x.id===n);if(!L||!L.abierta)return;
+  if(n>1)return alert('El contenido de esta lección está en preparación.');
+  const els=[...document.querySelectorAll('.step-content')];if(!INTRO)INTRO=els.map(e=>e.innerHTML);
+  LECC=n;CURSO=claveL(n);CFG={foro:L.foro!==false,grupo:L.grupo!==false};canalSel='comunidad';
+  if(n===0){TAREA='gran-historia';ETIQ=ETIQ0;els.forEach((e,i)=>e.innerHTML=INTRO[i]);}
+  else{TAREA='taller-l'+n;ETIQ=LEC1.etiq;els.forEach((e,i)=>e.innerHTML=LEC1.pasos[i]);}
+  await abrirCurso(irA);}
+// Contenido de la Lección 1
+const _q=(k,t)=>'<label><strong>'+t+'</strong></label><textarea data-k="'+k+'" placeholder="Escribe aquí..."></textarea>';
+const _nav=i=>'<div class="navigation-bar">'+(i>0?'<button class="btn btn-secondary" onclick="nextStep('+(i-1)+')">Volver</button>':'')+'<button class="btn" onclick="nextStep('+(i+1)+')">Guardar y continuar</button></div>';
+const _m4=[
+['Ponerse a la defensiva','Te cuesta recibir críticas sobre tus debilidades y pecados. Cuando alguien te confronta, tu tendencia inmediata es dar explicaciones, hablar de tus éxitos o justificar tus decisiones, lo que frena cualquier conversación profunda.','Cuando alguien te señala un error con amor, ¿qué dice de tu confianza en la gracia de Dios el hecho de que sientas la necesidad imperiosa de defender tu reputación en lugar de escuchar?'],
+['Fingir','Te esfuerzas constantemente por mantener una apariencia e imagen respetable. Tu comportamiento se rige por lo que crees que los demás piensan de ti, evitando la reflexión profunda hasta el punto de que casi nadie te conoce de verdad.','Si las personas vieran tus pensamientos y motivaciones reales tal como Dios los ve hoy, ¿a qué le temes más y qué idolatrías de aprobación estás protegiendo con tu fachada?'],
+['Esconderse','Tiendes a ocultar todo lo posible sobre tu vida, especialmente las “cosas malas”, impulsado por la vergüenza y el temor de que la gente no te acepte o te ame tal como eres.','Vivir escondido revela que dudas de la suficiencia de la Cruz. ¿Por qué te cuesta creer que el sacrificio de Jesús ya cubrió esa “cosa mala” que tanto te avergüenza?'],
+['Exagerar','Tiendes a pensar y hablar mucho mejor (o incluso mucho peor) de ti mismo de lo debido, dramatizando las situaciones para llamar la atención y generando un estrés innecesario.','Cuando buscas inflar tus logros o dramatizar tus crisis para ser notado, ¿a qué salvador falso (el aplauso, la lástima o el control) le estás pidiendo que te dé el valor que solo Cristo provee?'],
+['Echarles la culpa a los demás','Eres rápido para culpar a otras personas o a las circunstancias, mostrando orgullo al dar por sentado que la culpa no es tuya, o bien temor al rechazo si llegaras a asumirla.','Al señalar los defectos de los demás para absolver los tuyos, ¿cómo estás ignorando la viga en tu propio ojo y rebajando la norma de la perfecta santidad de Dios?'],
+['Restar importancia','Das poca importancia al pecado y a los problemas de tu vida, tratándolos como si fueran “normales” o “no estuvieran tan mal”, lo que provoca que los conflictos se acumulen hasta volverse abrumadores.','Minimizar un hábito pecaminoso llamándolo “un pequeño defecto” o “una tontería” minimiza el costo que le costó a Jesús la Cruz. ¿Qué daño le estás haciendo a tu alma al anestesiar tu conciencia de esta manera?']];
+const LEC1={etiq:['Módulo 1','Módulo 2','Módulo 3','Módulo 4','Módulo 5','📝 Taller'],pasos:[
+`<h2>Lección 1: El Marco del Evangelio</h2><h3>Módulo 1 · Introducción</h3>
+<p>“El Evangelio” es una frase que los cristianos usan con frecuencia, pero en pocas ocasiones lo aplican a cada aspecto de sus vidas. Muchos ven el Evangelio únicamente como la “puerta” o la entrada al reino de Dios, ¡pero es mucho más que eso! No es un evento del pasado para archivar en la memoria, sino una realidad presente que debe moldear nuestro futuro. No es solo el medio de salvación, sino el camino diario y el medio para una transformación personal constante. Es el combustible para la vida cristiana, no solo el motor de arranque. El Evangelio no solo nos libera del castigo del pecado, sino de su poder; lo cambia absolutamente todo: nuestras relaciones, nuestras motivaciones, nuestra identidad y la forma en que respondemos al sufrimiento.</p>
+<h3>El Evangelio como Motor Diario</h3><p>Para entender que el Evangelio no es solo el “punto de partida” sino la fuerza constante que transforma toda nuestra vida, nos apoyamos en estos tres principios bíblicos fundamentales:</p>
+<h3>1. Olvidar el Evangelio frena nuestro crecimiento (2 Pedro 1:3-9)</h3><blockquote>“Pero el que no tiene estas cosas tiene la vista muy corta; es ciego, habiendo olvidado la purificación de sus antiguos pecados.” (2 Pedro 1:9)</blockquote>
+<p><strong>El Principio:</strong> El apóstol Pedro enseña que la falta de una transformación continua en nuestras vidas sucede por olvidar lo que Dios ya ha hecho por nosotros con el Evangelio. El estancamiento espiritual no ocurre por falta de esfuerzo, sino por “amnesia del Evangelio”. Cuando olvidamos que ya hemos sido limpiados y aceptados, perdemos la fuerza para cambiar hoy.</p>
+<h3>2. El Evangelio no deja de dar fruto después de creer (Colosenses 1:6)</h3><blockquote>“...este evangelio está produciendo fruto y creciendo en todo el mundo, así como también lo ha estado haciendo entre ustedes desde el día en que lo escucharon y comprendieron la gracia de Dios en toda su verdad.” (Colosenses 1:6)</blockquote>
+<p><strong>El Principio:</strong> El apóstol Pablo elogia a la iglesia porque el Evangelio “lleva fruto y crece” de manera continua. Timothy Keller solía enfatizar este texto para mostrar que el Evangelio es una fuerza viva. No es una semilla que dejas atrás una vez que germina; es la raíz misma que sigue alimentando y produciendo cambios internos años después de tu conversión.</p>
+<h3>3. Caminar alineados a la verdad del Evangelio (Gálatas 2:14)</h3><blockquote>“Pero cuando vi que no andaban rectamente conforme a la verdad del evangelio, dije a Pedro delante de todos: Si tú, siendo judío, vives como los gentiles y no como judío, ¿por qué obligas a los gentiles a judaizar?” (Gálatas 2:14)</blockquote>
+<p>En este pasaje, el apóstol Pedro estaba cediendo a la presión social, al miedo y al racismo. Pablo no lo confrontó diciéndole “esfuérzate por ser menos racista y más valiente”, sino que le mostró que su comportamiento revelaba que, en ese momento, no estaba creyendo en la verdad del Evangelio. La solución a nuestros fallos diarios no es imponernos más reglas, sino arrepentirnos de nuestros ídolos y volver a alinear nuestro corazón con el Evangelio.</p>
+<h3>Preguntas de Reflexión</h3><p>Antes de avanzar, tómate un momento para evaluar tu propio corazón:</p>`
++_q('l1_m1_a','¿De qué manera has estado viendo el Evangelio últimamente: como una “puerta” por la que ya entraste en el pasado, o como el motor y combustible diario de tu vida presente?')
++_q('l1_m1_b','Considerando el ejemplo de Pedro en Gálatas 2:14, piensa en una lucha o reacción recurrente (miedo al qué dirán, necesidad de control, orgullo). En lugar de decir “tengo que esforzarme más para cambiar”, pregúntate: ¿Qué verdad específica del Evangelio (aceptación, perdón, identidad en Cristo) estoy olvidando en esos momentos?')+_nav(0),
+`<h2>El Gráfico de la Cruz: El Puente y el Crecimiento</h2><h3>Módulo 2</h3>
+<p>Antes de entender cómo crecemos en el Evangelio, necesitamos visualizar qué es exactamente lo que el Evangelio hace. Imagina un abismo insuperable. De un lado, está la perfecta, infinita y radiante santidad de Dios. Del otro lado, está nuestra vida, marcada por nuestra naturaleza pecaminosa y rota. Es una separación terrible. Sin embargo, la Cruz de Cristo es el puente definitivo. El Evangelio es lo único que une esa abismal separación, reconciliándonos con Dios y permitiéndonos cruzar hacia Él.</p>
+<img class="historia-grafica" src="grafico-cruz.jpg" alt="El Gráfico de la Cruz">
+<h3>El Punto de Partida (Conversión)</h3><p>La vida cristiana comienza en el punto de conversión, justo donde se unen las líneas. Esto ocurre cuando nos damos cuenta por primera vez de la enorme distancia que existe entre la santidad de Dios y nuestra naturaleza pecaminosa, y ponemos nuestra fe en Jesús como nuestro único puente.</p>
+<h3>Las Dos Líneas del Crecimiento Espiritual</h3><p>Sin embargo, en el momento de nuestra conversión, nuestra comprensión tanto de Dios como de nosotros mismos es muy pequeña. A medida que maduramos en la fe, leemos la Biblia y vivimos en comunidad, dos cosas deben suceder simultáneamente:</p>
+<h3>1. Línea Superior: Conciencia creciente de la santidad de Dios</h3><p>Empezamos a ver a Dios como realmente es. No es que Dios se vuelva más santo con el tiempo, sino que nuestra capacidad para ver el peso de su gloriosa perfección y majestad se hace mucho más vívida y real.</p>
+<blockquote>“Porque mis pensamientos no son los de ustedes, ni sus caminos son los míos —afirma el Señor—. Mis caminos y mis pensamientos son más altos que los de ustedes; ¡más altos que los cielos sobre la tierra!” (Isaías 55:8-9)</blockquote>
+<h3>2. Línea Inferior: Conciencia creciente de mi naturaleza pecaminosa</h3><p>Empezamos a vernos como realmente somos. Nos damos cuenta de que nuestro problema de pecado es mucho más profundo de lo que imaginábamos. No es que nos volvamos más pecadores en la práctica, sino que somos más honestos y conscientes de nuestro orgullo, egoísmo y falsas motivaciones ocultas en lo profundo del corazón.</p>
+<blockquote>“Nada hay tan engañoso como el corazón. No tiene remedio. ¿Quién puede comprenderlo? Yo, el Señor, sondeo el corazón y examino los pensamientos...” (Jeremías 17:9-10)</blockquote>
+<h3>El Resultado: Una Cruz más Grande</h3><p>Conforme estas dos líneas se van separando (vemos a Dios más santo y nos vemos más pecadores), algo hermoso ocurre en el centro: <strong>la Cruz se hace más grande en nuestra experiencia.</strong> Nuestro amor por Jesús, nuestra apreciación por su sacrificio, su mediación y su gracia crecen profundamente. ¡El Salvador se vuelve inmenso!</p>`+_nav(1),
+`<h2>Reduciendo la Cruz: El Peligro de Minimizar el Evangelio</h2><h3>Módulo 3</h3>
+<p>Desafortunadamente, el crecimiento espiritual no siempre es una línea recta. Debido al pecado que aún mora en nosotros, nos resulta doloroso e incómodo vivir con la tensión del Gráfico de la Cruz. Para evitar lidiar con la inmensa santidad de Dios o con lo oscuro de nuestro propio corazón, tenemos una tendencia natural a minimizar el Evangelio. A esto lo llamamos “Reducir la Cruz”.</p>
+<img class="historia-grafica" src="reduciendo-cruz.jpg" alt="Reduciendo la Cruz">
+<p>Reducimos la Cruz de dos maneras principales:</p><ul>
+<li><strong>Aparentando (minimizamos nuestro pecado):</strong> cuando la línea inferior de nuestra pecaminosidad nos pesa demasiado y nos abruma, compensamos intentando parecer mejores de lo que realmente somos. Escondemos nuestras luchas, nos ponemos a la defensiva, o nos comparamos con otros para sentirnos superiores y respetables ante los demás.</li>
+<li><strong>Cumpliendo (minimizamos la santidad de Dios):</strong> cuando la línea superior de la santidad de Dios nos intimida y nos hace sentir expuestos, rebajamos los estándares perfectos de Dios a una simple lista de reglas que creemos poder cumplir. Pensamos que si nos esforzamos lo suficiente en nuestras fuerzas, podemos ganarnos su favor y aprobación mediante nuestro propio comportamiento moral.</li></ul>
+<p>Crecer en el Evangelio significa dejar de aparentar y de intentar ganar nuestro valor cumpliendo reglas. Significa mirar a Jesús, el único que nos permite ver a Dios tal como es y admitir lo rotos que estamos, sin sentir miedo ni condena, porque Él ya pagó el precio por completo.</p>
+<h3>Preguntas de Reflexión Personal</h3>`
++_q('l1_m3_a','Entre las dos tendencias, ¿cuál es tu inclinación más común cuando te sientes espiritualmente “seco” o en falta?: ¿tiendes a aparentar (ocultar tus fallos y ponerte a la defensiva) o a cumplir (confiar en tus buenas obras y esfuerzo religioso para sentirte aceptado por Dios)?')
++_q('l1_m3_b','¿De qué manera el intentar justificar tus errores ante los demás o ante ti mismo demuestra que estás olvidando temporalmente el poder de la Cruz?')+_nav(2),
+`<h2>Suplemento: Seis Maneras de Minimizar el Pecado</h2><h3>Módulo 4</h3>
+<p>Para evitar enfrentarnos al peso y la incomodidad de ver nuestra propia “avería”, solemos utilizar mecanismos de defensa cotidianos que nos ayudan a minimizar nuestro pecado. Evalúa cada uno en tu vida usando la siguiente escala: <strong>1 = Nunca, 2 = Raramente, 3 = Frecuentemente, 4 = Muy frecuentemente / Es mi reacción automática.</strong></p>`
++_m4.map((x,i)=>'<div class="task-card"><h3 style="margin-top:0">'+(i+1)+'. '+x[0]+'</h3><p>'+x[1]+'</p><label><strong>Nivel de identificación (1 al 4):</strong> <input type="number" min="1" max="4" data-k="l1_m4_n'+(i+1)+'" style="width:70px;padding:6px"></label><p style="margin-top:12px"><em>'+x[2]+'</em></p></div>').join('')
++'<h3>Ejercicio Final de Sección</h3>'+_q('l1_m4_final','Elige el punto en el que obtuviste el puntaje más alto (del 3 al 4). Describe una situación reciente donde operó este mecanismo y escribe cómo se vería aplicar el Evangelio en lugar de usar esta evasión.')+_nav(3),
+`<h2>Ejercicio Práctico: Juzgando a los Demás</h2><h3>Módulo 5</h3>
+<p>Una de las formas más claras de ver el valor del Gráfico de la Cruz y de comprobar si estamos viviendo centrados en el Evangelio es aplicarlo a un área donde todos comúnmente tenemos problemas: el juicio hacia los demás. Juzgar a otros es algo que hacemos constantemente, de formas grandes y pequeñas. Para descubrir la raíz de nuestros juicios, responde con honestidad las siguientes preguntas:</p>`
++_q('l1_m5_1','1. Las formas del juicio: ¿Cuáles son algunas de las formas específicas y cotidianas en las que juzgas a otros (en la familia, el trabajo o la iglesia)?')
++_q('l1_m5_2','2. Las excusas del corazón: ¿Por qué juzgamos a los demás? ¿Cuáles son las razones o excusas que te das a ti mismo para justificar esos juicios?')
++_q('l1_m5_3','3. El reflejo de una perspectiva estrecha: ¿Cómo es que las razones que diste reflejan, por un lado, una perspectiva estrecha (reducida) de la santidad de Dios, y por el otro, una perspectiva estrecha de tu propio pecado?')
++'<p><strong>4. El impacto en las relaciones reales.</strong> Piensa en una persona específica en tu vida a la que frecuentemente juzgas.</p>'
++_q('l1_m5_4a','a) ¿Cómo afectaría a esa relación una perspectiva más amplia de la santidad de Dios?')
++_q('l1_m5_4b','b) ¿Cómo afectaría a esa relación una perspectiva más amplia de tu propio pecado (recordando cuánta gracia has recibido)?')
++'<p>Con este ejercicio cerramos los contenidos prácticos y reflexivos de la Lección 1: El Marco del Evangelio.</p>'+_nav(4),
+`<h2 class="taller-title">Taller Grupal: El Diagnóstico de una Comunidad que Reduce la Cruz</h2>
+<p><strong>Objetivo de la misión:</strong> reúnanse en su grupo asignado. Analicen cómo una iglesia o comunidad pequeña actúa cuando olvida la profundidad de la gracia y cae en el orgullo de aparentar o cumplir. Juntos, redactarán un texto diagnóstico que describa las características de una comunidad que ha reducido la Cruz, y propondrán cómo se vería esa misma comunidad si viviera verdaderamente anclada en el Evangelio.</p>
+<div class="task-card task-group"><h3>👥 Tarea Grupal</h3>
+<p>Cada equipo trabajará en el lienzo compartido para redactar un texto unificado que responda a estas dos preguntas:</p><ol style="margin-left:22px;font-size:1.05rem;line-height:1.6">
+<li><strong>Las señales de una comunidad que reduce la Cruz:</strong> ¿Qué ambiente se respira, cómo se trata a los pecadores o a los débiles, y de qué manera se disfraza el orgullo (aparentar y cumplir) cuando una comunidad olvida el Evangelio?</li>
+<li><strong>El cambio hacia una comunidad centrada en el Evangelio:</strong> ¿Cómo cambiaría radicalmente la cultura de ese grupo si todos abrazaran la gracia de Dios, admitieran su “avería” sin miedo y vivieran con una Cruz grande?</li></ol>
+<div id="grupo-box"></div></div>
+<div class="navigation-bar"><button class="btn btn-secondary" onclick="nextStep(4)">Volver al Módulo 5</button><button class="btn" onclick="finalizarSemana()">Finalizar Lección 1</button></div>`]};
+
 // ---------- INICIO ----------
 sb.auth.getSession().then(({data})=>{
   if(EN_RECUPERACION){ if(data.session){user=data.session.user;} return ver('view-nueva-pass'); }
   if(data.session){user=data.session.user;entrar();}
   else{ver('view-auth');if(ENLACE_VENCIDO)msg('auth-msg','El enlace venció o ya se usó. Toca "¿Olvidaste tu contraseña?" para pedir uno nuevo.');}});
 </script>
+</body>
+</html>t>
 </body>
 </html>
