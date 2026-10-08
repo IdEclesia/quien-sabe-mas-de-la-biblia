@@ -45,9 +45,12 @@ th{font-size:.75rem;text-transform:uppercase;color:var(--mut)}small{color:var(--
   <button class="btn o" style="margin-top:12px" onclick="sb.auth.signOut().then(()=>location.reload())">Entrar con otra cuenta</button></section>
 
 <section id="s-app" hidden>
-<header><img src="logo-evangelio-vida.png" alt="Evangelio & Vida"><div><b>Panel del curso</b> · <a class="btn o s" href="admin.html" style="text-decoration:none;display:inline-block">← Panel general</a> <button class="btn o s" onclick="cargar()">↻ Actualizar</button> <button class="btn o s" onclick="salir()">Salir</button></div></header>
+<header><img src="logo-evangelio-vida.png" alt="Evangelio & Vida"><div><b>Panel del curso</b> · <select id="sel-lecc" onchange="location.search=this.value?'?l='+this.value:''"><option value="">Introducción</option><option value="1">Lección 1</option><option value="2">Lección 2</option><option value="3">Lección 3</option><option value="4">Lección 4</option><option value="5">Lección 5</option><option value="6">Lección 6</option><option value="7">Lección 7</option><option value="8">Lección 8</option><option value="9">Lección 9</option></select> · <a class="btn o s" href="admin.html" style="text-decoration:none;display:inline-block">← Panel general</a> <button class="btn o s" onclick="cargar()">↻ Actualizar</button> <button class="btn o s" onclick="salir()">Salir</button></div></header>
 <main>
 <div class="kpis" id="kpis"></div>
+<details class="card" id="lecc-panel" ontoggle="if(this.open)cargarLecc()" style="margin-bottom:12px"><summary><b>📚 Habilitar lecciones y herramientas de la semana</b></summary>
+  <p style="font-size:.9rem;margin:8px 0">Marca qué lección ven los participantes y si esa semana usan el foro de la comunidad y el chat/taller de grupo. Para ver personas, grupos y asistencia de una lección, cámbiala arriba, junto a “Panel del curso”.</p>
+  <div class="scroll"><table><thead><tr><th>Lección</th><th>Visible</th><th>Foro comunidad</th><th>Chat/taller grupo</th></tr></thead><tbody id="tb-lecc"></tbody></table></div></details>
 <div class="tabs"><button class="btn on" data-t="personas">👥 Personas</button><button class="btn" data-t="respuestas">📝 Respuestas</button><button class="btn" data-t="foro">💬 Foro</button><button class="btn" data-t="grupos">🧩 Grupos</button><button class="btn" data-t="asistencia">✅ Asistencia</button></div>
 
 <div id="t-personas" class="card"><div class="bar"><input type="search" id="q" placeholder="Buscar por nombre, correo o iglesia…">
@@ -73,7 +76,9 @@ th{font-size:.75rem;text-transform:uppercase;color:var(--mut)}small{color:var(--
 
 <script>
 const sb=window.supabase.createClient("https://wfwmyuuxceyulmkhogqr.supabase.co","sb_publishable_hrR11nillC0GtzH50LqQfQ_qEqX9FX6");
-const CURSO='vida-centrada-evangelio',TAREA='gran-historia',PASOS=5;
+const LQ=new URLSearchParams(location.search).get('l')||'';
+const CURSO='vida-centrada-evangelio'+(LQ?'-l'+LQ:''),TAREA=LQ?'taller-l'+LQ:'gran-historia',PASOS=5;
+document.getElementById('sel-lecc').value=LQ;
 let personas=[],grupos=[],resp=[],foro=[];
 const $=i=>document.getElementById(i);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -96,6 +101,12 @@ async function init(){
 document.querySelectorAll('.tabs .btn').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.tabs .btn').forEach(x=>x.classList.toggle('on',x===b));
   ['personas','respuestas','foro','grupos','asistencia'].forEach(t=>$('t-'+t).hidden=t!==b.dataset.t);if(b.dataset.t==='personas'&&personas.length)pintarPersonas();});
+async function cargarLecc(){
+  const {data}=await sb.from('ev_lecciones').select('*').order('id');
+  $('tb-lecc').innerHTML=(data||[]).map(l=>'<tr data-id="'+l.id+'"><td>'+esc(l.titulo)+'</td>'+['abierta','foro','grupo'].map(k=>'<td><input type="checkbox" '+(l[k]?'checked ':'')+'onchange="guardarLecc('+l.id+')" data-c="'+k+'"></td>').join('')+'</tr>').join('')||'<tr><td colspan="4"><small>Ejecuta lecciones.sql en Supabase.</small></td></tr>';}
+async function guardarLecc(id){
+  const r=document.querySelector('#tb-lecc tr[data-id="'+id+'"]'),v=k=>r.querySelector('[data-c="'+k+'"]').checked;
+  await rpc('ev_admin_leccion',{p_id:id,p_abierta:v('abierta'),p_foro:v('foro'),p_grupo:v('grupo')});}
 function tab(t){document.querySelector('[data-t="'+t+'"]').click();}
 
 async function cargar(){await cargarGrupos();await cargarAsistencia();await cargarPersonas();
