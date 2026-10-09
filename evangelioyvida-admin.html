@@ -49,8 +49,8 @@ th{font-size:.75rem;text-transform:uppercase;color:var(--mut)}small{color:var(--
 <main>
 <div class="kpis" id="kpis"></div>
 <details class="card" id="lecc-panel" ontoggle="if(this.open)cargarLecc()" style="margin-bottom:12px"><summary><b>📚 Habilitar lecciones y herramientas de la semana</b></summary>
-  <p style="font-size:.9rem;margin:8px 0">Marca qué lección ven los participantes y si esa semana usan el foro de la comunidad y el chat/taller de grupo. Para ver personas, grupos y asistencia de una lección, cámbiala arriba, junto a “Panel del curso”.</p>
-  <div class="scroll"><table><thead><tr><th>Lección</th><th>Visible</th><th>Foro comunidad</th><th>Chat/taller grupo</th></tr></thead><tbody id="tb-lecc"></tbody></table></div></details>
+  <p style="font-size:.9rem;margin:8px 0">Con “👁 Ver” abres la lección en vista previa: sin guardar nada y aunque no esté visible. Marca qué lección ven los participantes y si esa semana usan el foro de la comunidad y el chat/taller de grupo. Para ver personas, grupos y asistencia de una lección, cámbiala arriba, junto a “Panel del curso”.</p>
+  <div class="scroll"><table><thead><tr><th>Lección</th><th>Visible</th><th>Foro comunidad</th><th>Chat/taller grupo</th><th>Vista previa</th></tr></thead><tbody id="tb-lecc"></tbody></table></div></details>
 <div class="tabs"><button class="btn on" data-t="personas">👥 Personas</button><button class="btn" data-t="respuestas">📝 Respuestas</button><button class="btn" data-t="foro">💬 Foro</button><button class="btn" data-t="grupos">🧩 Grupos</button><button class="btn" data-t="asistencia">✅ Asistencia</button></div>
 
 <div id="t-personas" class="card"><div class="bar"><input type="search" id="q" placeholder="Buscar por nombre, correo o iglesia…">
@@ -103,7 +103,7 @@ document.querySelectorAll('.tabs .btn').forEach(b=>b.onclick=()=>{
   ['personas','respuestas','foro','grupos','asistencia'].forEach(t=>$('t-'+t).hidden=t!==b.dataset.t);if(b.dataset.t==='personas'&&personas.length)pintarPersonas();});
 async function cargarLecc(){
   const {data}=await sb.from('ev_lecciones').select('*').order('id');
-  $('tb-lecc').innerHTML=(data||[]).map(l=>'<tr data-id="'+l.id+'"><td>'+esc(l.titulo)+'</td>'+['abierta','foro','grupo'].map(k=>'<td><input type="checkbox" '+(l[k]?'checked ':'')+'onchange="guardarLecc('+l.id+')" data-c="'+k+'"></td>').join('')+'</tr>').join('')||'<tr><td colspan="4"><small>Ejecuta lecciones.sql en Supabase.</small></td></tr>';}
+  $('tb-lecc').innerHTML=(data||[]).map(l=>'<tr data-id="'+l.id+'"><td>'+esc(l.titulo)+'</td>'+['abierta','foro','grupo'].map(k=>'<td><input type="checkbox" '+(l[k]?'checked ':'')+'onchange="guardarLecc('+l.id+')" data-c="'+k+'"></td>').join('')+'<td>'+(l.id<=1?'<button class="btn" onclick="window.open(\'evangelioyvida.html?preview='+l.id+'\',\'_blank\')">👁 Ver</button>':'<small>—</small>')+'</td></tr>').join('')||'<tr><td colspan="5"><small>Ejecuta lecciones.sql en Supabase.</small></td></tr>';}
 async function guardarLecc(id){
   const r=document.querySelector('#tb-lecc tr[data-id="'+id+'"]'),v=k=>r.querySelector('[data-c="'+k+'"]').checked;
   await rpc('ev_admin_leccion',{p_id:id,p_abierta:v('abierta'),p_foro:v('foro'),p_grupo:v('grupo')});}
