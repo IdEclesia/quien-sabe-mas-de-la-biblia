@@ -537,6 +537,7 @@ const EN_RECUPERACION = /type=recovery/.test(location.hash + location.search);
 const ENLACE_VENCIDO = /error_code=otp_expired|error=access_denied/.test(location.hash + location.search);
 const sb = window.supabase.createClient("https://wfwmyuuxceyulmkhogqr.supabase.co","sb_publishable_hrR11nillC0GtzH50LqQfQ_qEqX9FX6");
 const BASE='vida-centrada-evangelio', TOTAL_PASOS=5; let CURSO=BASE, TAREA='gran-historia', LECC=0, CFG={foro:true,grupo:true}, LECS=[], INTRO=null;
+const PREV_N=(new URLSearchParams(location.search).get('preview')),PREV_REQ=PREV_N!==null&&/^\d+$/.test(PREV_N);let PREVIEW=false;
 const forumPrompts = [
             "¡Bienvenido a la comunidad! Preséntate brevemente y comparte desde qué ciudad te estás conectando para estudiar esta Gran Historia.",
             "Recordando que Dios es el protagonista de la Creación y nos diseñó para relacionarnos con Él, ¿cómo cambiaría la perspectiva de nuestra semana si dejáramos de ver a Dios como un 'asistente' para nuestros planes y comenzáramos a verlo como el Autor que ya diseñó nuestro propósito?",
@@ -605,7 +606,7 @@ async function cargarProgreso(){
 const tope=()=>Math.max(maxPaso,terminado?TOTAL_PASOS:0);
 async function irACursos(){
   $('saludo').textContent=perfil.nombre_apellido+' · '+perfil.iglesia;ver('view-cursos');}
-function volver(){guardar();if(canal)sb.removeChannel(canal),canal=null;clearInterval(pollG);abrirHub();}
+function volver(){if(PREVIEW){if(window.opener){window.close();}else{history.back();}return;}guardar();if(canal)sb.removeChannel(canal),canal=null;clearInterval(pollG);abrirHub();}
 
 async function cargarAsistencia(){
   const box=$('asist');const {data,error}=await sb.rpc('ev_mi_asistencia',{p_curso:CURSO});
@@ -623,12 +624,14 @@ document.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset
   dirty.add(k);$('guardado').textContent='Guardando…';clearTimeout(tm);tm=setTimeout(guardar,800);
   if(e.target.id==='shared-textarea')grupoSucio=true;});
 async function guardar(){
+  if(PREVIEW){dirty.clear();return;}
   if(!dirty.size)return;const ks=[...dirty];dirty.clear();
   const rows=ks.map(k=>({perfil_id:user.id,curso:CURSO,clave:k,texto:document.querySelector('[data-k="'+k+'"]').value,updated_at:new Date().toISOString()}));
   const {error}=await sb.from('ev_respuestas').upsert(rows,{onConflict:'perfil_id,curso,clave'});
   if(error){console.error(error);ks.forEach(k=>dirty.add(k));$('guardado').textContent='⚠ No se pudo guardar';}else $('guardado').textContent='Guardado ✓';}
 async function abrirCurso(irA){
   ver('view-curso');
+  if(PREVIEW){terminado=false;step=0;maxPaso=TOTAL_PASOS;grupo=null;equipo=[];document.querySelectorAll('[data-k]').forEach(t=>t.value='');$('guardado').textContent='';mostrarPaso();return;}
   await sb.from('ev_progreso').upsert({perfil_id:user.id,curso:CURSO},{onConflict:'perfil_id,curso',ignoreDuplicates:true});
   await cargarProgreso();
   const {data}=await sb.from('ev_respuestas').select('clave,texto').eq('perfil_id',user.id).eq('curso',CURSO);
@@ -643,6 +646,7 @@ async function abrirCurso(irA){
   mostrarPaso();}
 async function nextStep(i){
   await guardar();step=i;maxPaso=Math.max(maxPaso,i);mostrarPaso();
+  if(PREVIEW)return;
   sb.from('ev_progreso').upsert({perfil_id:user.id,curso:CURSO,paso_actual:i,paso_max:maxPaso,updated_at:new Date().toISOString()},{onConflict:'perfil_id,curso'}).then(()=>{});}
 const ETIQ0=['Inicio','Acto 1','Acto 2','Acto 3','Acto 4','📝 Tarea'];let ETIQ=ETIQ0;
 function pintarStepper(){
@@ -655,6 +659,7 @@ function mostrarPaso(){
   pintarCanal();cargarForo();
   clearInterval(pollG);if(step===5)cargarGrupo();}
 async function finalizarSemana(){
+  if(PREVIEW)return alert('Vista previa: aquí se finalizaría la lección. No se guardó nada.');
   await guardar();
   await sb.from('ev_progreso').upsert({perfil_id:user.id,curso:CURSO,paso_actual:5,paso_max:5,completado:true,updated_at:new Date().toISOString()},{onConflict:'perfil_id,curso'});
   alert('¡Has finalizado todas las tareas de la semana!');volver();}
@@ -683,12 +688,14 @@ function pintarMsg(r){
   box.scrollTop=box.scrollHeight;}
 async function cargarForo(){
   idsForo.clear();$('chat-messages').innerHTML='';
+  if(PREVIEW){$('chat-messages').innerHTML='<div class="message"><div class="body" style="color:#888">👁 Vista previa: el foro no se carga ni se escribe aquí.</div></div>';return;}
   if((canalSel==='grupo'&&!grupo)||(canalSel==='grupo'?!CFG.grupo:!CFG.foro))return;
   let q=sb.from('ev_foro').select('*').eq('curso',CURSO).eq('paso',pasoChat()).eq('oculto',false).order('created_at').limit(200);
   q=foroGrupo?q.eq('grupo_id',foroGrupo):q.is('grupo_id',null);
   const {data}=await q;(data||[]).forEach(pintarMsg);
   if(!data||!data.length)$('chat-messages').innerHTML='<div class="message"><div class="body" style="color:#888">Aún no hay comentarios. ¡Sé el primero en escribir!</div></div>';}
 async function postToForum(){
+  if(PREVIEW)return alert('Vista previa: no se envían mensajes.');
   const inp=$('forum-input'),t=inp.value.trim();if(!t||(canalSel==='grupo'&&!grupo))return;inp.value='';
   const {data,error}=await sb.from('ev_foro').insert({curso:CURSO,paso:pasoChat(),grupo_id:foroGrupo,perfil_id:user.id,
     autor_nombre:perfil.nombre_apellido,autor_iglesia:perfil.iglesia,mensaje:t}).select().single();
@@ -727,10 +734,12 @@ async function refrescarGrupo(forzar){
   const b=$('btn-approve');b.hidden=s.aprobado;b.textContent=yo&&yo.firmado?'↩ Retirar mi firma':'✅ Aprobar este texto final';b.dataset.firmado=yo&&yo.firmado?'1':'';
   $('g-estado').textContent=s.aprobado?'🔒 Aprobado: texto cerrado':'✏️ En edición';}
 async function saveDraft(){
+  if(PREVIEW)return alert('Vista previa: no se guarda nada.');
   const t=$('shared-textarea').value;if(!t.trim())return alert('El borrador está vacío.');
   const {error}=await sb.rpc('ev_guardar_texto_grupo',{p_grupo:grupo.id,p_tarea:TAREA,p_contenido:t});
   if(error)return alert(error.message);grupoSucio=false;await refrescarGrupo(true);alert('Borrador guardado. Tu equipo verá esta versión.');}
 async function firmar(){
+  if(PREVIEW)return alert('Vista previa: no se registra ninguna firma.');
   if(grupoSucio)return alert('Guarda tu borrador antes de firmar.');
   const quitar=$('btn-approve').dataset.firmado==='1';
   const {error}=await sb.rpc('ev_firmar_grupo',{p_grupo:grupo.id,p_tarea:TAREA,p_firmar:!quitar});
@@ -738,12 +747,12 @@ async function firmar(){
 
 
 // ---------- LECCIONES ----------
-const TIT={0:'Introducción: El Choque de Historias',1:'Lección 1: El Marco del Evangelio'};
+const TIT={0:'Introducción: El Choque de Historias',1:'Lección 1: El Marco del Evangelio',2:'Lección 2: Aparentando y Cumpliendo',3:'Lección 3: Creyendo en el Evangelio',4:'Lección 4: La Ley y el Evangelio',5:'Lección 5: El Arrepentimiento',6:'Lección 6: La Idolatría del Corazón',7:'Lección 7: La Misión',8:'Lección 8: El Perdón',9:'Lección 9: El Conflicto'};
 const claveL=n=>n===0?BASE:BASE+'-l'+n;
 async function abrirHub(){
   ver('view-lecciones');const box=$('lista-lecc');box.innerHTML='<p>Cargando…</p>';
   const {data}=await sb.from('ev_lecciones').select('*').order('id');const m={};(data||[]).forEach(r=>m[r.id]=r);
-  LECS=[0,1,2,3,4,5,6,7,8,9].map(i=>Object.assign({id:i,titulo:TIT[i]||'Lección '+i,abierta:(!data||!data.length)&&i===0,foro:true,grupo:true},m[i]||{}));
+  LECS=[0,1,2,3,4,5,6,7,8,9].map(i=>Object.assign({id:i,titulo:TIT[i]||'Lección '+i,abierta:(!data||!data.length)&&i===0,foro:true,grupo:true},m[i]||{},{titulo:TIT[i]||(m[i]&&m[i].titulo)||'Lección '+i}));
   const {data:pr}=await sb.from('ev_progreso').select('curso,paso_max,completado').eq('perfil_id',user.id).in('curso',LECS.map(l=>claveL(l.id)));
   const P={};(pr||[]).forEach(r=>P[r.curso]=r);
   const A={};await Promise.all(LECS.filter(l=>l.abierta).map(async l=>{const {data:a}=await sb.rpc('ev_mi_asistencia',{p_curso:claveL(l.id)});A[l.id]=a;}));
@@ -827,9 +836,22 @@ const LEC1={etiq:['Módulo 1','Módulo 2','Módulo 3','Módulo 4','Módulo 5','�
 <div id="grupo-box"></div></div>
 <div class="navigation-bar"><button class="btn btn-secondary" onclick="nextStep(4)">Volver al Módulo 5</button><button class="btn" onclick="finalizarSemana()">Finalizar Lección 1</button></div>`]};
 
+// ---------- VISTA PREVIA (solo administradores; no guarda ni registra nada) ----------
+async function abrirPreview(n){
+  let ok=false;try{const {data}=await sb.rpc('ev_es_admin');ok=data===true;}catch(e){}
+  if(!ok||n>1){history.replaceState(null,'',location.pathname);return entrar();}
+  PREVIEW=true;
+  const b=document.createElement('div');b.id='banner-prev';
+  b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#7d3c98;color:#fff;text-align:center;padding:6px 10px;font:600 .85rem Poppins,system-ui,sans-serif';
+  b.textContent='👁 VISTA PREVIA (administrador) — no se guarda ni se registra nada';
+  document.body.appendChild(b);document.body.style.paddingTop='30px';
+  LECS=[{id:n,titulo:TIT[n],abierta:true,foro:false,grupo:false}];
+  await abrirLeccion(n);}
+
 // ---------- INICIO ----------
 sb.auth.getSession().then(({data})=>{
   if(EN_RECUPERACION){ if(data.session){user=data.session.user;} return ver('view-nueva-pass'); }
+  if(data.session&&PREV_REQ){user=data.session.user;return abrirPreview(+PREV_N);}
   if(data.session){user=data.session.user;entrar();}
   else{ver('view-auth');if(ENLACE_VENCIDO)msg('auth-msg','El enlace venció o ya se usó. Toca "¿Olvidaste tu contraseña?" para pedir uno nuevo.');}});
 </script>
