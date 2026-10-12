@@ -32,6 +32,7 @@ th{font-size:.75rem;text-transform:uppercase;color:var(--mut)}small{color:var(--
 .grid th,.grid td{text-align:center;white-space:nowrap}.grid .col-p{position:sticky;left:0;background:#fff;min-width:170px;text-align:left;z-index:1;white-space:normal}
 .grid th.col-clase{min-width:120px;font-weight:400;font-size:.8rem;text-transform:none;color:#1d1d1b}.grid th.col-clase .btn{margin-top:4px}
 .cb{border:1px solid #ddd;background:#fff;border-radius:6px;width:44px;height:34px;font-size:1.1rem;cursor:pointer}.cb.si{background:#d5f5e3;border-color:#abebc6}.cb.no{background:#fadbd8;border-color:#f1a9a0}
+#lecbar{position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:1px solid var(--bd);padding:8px 24px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .login{max-width:360px;margin:80px auto;text-align:center}.login input{width:100%;margin-bottom:10px}.err{color:#b03a2e;min-height:1.3em;margin-top:8px}
 </style></head><body>
 
@@ -46,12 +47,13 @@ th{font-size:.75rem;text-transform:uppercase;color:var(--mut)}small{color:var(--
 
 <section id="s-app" hidden>
 <header><img src="logo-evangelio-vida.png" alt="Evangelio & Vida"><div><b>Panel del curso</b> · <select id="sel-lecc" onchange="location.search=this.value?'?l='+this.value:''"><option value="">Introducción</option><option value="1">Lección 1</option><option value="2">Lección 2</option><option value="3">Lección 3</option><option value="4">Lección 4</option><option value="5">Lección 5</option><option value="6">Lección 6</option><option value="7">Lección 7</option><option value="8">Lección 8</option><option value="9">Lección 9</option></select> · <a class="btn o s" href="admin.html" style="text-decoration:none;display:inline-block">← Panel general</a> <button class="btn o s" onclick="cargar()">↻ Actualizar</button> <button class="btn o s" onclick="salir()">Salir</button></div></header>
+<nav id="lecbar"></nav>
 <main>
 <div class="kpis" id="kpis"></div>
 <details class="card" id="lecc-panel" ontoggle="if(this.open)cargarLecc()" style="margin-bottom:12px"><summary><b>📚 Habilitar lecciones y herramientas de la semana</b></summary>
   <p style="font-size:.9rem;margin:8px 0">Con “👁 Ver” abres la lección en vista previa: sin guardar nada y aunque no esté visible. Marca qué lección ven los participantes y si esa semana usan el foro de la comunidad y el chat/taller de grupo. Para ver personas, grupos y asistencia de una lección, cámbiala arriba, junto a “Panel del curso”.</p>
   <div class="scroll"><table><thead><tr><th>Lección</th><th>Visible</th><th>Foro comunidad</th><th>Chat/taller grupo</th><th>Vista previa</th></tr></thead><tbody id="tb-lecc"></tbody></table></div></details>
-<div class="tabs"><button class="btn on" data-t="personas">👥 Personas</button><button class="btn" data-t="respuestas">📝 Respuestas</button><button class="btn" data-t="foro">💬 Foro</button><button class="btn" data-t="grupos">🧩 Grupos</button><button class="btn" data-t="asistencia">✅ Asistencia</button></div>
+<div class="tabs"><button class="btn on" data-t="personas">👥 Personas</button><button class="btn" data-t="respuestas">📝 Respuestas</button><button class="btn" data-t="foro">💬 Foro</button><button class="btn" data-t="grupos">🧩 Grupos</button><button class="btn" data-t="esquema">🗂 Esquema por lección</button><button class="btn" data-t="asistencia">✅ Asistencia</button></div>
 
 <div id="t-personas" class="card"><div class="bar"><input type="search" id="q" placeholder="Buscar por nombre, correo o iglesia…">
   <label><input type="checkbox" id="activos" checked> Solo con actividad en el curso</label><button class="btn" onclick="cargarPersonas()">Buscar</button></div>
@@ -63,12 +65,15 @@ th{font-size:.75rem;text-transform:uppercase;color:var(--mut)}small{color:var(--
     <label><input type="checkbox" id="foro-ocultos" onchange="pintarForo()"> Mostrar ocultos</label>
     <input id="foro-q" placeholder="Buscar texto o autor…" oninput="pintarForo()" style="flex:1;min-width:160px"></div>
   <div class="scroll"><table><thead><tr><th>Fecha</th><th>Paso</th><th>Canal</th><th>Autor</th><th>Mensaje</th><th></th></tr></thead><tbody id="tb-foro"></tbody></table></div></div>
-<div id="t-grupos" hidden><div class="card"><div class="bar"><input id="ng" placeholder="Nombre del nuevo grupo (ej. Grupo 1)"><button class="btn" onclick="crearGrupo()">+ Crear grupo</button></div>
+<div id="t-grupos" hidden><div class="card" id="lec-ban" style="background:#F3F1E0"></div><div class="card"><div class="bar"><input id="ng" placeholder="Nombre del nuevo grupo (ej. Grupo 1)"><button class="btn" onclick="crearGrupo()">+ Crear grupo</button></div>
   <small>Para meter a alguien en un grupo, hazlo desde la pestaña Personas (columna Grupo).</small></div><div id="lista-grupos"></div></div>
+<div id="t-esquema" hidden><div class="card"><div class="bar"><b>🗂 Esquema de grupos por lección</b><input type="search" id="esq-q" placeholder="Buscar persona…" oninput="pintarEsquema()"><button class="btn o s" onclick="cargarEsquema()">↻ Recargar</button></div>
+  <small>Cada columna es una lección con sus propios grupos. Elige el grupo de cada persona en cada lección. Con “Copiar de…” traes los grupos y sus integrantes desde otra lección (después puedes ajustar). Para crear un grupo nuevo en una lección usa el botón “+ grupo” de su columna.</small></div>
+  <div class="card"><div class="scroll" id="esq-box"></div></div></div>
 <div id="t-asistencia" hidden>
- <div class="card"><div class="bar"><b>➕ Nueva clase</b><input type="date" id="nc-fecha"><input id="nc-tit" placeholder="Nombre (ej. Clase 1)"><button class="btn" onclick="crearClase()">Crear clase</button></div>
+ <div class="card"><div class="bar"><b>➕ Nueva clase</b><select id="nc-lec"></select><input type="date" id="nc-fecha"><input id="nc-tit" placeholder="Nombre (opcional)"><input id="nc-parte" placeholder="Parte (opcional, ej. 2)" style="width:160px"><button class="btn" onclick="crearClase()">Crear clase</button></div>
   <div class="bar"><label>Asistencia mínima para aprobar: <input type="number" id="min-asis" min="0" max="100" style="width:70px"> %</label><button class="btn o s" onclick="guardarMin()">Guardar</button></div>
-  <small>Cada clase aparece como una columna nueva. Toca una celda para marcar: · sin marcar → ✅ asistió → ❌ no asistió → sin marcar. En una clase ya tomada, quien queda sin marcar cuenta como ausente.</small></div>
+  <small>El porcentaje se calcula sobre <b>todas las clases de todas las lecciones</b>. Si una lección no alcanzó en una sola reunión, créala dos veces (Parte 1 y Parte 2) o usa ✂ en la columna: cada parte cuenta como una clase para la asistencia, sin cambiar el estudio de la lección. Cada clase aparece como una columna nueva. Toca una celda para marcar: · sin marcar → ✅ asistió → ❌ no asistió → sin marcar. En una clase ya tomada, quien queda sin marcar cuenta como ausente.</small></div>
  <div class="card"><div class="bar"><input type="search" id="fa" placeholder="Buscar persona…" oninput="buscarAsis()"><label><input type="checkbox" id="todos-perf" onchange="cargarAsisPersonas()"> Ver todos los perfiles (no solo los inscriptos al curso)</label></div>
   <div class="scroll" id="lista-asis"></div></div>
 </div>
@@ -87,6 +92,13 @@ const LBL={intro_q1:'Punto de partida',micro_historia:'Taller · Mi micro-histor
 const label=k=>LBL[k]||k.replace(/^acto(\d)_q(\d)$/,'Acto $1 · Pregunta $2');
 async function rpc(n,a){const {data,error}=await sb.rpc(n,a);if(error){alert(error.message);throw error;}return data;}
 
+const KEYS=[...Array(10).keys()].map(n=>'vida-centrada-evangelio'+(n?'-l'+n:''));
+const LT=['Introducción: El Choque de Historias','Lección 1: El Marco del Evangelio','Lección 2: Aparentando y Cumpliendo','Lección 3: Creyendo en el Evangelio','Lección 4: La Ley y el Evangelio','Lección 5: El Arrepentimiento','Lección 6: La Idolatría del Corazón','Lección 7: La Misión','Lección 8: El Perdón','Lección 9: El Conflicto'];
+const TAREA_L=i=>i?'taller-l'+i:'gran-historia';
+const lecCorta=i=>i?'Lección '+i:'Introducción';
+function irL(n){location.href=location.pathname+(n?'?l='+n:'')+location.hash;}
+$('lecbar').innerHTML='<b style="color:var(--gd)">Lección activa:</b> '+LT.map((t,i)=>'<button class="btn '+(String(i||'')===LQ?'':'o ')+'s" title="'+esc(t)+'" onclick="irL('+i+')">'+(i?'Lec. '+i:'Intro')+'</button>').join('')+' <span style="margin-left:6px;font-weight:600;color:var(--gd)">'+esc(LT[+LQ||0])+'</span>';
+$('lec-ban').innerHTML='🧩 <b>Estás armando los grupos de: '+esc(LT[+LQ||0])+'</b><br><small>Cada lección tiene sus propios grupos. Para otra lección usa la barra de arriba, o abre el <a href="#esquema" onclick="document.querySelector(\'[data-t=esquema]\').click();return false">🗂 Esquema por lección</a> para ver y asignar todas juntas.</small>';
 async function entrar(){$('err').textContent='';
   const {error}=await sb.auth.signInWithPassword({email:$('em').value.trim(),password:$('pw').value});
   if(error)return $('err').textContent='No pudimos ingresar: '+error.message;init();}
@@ -97,10 +109,10 @@ async function init(){
   if(!ok){$('s-login').hidden=true;$('s-no').hidden=false;const m=s.session.user.email;
     $('no-msg').innerHTML=e0?'No pude verificar tu permiso: <code>'+esc(e0.message)+'</code><br>Probablemente falta correr <b>evangelioyvida-admin.sql</b> en Supabase.':'Estás conectado como <b>'+esc(m)+'</b>, pero esta cuenta todavía no figura como administradora de este curso.<br>Corre esto una vez en el SQL Editor de Supabase:';
     $('no-sql').textContent=e0?'':"insert into ev_admins (perfil_id) select id from perfiles where correo = '"+m.replace(/'/g,"''")+"' on conflict do nothing;";return;}
-  $('s-login').hidden=true;$('s-app').hidden=false;cargar();}
+  $('s-login').hidden=true;$('s-app').hidden=false;cargar();const h=location.hash.slice(1),hb=h&&document.querySelector('.tabs [data-t="'+h+'"]');if(hb)hb.click();}
 document.querySelectorAll('.tabs .btn').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.tabs .btn').forEach(x=>x.classList.toggle('on',x===b));
-  ['personas','respuestas','foro','grupos','asistencia'].forEach(t=>$('t-'+t).hidden=t!==b.dataset.t);if(b.dataset.t==='personas'&&personas.length)pintarPersonas();});
+  ['personas','respuestas','foro','grupos','esquema','asistencia'].forEach(t=>$('t-'+t).hidden=t!==b.dataset.t);history.replaceState(null,'','#'+b.dataset.t);if(b.dataset.t==='personas'&&personas.length)pintarPersonas();if(b.dataset.t==='esquema')cargarEsquema();});
 async function cargarLecc(){
   const {data}=await sb.from('ev_lecciones').select('*').order('id');
   $('tb-lecc').innerHTML=(data||[]).map(l=>'<tr data-id="'+l.id+'"><td>'+esc(l.titulo)+'</td>'+['abierta','foro','grupo'].map(k=>'<td><input type="checkbox" '+(l[k]?'checked ':'')+'onchange="guardarLecc('+l.id+')" data-c="'+k+'"></td>').join('')+'<td>'+(l.id<=1?'<button class="btn" onclick="window.open(\'evangelioyvida.html?preview='+l.id+'\',\'_blank\')">👁 Ver</button>':'<small>—</small>')+'</td></tr>').join('')||'<tr><td colspan="5"><small>Ejecuta lecciones.sql en Supabase.</small></td></tr>';}
@@ -165,6 +177,40 @@ async function cargarGrupos(){grupos=await rpc('ev_admin_grupos',{p_curso:CURSO,
     '<details style="margin-top:10px"><summary>Ver texto del grupo</summary><p style="white-space:pre-wrap;margin-top:8px">'+(esc(g.contenido)||'<small>Aún no escribieron nada.</small>')+'</p></details></div>').join('')||'<div class="card"><small>Todavía no hay grupos. Crea el primero arriba.</small></div>';}
 async function crearGrupo(){const n=$('ng').value.trim();if(!n)return;await rpc('ev_admin_crear_grupo',{p_curso:CURSO,p_nombre:n});$('ng').value='';await cargarGrupos();await cargarPersonas();}
 async function reabrir(id){if(!confirm('Se borran las firmas y el grupo podrá editar de nuevo. ¿Continuar?'))return;await rpc('ev_admin_reabrir',{p_grupo:id,p_tarea:TAREA});await cargarGrupos();}
+// ---------- ESQUEMA DE GRUPOS POR LECCIÓN ----------
+let ESQ={pers:[],gr:[]};
+async function cargarEsquema(){$('esq-box').innerHTML='<small>Cargando todas las lecciones…</small>';
+  const [gs,ps]=await Promise.all([
+    Promise.all(KEYS.map((k,i)=>sb.rpc('ev_admin_grupos',{p_curso:k,p_tarea:TAREA_L(i)}).then(r=>r.data||[]))),
+    Promise.all(KEYS.map(k=>sb.rpc('ev_admin_personas',{p_curso:k,p_q:'',p_solo_activos:false}).then(r=>r.data||[])))]);
+  ESQ.gr=gs;const m=new Map();
+  ps.forEach((arr,i)=>arr.forEach(p=>{let o=m.get(p.id);if(!o){o={id:p.id,nombre:p.nombre,iglesia:p.iglesia,g:{}};m.set(p.id,o);}o.g[i]=p.grupo_id||'';}));
+  ESQ.pers=[...m.values()].sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'));pintarEsquema();}
+function pintarEsquema(){
+  const f=($('esq-q').value||'').trim().toLowerCase(),L=ESQ.pers.filter(p=>!f||(p.nombre||'').toLowerCase().includes(f));
+  const ths=KEYS.map((k,i)=>'<th style="min-width:130px;text-transform:none"><b>'+(i?'Lec. '+i:'Intro')+'</b><br><small>'+ESQ.gr[i].length+' grupos</small><br>'+
+    '<select onchange="copiarGrupos('+i+',this.value);this.value=\'\'" style="max-width:130px;font-size:.75rem"><option value="">Copiar de…</option>'+KEYS.map((_,j)=>j===i?'':'<option value="'+j+'">'+(j?'Lec. '+j:'Intro')+'</option>').join('')+'</select><br>'+
+    '<button class="btn o s" style="margin-top:4px" onclick="nuevoGrupoEsq('+i+')">+ grupo</button></th>').join('');
+  const rows=L.map(p=>'<tr><td class="col-p"><b>'+esc(p.nombre)+'</b><br><small>'+esc(p.iglesia)+'</small></td>'+KEYS.map((k,i)=>'<td><select onchange="asignarEsq(\''+p.id+'\','+i+',this.value)" style="max-width:130px;font-size:.8rem"><option value="">—</option>'+ESQ.gr[i].map(g=>'<option value="'+g.id+'"'+(p.g[i]===g.id?' selected':'')+'>'+esc(g.nombre)+'</option>').join('')+'</select></td>').join('')+'</tr>').join('');
+  $('esq-box').innerHTML='<table class="grid"><thead><tr><th class="col-p">Persona ('+L.length+')</th>'+ths+'</tr></thead><tbody>'+(rows||'<tr><td colspan="11"><small>Nadie coincide.</small></td></tr>')+'</tbody></table>';}
+async function asignarEsq(p,i,g){
+  try{await rpc('ev_admin_asignar',{p_curso:KEYS[i],p_perfil:p,p_grupo:g||null});}catch(e){return cargarEsquema();}
+  const o=ESQ.pers.find(x=>x.id===p);if(o)o.g[i]=g;if(KEYS[i]===CURSO){cargarGrupos();}}
+async function nuevoGrupoEsq(i){const n=prompt('Nombre del nuevo grupo para '+LT[i]+':');if(!n||!n.trim())return;
+  await rpc('ev_admin_crear_grupo',{p_curso:KEYS[i],p_nombre:n.trim()});
+  ESQ.gr[i]=await rpc('ev_admin_grupos',{p_curso:KEYS[i],p_tarea:TAREA_L(i)});pintarEsquema();if(KEYS[i]===CURSO)cargarGrupos();}
+async function copiarGrupos(dest,src){
+  if(src===''||+src===dest)return;src=+src;const ns=ESQ.gr[src];
+  if(!ns.length)return alert('Esa lección todavía no tiene grupos.');
+  if(!confirm('Se crearán en '+LT[dest]+' los grupos que falten ('+ns.map(g=>g.nombre).join(', ')+') y cada persona pasará al mismo grupo que tiene en '+LT[src]+'. ¿Continuar?'))return;
+  const have=new Set(ESQ.gr[dest].map(g=>g.nombre));
+  for(const g of ns)if(!have.has(g.nombre))await rpc('ev_admin_crear_grupo',{p_curso:KEYS[dest],p_nombre:g.nombre});
+  const nuevos=await rpc('ev_admin_grupos',{p_curso:KEYS[dest],p_tarea:TAREA_L(dest)});ESQ.gr[dest]=nuevos;
+  const porNombre=new Map(nuevos.map(g=>[g.nombre,g.id])),nomSrc=new Map(ns.map(g=>[g.id,g.nombre]));
+  for(const p of ESQ.pers){const sg=p.g[src];if(!sg)continue;const did=porNombre.get(nomSrc.get(sg));
+    if(did&&p.g[dest]!==did){await rpc('ev_admin_asignar',{p_curso:KEYS[dest],p_perfil:p.id,p_grupo:did});p.g[dest]=did;}}
+  pintarEsquema();if(KEYS[dest]===CURSO)cargarGrupos();}
+
 // ---------- ASISTENCIA ----------
 let asis={minimo:75,clases:[],marcas:[]},asisP=[],tq;
 const marca=(c,p)=>asis.marcas.find(m=>m.clase_id===c&&m.perfil_id===p);
@@ -174,14 +220,22 @@ const clasesAsc=()=>[...asis.clases].sort((a,b)=>a.fecha.localeCompare(b.fecha)|
 function asisTxt(id){const t=tomadas();if(!t.length)return '<small>—</small>';
   const n=t.filter(c=>{const m=marca(c.id,id);return m&&m.presente;}).length,pct=Math.round(n/t.length*100);
   return '<span class="tag'+(pct>=asis.minimo?' ok':'')+'">'+pct+'%</span> <small>'+n+'/'+t.length+'</small>';}
-async function cargarAsistencia(){asis=await rpc('ev_admin_asistencia',{p_curso:CURSO});$('min-asis').value=asis.minimo;await cargarAsisPersonas();}
-async function cargarAsisPersonas(){asisP=await rpc('ev_admin_personas',{p_curso:CURSO,p_q:$('fa').value.trim(),p_solo_activos:!$('todos-perf').checked});pintarAsistencia();}
+async function cargarAsistencia(){
+  const rs=await Promise.all(KEYS.map(k=>sb.rpc('ev_admin_asistencia',{p_curso:k}).then(r=>r.data||{minimo:75,clases:[],marcas:[]})));
+  asis={minimo:(rs[0]&&rs[0].minimo)||75,clases:[],marcas:[]};
+  rs.forEach((r,i)=>{(r.clases||[]).forEach(c=>asis.clases.push({...c,lec:i}));(r.marcas||[]).forEach(m=>asis.marcas.push(m));});
+  $('min-asis').value=asis.minimo;await cargarAsisPersonas();}
+async function cargarAsisPersonas(){
+  const q=$('fa').value.trim(),solo=!$('todos-perf').checked;
+  const rs=await Promise.all(KEYS.map(k=>sb.rpc('ev_admin_personas',{p_curso:k,p_q:q,p_solo_activos:solo}).then(r=>r.data||[])));
+  const m=new Map();rs.flat().forEach(p=>{if(!m.has(p.id))m.set(p.id,p);});
+  asisP=[...m.values()].sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'));pintarAsistencia();}
 function buscarAsis(){clearTimeout(tq);tq=setTimeout(cargarAsisPersonas,400);}
 function pintarAsistencia(){
   const cl=clasesAsc(),box=$('lista-asis');
   if(!cl.length){box.innerHTML='<small>Todavía no hay clases. Crea la primera arriba y aparecerá como una columna.</small>';return;}
-  const ths=cl.map(c=>'<th class="col-clase"><b>'+esc(c.titulo||'Clase')+'</b><br>'+fdia(c.fecha)+'<br><small>'+asis.marcas.filter(m=>m.clase_id===c.id&&m.presente).length+' asistieron</small><br>'+
-    '<button class="btn o s" onclick="todosClase(\''+c.id+'\')">✓ Todos</button> <a href="#" onclick="borrarClase(\''+c.id+'\');return false" title="Eliminar clase">🗑</a></th>').join('');
+  const ths=cl.map(c=>'<th class="col-clase"><small style="color:var(--gd);font-weight:600">'+(c.lec?'Lec. '+c.lec:'Intro')+'</small><br><b>'+esc(c.titulo||'Clase')+'</b><br>'+fdia(c.fecha)+'<br><small>'+asis.marcas.filter(m=>m.clase_id===c.id&&m.presente).length+' asistieron</small><br>'+
+    '<button class="btn o s" onclick="todosClase(\''+c.id+'\')">✓ Todos</button> <a href="#" onclick="dividirClase(\''+c.id+'\');return false" title="Agregar otra parte de esta lección (cuenta como otra clase)">✂</a> <a href="#" onclick="borrarClase(\''+c.id+'\');return false" title="Eliminar clase">🗑</a></th>').join('');
   const rows=asisP.map(p=>'<tr><td class="col-p"><b>'+esc(p.nombre)+'</b><br><small>'+esc(p.iglesia)+'</small></td>'+cl.map(c=>{const m=marca(c.id,p.id);
     return '<td><button class="cb '+(m?(m.presente?'si':'no'):'')+'" onclick="ciclo(\''+c.id+'\',\''+p.id+'\')">'+(m?(m.presente?'✅':'❌'):'·')+'</button></td>';}).join('')+'<td>'+asisTxt(p.id)+'</td></tr>').join('');
   box.innerHTML='<table class="grid"><thead><tr><th class="col-p">Persona ('+asisP.length+')</th>'+ths+'<th>Total</th></tr></thead><tbody>'+(rows||'<tr><td colspan="'+(cl.length+2)+'"><small>Nadie coincide. Prueba con "Ver todos los perfiles".</small></td></tr>')+'</tbody></table>';}
@@ -192,12 +246,18 @@ async function marcarVarios(c,ids,val){
 function ciclo(c,p){const m=marca(c,p);marcarVarios(c,[p],!m?true:(m.presente?false:null));}
 function todosClase(c){if(!asisP.length)return;if(confirm('Marcar como que asistieron a las '+asisP.length+' personas de la lista en esta clase?'))marcarVarios(c,asisP.map(p=>p.id),true);}
 async function crearClase(){const f=$('nc-fecha').value;if(!f)return alert('Elige la fecha de la clase.');
-  const t=$('nc-tit').value.trim()||('Clase '+(asis.clases.length+1));
-  await rpc('ev_admin_crear_clase',{p_curso:CURSO,p_fecha:f,p_titulo:t});$('nc-tit').value='';await cargarAsistencia();}
+  const lec=+$('nc-lec').value,parte=$('nc-parte').value.trim();
+  const t=$('nc-tit').value.trim()||(lecCorta(lec)+(parte?' · Parte '+parte:''));
+  await rpc('ev_admin_crear_clase',{p_curso:KEYS[lec],p_fecha:f,p_titulo:t});$('nc-tit').value='';$('nc-parte').value='';await cargarAsistencia();}
+async function dividirClase(id){const c=asis.clases.find(x=>x.id===id);if(!c)return;
+  const f=prompt('Fecha de la otra parte de esta lección (AAAA-MM-DD):',c.fecha);if(!f)return;
+  const n=asis.clases.filter(x=>x.lec===c.lec).length+1;
+  await rpc('ev_admin_crear_clase',{p_curso:KEYS[c.lec],p_fecha:f,p_titulo:lecCorta(c.lec)+' · Parte '+n});await cargarAsistencia();}
 async function borrarClase(id){if(!confirm('Se elimina la clase y toda su asistencia. ¿Continuar?'))return;
   await rpc('ev_admin_borrar_clase',{p_clase:id});await cargarAsistencia();pintarPersonas();}
 async function guardarMin(){const n=parseInt($('min-asis').value,10);if(isNaN(n)||n<0||n>100)return alert('Escribe un porcentaje entre 0 y 100.');
-  await rpc('ev_admin_config_asistencia',{p_curso:CURSO,p_minimo:n});asis.minimo=n;pintarAsistencia();pintarPersonas();alert('Mínimo guardado: '+n+'%');}
+  for(const k of KEYS)await rpc('ev_admin_config_asistencia',{p_curso:k,p_minimo:n});asis.minimo=n;pintarAsistencia();pintarPersonas();alert('Mínimo guardado: '+n+'%');}
+$('nc-lec').innerHTML=LT.map((t,i)=>'<option value="'+i+'">'+esc(lecCorta(i))+'</option>').join('');$('nc-lec').value=String(+LQ||0);
 $('nc-fecha').value=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
 init();
 </script></body></html>
