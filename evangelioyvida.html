@@ -673,8 +673,8 @@ function pintarCanal(){
   $('forum-input').placeholder=canalSel==='grupo'?'Escribe a tu grupo...':'Escribe a la comunidad...';
   $('forum-input').disabled=sinGrupo||off;document.querySelector('.chat-input-area .btn').disabled=sinGrupo||off;
   $('forum-prompt-text').innerHTML=off?'<strong>Este chat no está habilitado esta semana.</strong> Lo activaremos cuando la tarea lo necesite.':sinGrupo?'<strong>Todavía no tienes grupo.</strong> Cuando el administrador te asigne uno, podrás coordinar aquí con tu equipo.'
-    :canalSel==='grupo'?'<strong>Chat privado de '+esc(grupo.nombre||'tu grupo')+':</strong> solo lo ven los integrantes. Úsenlo para ponerse de acuerdo y presentar la tarea de la semana 1.'+(equipo.length?'<div class="approval-list" style="margin-top:10px">'+chipsEquipo()+'</div>':'')
-    :(step<5?forumPrompts[step]:'Comparte con toda la comunidad lo que Dios te ha mostrado esta semana y anima a otros con sus comentarios.');
+    :canalSel==='grupo'?'<strong>Chat privado de '+esc(grupo.nombre||'tu grupo')+':</strong> solo lo ven los integrantes. Úsenlo para ponerse de acuerdo y presentar la tarea de esta semana.'+(equipo.length?'<div class="approval-list" style="margin-top:10px">'+chipsEquipo()+'</div>':'')
+    :(step<5?((LECX[LECC]&&LECX[LECC].foro)||forumPrompts)[step]:'Comparte con toda la comunidad lo que Dios te ha mostrado esta semana y anima a otros con sus comentarios.');
   foroGrupo=canalSel==='grupo'&&tiene?grupo.id:null;}
 async function elegirCanal(c){
   if(c==='grupo'&&!grupo){const {data:g}=await sb.rpc('ev_mi_grupo',{p_curso:CURSO});grupo=(g&&g[0])||null;cargarEquipo();}
@@ -765,11 +765,11 @@ async function abrirHub(){
       '<div class="acciones"><button class="btn" onclick="abrirLeccion('+l.id+')">'+(r?'Continuar':'Comenzar')+'</button>'+(llego?'<button class="btn btn-secondary" onclick="abrirLeccion('+l.id+',5)">📝 Ir a la tarea</button>':'')+'</div></div>';}).join('');}
 async function abrirLeccion(n,irA){
   const L=LECS.find(x=>x.id===n);if(!L||!L.abierta)return;
-  if(n>1)return alert('El contenido de esta lección está en preparación.');
+  if(n>2)return alert('El contenido de esta lección está en preparación.');
   const els=[...document.querySelectorAll('.step-content')];if(!INTRO)INTRO=els.map(e=>e.innerHTML);
   LECC=n;CURSO=claveL(n);CFG={foro:L.foro!==false,grupo:L.grupo!==false};canalSel='comunidad';
   if(n===0){TAREA='gran-historia';ETIQ=ETIQ0;els.forEach((e,i)=>e.innerHTML=INTRO[i]);}
-  else{TAREA='taller-l'+n;ETIQ=LEC1.etiq;els.forEach((e,i)=>e.innerHTML=LEC1.pasos[i]);}
+  else{const LX=LECX[n];TAREA='taller-l'+n;ETIQ=LX.etiq;els.forEach((e,i)=>e.innerHTML=LX.pasos[i]);}
   await abrirCurso(irA);}
 // Contenido de la Lección 1
 const _q=(k,t)=>'<label><strong>'+t+'</strong></label><textarea data-k="'+k+'" placeholder="Escribe aquí..."></textarea>';
@@ -836,10 +836,61 @@ const LEC1={etiq:['Módulo 1','Módulo 2','Módulo 3','Módulo 4','Módulo 5','�
 <div id="grupo-box"></div></div>
 <div class="navigation-bar"><button class="btn btn-secondary" onclick="nextStep(4)">Volver al Módulo 5</button><button class="btn" onclick="finalizarSemana()">Finalizar Lección 1</button></div>`]};
 
+// Contenido de la Lección 2
+const _just=[
+['Justicia Laboral','“Soy una persona que trabaja mucho y bien, así que Dios tiene que recompensarme o me mirará con agrado.”'],
+['Justicia Familiar o de Crianza','“Porque mis hijos se portan bien y hago las cosas correctamente como padre/madre, soy más espiritual que otros.”'],
+['Justicia Teológica o Intelectual','“Tengo la doctrina correcta, he leído más libros y me expreso mejor; por lo tanto, Dios me prefiere y soy superior a los demás.”'],
+['Justicia de Horario o Disciplina','“Soy riguroso, organizado y autodisciplinado en la gestión de mi tiempo, lo cual me hace más maduro que los desordenados.”'],
+['Justicia Legalista','“Yo no bebo, no fumo, no voy a ciertos lugares ni me porto como esa clase de gente. Mi moralidad me guarda.”'],
+['Justicia de la Tolerancia o Misericordia','“Soy sumamente abierto, cuido de los pobres o acepto a todos sin juzgar; me parezco tanto a Jesús que eso me valida.”']];
+const LEC2={etiq:['Módulo 1','Módulo 2','Módulo 3','Módulo 4','Módulo 5','📝 Taller'],
+foro:['Comparte con el grupo qué parte de la introducción te hizo detenerte: ¿en qué momentos has soltado “las amarras” del Evangelio?','Si te animas, cuenta de dónde has sacado tu “credibilidad personal” últimamente y cómo se siente soltarla.','¿Qué imaginas que expresa el rostro de Dios cuando piensa en ti? Cuéntanos qué descubriste al responder con honestidad.','Comparte (si te sientes cómodo) un ejemplo de regla oculta que te hace sentir bien al cumplirse y molesto cuando se rompe.','¿Cómo ha afectado tu manera de amar a los demás el vivir dominado por tus reglas? Anímense unos a otros.'],
+pasos:[
+`<h2>Lección 2: Aparentando y Cumpliendo</h2><h3>Módulo 1 · Introducción</h3>
+<img class="historia-grafica" src="aparentarycompartir.jpg" alt="Reduciendo la Cruz: Aparentando y Cumpliendo">
+<p>En la primera lección vimos cómo el crecimiento espiritual implica una conciencia cada vez mayor de dos realidades: la infinita santidad de Dios (la línea superior) y nuestra profunda naturaleza pecaminosa (la línea inferior). Conforme estas dos realidades se separan, la Cruz se hace más grande y nuestro amor por Jesús se profundiza.</p>
+<p>Sin embargo, vivir con esa tensión no es fácil. Debido al pecado que aún mora en nosotros, nos desviamos de la verdad del Evangelio como una barca que suelta sus amarras. Cuando no estamos firmemente anclados en la obra de Cristo, terminamos “reduciendo la Cruz” de dos maneras muy sutiles pero destructivas: <strong>aparentando</strong> o <strong>cumpliendo</strong>.</p>`+_nav(0),
+`<h2>La Raíz del Problema: ¿De dónde sacamos nuestra “Credibilidad Personal”?</h2><h3>Módulo 2</h3>
+<p>Para entender nuestras tendencias ocultas, debemos hacernos una pregunta fundamental: <strong>¿En qué basas actualmente tu sentido de valor, aceptación y credibilidad personal?</strong></p>
+<p>Cuando no descansamos plenamente en la justicia de Jesús, buscamos fuentes sustitutas de justicia para edificar nuestra reputación y calmarnos. Esto se manifiesta de muchas formas en la vida diaria. Vamos a explorar algunas de las más comunes:</p>
+<ul>`+_just.map(x=>'<li><strong>'+x[0]+':</strong> '+x[1]+'</li>').join('')+`</ul>
+<h3>Pregunta de Reflexión Personal</h3>`
++_q('l2_m2_a','Revisando esta lista, ¿cuál de estas fuentes de “justicia funcional” es tu refugio secreto cuando quieres sentirte “lo suficientemente bueno” o superior a los demás?')+_nav(1),
+`<h2>¿Cómo se manifiestan el Aparentar y el Cumplir?</h2><h3>Módulo 3</h3>
+<div class="task-card"><h3 style="margin-top:0">Aparentar (minimizando nuestro pecado)</h3>
+<p>Mirar el fondo de nuestro corazón (“la madriguera del conejo”) da miedo. Significa admitir que no somos tan buenos como creíamos. Para evitar el peso de esa culpa, nos ponemos una careta. Usamos la deshonestidad, las comparaciones (“al menos no soy tan malo como aquel”), las excusas y la falsa justicia para autoconvencernos de que todo está bien.</p></div>
+<div class="task-card"><h3 style="margin-top:0">Cumplir (minimizando la santidad de Dios)</h3>
+<p>Enfrentarnos a la perfección de Dios es intimidante. Para compensar, rebajamos sus exigencias a un nivel que sí podamos alcanzar por nuestras propias fuerzas. Vivimos sobre una “cinta de correr” religiosa, intentando ganar la aprobación de Dios mediante el cumplimiento de expectativas (propias o ajenas).</p></div>
+<h3>La pregunta clave que revela tu concepto de Dios</h3>
+<p>Al pensar Dios en ti ahora mismo, <strong>¿cuál te imaginas que es la expresión de su rostro?</strong> ¿Decepción? ¿Enojo? ¿Indiferencia? ¿Una exigencia constante de “organízate de una vez”?</p>
+<p>Si imaginas a cualquier Dios que no esté profundamente satisfecho contigo, has caído en la mentalidad de cumplir. La verdad del Evangelio es que, basándose en la obra perfecta de Jesús, <strong>Dios ya está profundamente satisfecho contigo y te ha adoptado como su hijo o hija.</strong></p>`+_nav(2),
+`<h2>Taller Práctico: Lo Bueno y lo Malo</h2><h3>Módulo 4 · Nuestras Reglas Ocultas</h3>
+<p>Todos hemos construido reglas o normas por las cuales regimos nuestras vidas, pensando que si las guardamos, quedaremos más “justos” ante Dios y ante los demás. Curiosamente, estas reglas suelen ser cosas buenas (orden, puntualidad, control, respeto en el tráfico), pero las convertimos en leyes absolutas.</p>
+<p>Cuando la gente incumple nuestras reglas personales, sentimos que perdemos el control, nos enojamos y usamos esas normas para juzgar y condenar a los demás en lugar de usarlas para amar.</p>
+<h3>Pregunta de Aplicación Personal</h3>`
++_q('l2_m4_a','La regla oculta: da un ejemplo de alguna regla o expectativa no escrita que te hayas impuesto (para ti y para los demás) que te hace sentir bien cuando se cumple, pero profundamente molesto o deprimido cuando se rompe.')+_nav(3),
+`<h2>El Costo de Vivir Bajo Nuestras Reglas</h2><h3>Módulo 5</h3>
+<p>Ahora miremos con honestidad qué producen esas reglas en nuestro corazón y en nuestras relaciones.</p>
+<h3>Preguntas de Aplicación Personal</h3>`
++_q('l2_m5_a','La autojusticia: ¿cómo te ha dado esta dinámica de exigir el cumplimiento de tus propias normas un falso sentido de superioridad o autojusticia?')
++_q('l2_m5_b','El bloqueo al amor: ¿de qué manera concreta el dejarte dominar por estas reglas te impide amar genuinamente a las personas que te rodean?')
++'<p>Con este ejercicio cerramos los contenidos personales de la Lección 2: Aparentando y Cumpliendo.</p>'+_nav(4),
+`<h2 class="taller-title">Taller Grupal: Nuestras Reglas Frente a la Cruz</h2>
+<p><strong>Objetivo de la misión:</strong> reúnanse en su grupo asignado. Cada integrante compartirá, con honestidad y sin juzgar, algunas de las reglas ocultas que anotó. Después, redactarán juntos un texto que muestre cómo esas reglas —buenas en apariencia— terminan reduciendo la Cruz, y cómo cambia la vida cuando recibimos nuestra justicia de Jesús.</p>
+<div class="task-card task-group"><h3>👥 Tarea Grupal</h3>
+<p>Cada equipo trabajará en el lienzo compartido para redactar un texto unificado que responda a estas preguntas:</p><ol style="margin-left:22px;font-size:1.05rem;line-height:1.6">
+<li><strong>De lo neutral a lo moral:</strong> ¿cómo es que reglas que en sí mismas son neutrales o buenas llegan a convertirse en asuntos morales en nuestra mente? ¿Por qué tenemos un deseo tan grande de autojusticia?</li>
+<li><strong>Reglas que reducen la Cruz:</strong> ¿de qué manera nuestras reglas reducen la Cruz y nos impiden ver nuestro propio pecado?</li>
+<li><strong>La diferencia de Jesús:</strong> ¿qué diferencia práctica marcaría en nuestra vida recibir el sentimiento de justicia de parte de Jesús, y no de nuestras reglas? ¿Y cómo cambiaría la manera de tratar a quienes nos imponen las suyas?</li></ol>
+<div id="grupo-box"></div></div>
+<div class="navigation-bar"><button class="btn btn-secondary" onclick="nextStep(4)">Volver al Módulo 5</button><button class="btn" onclick="finalizarSemana()">Finalizar Lección 2</button></div>`]};
+const LECX={1:LEC1,2:LEC2};
+
 // ---------- VISTA PREVIA (solo administradores; no guarda ni registra nada) ----------
 async function abrirPreview(n){
   let ok=false;try{const {data}=await sb.rpc('ev_es_admin');ok=data===true;}catch(e){}
-  if(!ok||n>1){history.replaceState(null,'',location.pathname);return entrar();}
+  if(!ok||n>2){history.replaceState(null,'',location.pathname);return entrar();}
   PREVIEW=true;
   const b=document.createElement('div');b.id='banner-prev';
   b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#7d3c98;color:#fff;text-align:center;padding:6px 10px;font:600 .85rem Poppins,system-ui,sans-serif';
@@ -855,7 +906,5 @@ sb.auth.getSession().then(({data})=>{
   if(data.session){user=data.session.user;entrar();}
   else{ver('view-auth');if(ENLACE_VENCIDO)msg('auth-msg','El enlace venció o ya se usó. Toca "¿Olvidaste tu contraseña?" para pedir uno nuevo.');}});
 </script>
-</body>
-</html>t>
 </body>
 </html>
