@@ -115,7 +115,7 @@ document.querySelectorAll('.tabs .btn').forEach(b=>b.onclick=()=>{
   ['personas','respuestas','foro','grupos','esquema','asistencia'].forEach(t=>$('t-'+t).hidden=t!==b.dataset.t);history.replaceState(null,'','#'+b.dataset.t);if(b.dataset.t==='personas'&&personas.length)pintarPersonas();if(b.dataset.t==='esquema')cargarEsquema();});
 async function cargarLecc(){
   const {data}=await sb.from('ev_lecciones').select('*').order('id');
-  $('tb-lecc').innerHTML=(data||[]).map(l=>'<tr data-id="'+l.id+'"><td>'+esc(l.titulo)+'</td>'+['abierta','foro','grupo'].map(k=>'<td><input type="checkbox" '+(l[k]?'checked ':'')+'onchange="guardarLecc('+l.id+')" data-c="'+k+'"></td>').join('')+'<td>'+(l.id<=1?'<button class="btn" onclick="window.open(\'evangelioyvida.html?preview='+l.id+'\',\'_blank\')">👁 Ver</button>':'<small>—</small>')+'</td></tr>').join('')||'<tr><td colspan="5"><small>Ejecuta lecciones.sql en Supabase.</small></td></tr>';}
+  $('tb-lecc').innerHTML=(data||[]).map(l=>'<tr data-id="'+l.id+'"><td>'+esc(l.titulo)+'</td>'+['abierta','foro','grupo'].map(k=>'<td><input type="checkbox" '+(l[k]?'checked ':'')+'onchange="guardarLecc('+l.id+')" data-c="'+k+'"></td>').join('')+'<td>'+(l.id<=2?'<button class="btn" onclick="window.open(\'evangelioyvida.html?preview='+l.id+'\',\'_blank\')">👁 Ver</button>':'<small>—</small>')+'</td></tr>').join('')||'<tr><td colspan="5"><small>Ejecuta lecciones.sql en Supabase.</small></td></tr>';}
 async function guardarLecc(id){
   const r=document.querySelector('#tb-lecc tr[data-id="'+id+'"]'),v=k=>r.querySelector('[data-c="'+k+'"]').checked;
   await rpc('ev_admin_leccion',{p_id:id,p_abierta:v('abierta'),p_foro:v('foro'),p_grupo:v('grupo')});}
