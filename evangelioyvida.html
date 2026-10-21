@@ -175,6 +175,13 @@ body{display:block;height:auto;overflow:auto;font-family:'Poppins',system-ui,san
 .curso-card h3{margin:0 0 4px;color:var(--dark-green);font-size:1.05rem}
 .curso-card p{font-size:.85rem;color:var(--text-muted);margin:0}
 .barra{height:6px;background:#eee;border-radius:3px;margin-top:8px;overflow:hidden}.barra i{display:block;height:100%;background:var(--primary-green)}
+.asis-top{display:flex;align-items:center;gap:14px;margin:6px 0 12px}.asis-pct{font-size:2.3rem;line-height:1;color:var(--dark-green);font-weight:700}
+.asis-top small{color:var(--text-muted)}
+.asis-track{display:flex;gap:3px;margin:6px 0 4px}.asis-track i{flex:1;height:14px;border-radius:4px;background:#e9e7d6}.asis-track i.si{background:#52be80}.asis-track i.no{background:#e6877d}
+.asis-leg{font-size:.75rem;color:var(--text-muted);margin-bottom:10px}
+.asis-msg{font-size:.92rem;margin:8px 0}.asis-prox{font-size:.85rem;color:var(--dark-green);background:#F3F1E0;border-radius:8px;padding:8px 12px;margin-top:8px}
+#asist details{margin-top:10px;font-size:.85rem}#asist summary{cursor:pointer;color:var(--dark-green)}
+.asis-mini{font-size:.9rem;margin-bottom:12px;color:var(--dark-green)}
 .top{display:flex;justify-content:space-between;align-items:center;font-size:.85rem;margin-bottom:14px}
 .link{background:none;border:none;color:var(--dark-green);cursor:pointer;font:inherit;text-decoration:underline}
 header .link{font-size:.85rem}#guardado{font-size:.8rem;color:var(--text-muted);margin-right:12px}
@@ -318,6 +325,7 @@ header .link{font-size:.85rem}#guardado{font-size:.8rem;color:var(--text-muted);
   <div class="top"><button class="link" onclick="irACursos()">← Mis cursos</button><button class="link" onclick="salir()">Salir</button></div>
   <h2 style="color:var(--dark-green);margin-bottom:4px;font-size:1.3rem">Una Vida Centrada en el Evangelio</h2>
   <p style="margin-bottom:14px;color:var(--text-muted);font-size:.95rem">Cada semana se habilita una nueva lección.</p>
+  <div class="asis-mini" id="asist-mini"></div>
   <div id="lista-lecc"></div>
 </div></div>
 
@@ -605,18 +613,31 @@ async function cargarProgreso(){
   terminado=!!data?.completado;step=terminado?0:(data?.paso_actual||0);maxPaso=data?.paso_max||0;return data;}
 const tope=()=>Math.max(maxPaso,terminado?TOTAL_PASOS:0);
 async function irACursos(){
-  $('saludo').textContent=perfil.nombre_apellido+' · '+perfil.iglesia;ver('view-cursos');}
+  $('saludo').textContent=perfil.nombre_apellido+' · '+perfil.iglesia;ver('view-cursos');cargarAsistencia();}
 function volver(){if(PREVIEW){if(window.opener){window.close();}else{history.back();}return;}guardar();if(canal)sb.removeChannel(canal),canal=null;clearInterval(pollG);abrirHub();}
 
+let ASIS=null;
+async function asisData(){const {data,error}=await sb.rpc('ev_cal_mi_asistencia');ASIS=error?null:data;return ASIS;}
+function asisCalc(d){const cl=d.clases,total=cl.length,tom=cl.filter(c=>c.tomada),pres=tom.filter(c=>c.presente===true).length,rest=total-tom.length,need=Math.ceil(d.minimo*total/100),faltan=Math.max(0,need-pres);
+  return {cl,total,tom:tom.length,pres,aus:tom.length-pres,rest,need,faltan,pct:tom.length?Math.round(pres/tom.length*100):null,techo:total?Math.round((pres+rest)/total*100):0,ok:pres>=need,posible:faltan<=rest,prox:cl.find(c=>!c.tomada&&c.fecha>=d.hoy)};}
+const fAsis=f=>f.split('-').reverse().join('/');
 async function cargarAsistencia(){
-  const box=$('asist');const {data,error}=await sb.rpc('ev_mi_asistencia',{p_curso:CURSO});
-  if(error||!data){box.hidden=true;return;}
-  box.hidden=false;const h='<h3 style="color:var(--dark-green);margin-bottom:8px">Mi asistencia</h3>';
-  if(!data.total){box.innerHTML=h+'<p style="font-size:.9rem;color:var(--text-muted)">Todavía no se registraron clases. Aquí verás si asististe.</p>';return;}
-  const pct=Math.round(data.presentes/data.total*100),ok=pct>=data.minimo;
-  box.innerHTML=h+'<p><b style="font-size:1.6rem">'+pct+'%</b> <small>'+data.presentes+' de '+data.total+' clases</small></p><div class="barra"><i style="width:'+pct+'%"></i></div>'+
-    '<p style="margin:10px 0;font-size:.9rem">'+(ok?'✅ Tu asistencia alcanza el mínimo para aprobar ('+data.minimo+'%).':'Para aprobar necesitas al menos '+data.minimo+'% de asistencia.')+'</p>'+
-    data.clases.map(c=>'<span style="display:inline-block;margin:2px;padding:3px 10px;border-radius:12px;font-size:.8rem;'+(c.presente?'background:#d5f5e3;color:#1e8449':'background:#fadbd8;color:#b03a2e')+'">'+(c.presente?'✅ ':'❌ ')+c.fecha.split('-').reverse().join('/')+(c.titulo?' · '+esc(c.titulo):'')+'</span>').join('');}
+  const box=$('asist'),d=await asisData();
+  if(!d||!d.clases||!d.clases.length){box.hidden=true;return;}
+  const a=asisCalc(d);box.hidden=false;
+  const seg=a.cl.map(c=>'<i class="'+(!c.tomada?'':(c.presente?'si':'no'))+'" title="'+esc(c.titulo)+' · '+fAsis(c.fecha)+'"></i>').join('');
+  let msg;
+  if(!a.tom)msg='Todavía no se tomó asistencia. Son '+a.total+' clases en total: cada una que sumes te acerca al 100%.';
+  else if(a.pres===a.total)msg='¡Completaste el curso con 100% de asistencia! 🎉';
+  else if(!a.aus)msg='¡Vas con el 100%! Si asistes a las '+a.rest+' clases que quedan, cierras el curso con 100%.';
+  else{msg='Hasta ahora asististe a '+a.pres+' de '+a.tom+' clases. Con las '+a.rest+' que quedan puedes llegar hasta '+a.techo+'%.';
+    msg+=a.ok?' Ya alcanzaste el mínimo para aprobar ('+d.minimo+'%): ¡sigue sumando!':(a.posible?' Para aprobar (mínimo '+d.minimo+'%) te faltan '+a.faltan+(a.faltan===1?' clase':' clases')+' de las que quedan.':' Con las clases que quedan ya no se llega al mínimo de '+d.minimo+'%: habla con tu líder para ver cómo recuperar.');}
+  const dia=a.prox?new Date(a.prox.fecha+'T12:00:00').toLocaleDateString('es',{weekday:'long'}):'';
+  box.innerHTML='<h3 style="color:var(--dark-green);margin-bottom:4px">Mi asistencia</h3>'+
+    '<div class="asis-top"><b class="asis-pct">'+(a.pct===null?'—':a.pct+'%')+'</b><span>de las clases que ya se tomaron<br><small>'+a.pres+' de '+a.tom+' · quedan '+a.rest+' por venir (total '+a.total+')</small></span></div>'+
+    '<div class="asis-track">'+seg+'</div><div class="asis-leg">🟩 Asististe · 🟥 Faltaste · ⬜ Por venir</div>'+
+    '<p class="asis-msg">'+msg+'</p>'+(a.prox?'<div class="asis-prox">Próxima clase: <b>'+esc(a.prox.titulo)+'</b> · '+dia+' '+fAsis(a.prox.fecha)+'</div>':'')+
+    '<details><summary>Ver clase por clase</summary><div style="margin-top:8px">'+a.cl.map(c=>'<span style="display:inline-block;margin:2px;padding:3px 10px;border-radius:12px;font-size:.8rem;'+(!c.tomada?'background:#eee;color:#666':(c.presente?'background:#d5f5e3;color:#1e8449':'background:#fadbd8;color:#b03a2e'))+'">'+(!c.tomada?'⬜ ':(c.presente?'✅ ':'❌ '))+fAsis(c.fecha)+' · '+esc(c.titulo)+'</span>').join('')+'</div></details>';}
 
 // ---------- CURSO: respuestas, progreso ----------
 const dirty=new Set();let tm;
@@ -755,7 +776,7 @@ async function abrirHub(){
   LECS=[0,1,2,3,4,5,6,7,8,9].map(i=>Object.assign({id:i,titulo:TIT[i]||'Lección '+i,abierta:(!data||!data.length)&&i===0,foro:true,grupo:true},m[i]||{},{titulo:TIT[i]||(m[i]&&m[i].titulo)||'Lección '+i}));
   const {data:pr}=await sb.from('ev_progreso').select('curso,paso_max,completado').eq('perfil_id',user.id).in('curso',LECS.map(l=>claveL(l.id)));
   const P={};(pr||[]).forEach(r=>P[r.curso]=r);
-  const A={};await Promise.all(LECS.filter(l=>l.abierta).map(async l=>{const {data:a}=await sb.rpc('ev_mi_asistencia',{p_curso:claveL(l.id)});A[l.id]=a;}));
+  const A={},AS=await asisData();if(AS){LECS.forEach(l=>{const cs=AS.clases.filter(c=>c.lec===l.id&&c.tomada);A[l.id]={total:cs.length,presentes:cs.filter(c=>c.presente===true).length};});const q=asisCalc(AS);$('asist-mini').innerHTML=q.tom?'📅 Mi asistencia: <b>'+q.pct+'%</b> · '+q.pres+' de '+q.tom+' clases tomadas (total del curso: '+q.total+')':'';}
   box.innerHTML=LECS.map(l=>{
     const r=P[claveL(l.id)],pct=r?(r.completado?100:Math.round((r.paso_max||0)/TOTAL_PASOS*100)):0,a=A[l.id];
     if(!l.abierta)return '<div class="card leccion bloq"><h3>🔒 '+esc(l.titulo)+'</h3><p style="font-size:.9rem">Se habilitará en su semana.</p></div>';
