@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow"><link rel="manifest" href="manifest-evangelioyvida-asistencia.json">
+<link rel="apple-touch-icon" href="apple-touch-icon-ev.png">
+<meta name="theme-color" content="#8B894C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Asistencia EyV">
+<title>Asistencia · Evangelio & Vida</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--g:#8B894C;--gd:#5E5C2F;--bg:#F7F4EA;--bd:#E3DFC9;--mut:#666;--ok:#d5f5e3;--okd:#1e8449;--no:#fadbd8;--nod:#b03a2e}
+*{box-sizing:border-box;margin:0;padding:0}[hidden]{display:none!important}
+body{font-family:'Poppins',system-ui,sans-serif;background:var(--bg);color:#1d1d1b;font-size:15px;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+header{background:#fff;border-bottom:2px solid var(--g);padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top));display:flex;justify-content:space-between;align-items:center;gap:10px}
+header img{height:36px}header small{color:var(--mut);display:block;font-size:.75rem;text-align:right}
+.link{background:none;border:none;color:var(--gd);cursor:pointer;font:inherit;font-size:.8rem;text-decoration:underline}
+main{max-width:760px;margin:0 auto;padding:14px}
+.card{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:12px}
+input{font:inherit;font-size:16px;padding:11px 12px;border:1px solid #ccc;border-radius:8px;background:#fff;width:100%}
+.btn{background:var(--g);color:#fff;border:none;border-radius:8px;padding:11px 16px;font:inherit;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--gd)}.btn.o{background:#fff;color:var(--gd);border:1px solid var(--g)}.btn.s{padding:7px 12px;font-size:.85rem}
+.login{max-width:380px;margin:60px auto;text-align:center}.login h2{color:var(--gd);margin-bottom:6px}.login p{color:var(--mut);font-size:.88rem;margin-bottom:14px}
+.login input{margin-bottom:10px}.err{color:var(--nod);min-height:1.4em;margin-top:8px;font-size:.88rem}
+/* clases */
+#chips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+.chip{flex:0 0 auto;scroll-snap-align:center;background:#fff;border:1px solid var(--bd);border-radius:10px;padding:8px 12px;min-width:98px;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.chip b{display:block;font-size:.85rem;color:var(--gd)}.chip span{display:block;font-size:.75rem;color:var(--mut)}
+.chip.on{background:var(--g);border-color:var(--g)}.chip.on b,.chip.on span{color:#fff}
+.chip.fut{opacity:.55}.chip em{font-style:normal;font-size:.7rem;font-weight:600;color:var(--okd)}.chip.on em{color:#fff}
+.vista{display:flex;gap:8px;margin-bottom:10px}.vista .btn{flex:1}
+.vista .btn:not(.on){background:#fff;color:var(--gd);border:1px solid var(--bd)}
+.bar{display:flex;gap:8px;margin-bottom:10px}.bar input{flex:1}
+.filt{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}.filt .btn{padding:6px 12px;font-size:.8rem}
+.filt .btn:not(.on){background:#fff;color:var(--gd);border:1px solid var(--bd)}
+/* lista */
+.fila{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--bd)}
+.fila:last-child{border-bottom:none}.fila .n{flex:1;min-width:0}.fila b{display:block;font-weight:600;line-height:1.25}.fila small{color:var(--mut);font-size:.78rem}
+.cb{border:1px solid #d6d6d6;background:#fff;border-radius:10px;min-width:92px;height:46px;font:inherit;font-size:.9rem;font-weight:600;cursor:pointer;color:var(--mut)}
+.cb.si{background:var(--ok);border-color:#abebc6;color:var(--okd)}.cb.no{background:var(--no);border-color:#f1a9a0;color:var(--nod)}
+.cb:disabled{opacity:.45;cursor:not-allowed}
+/* planilla */
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}table{border-collapse:collapse;width:100%}
+th,td{padding:8px;border-bottom:1px solid var(--bd);text-align:center;white-space:nowrap}
+.col-p{position:sticky;left:0;background:#fff;text-align:left;min-width:150px;max-width:170px;white-space:normal;z-index:1;font-size:.85rem}
+th.cl{font-weight:400;font-size:.75rem;min-width:84px}th.cl b{display:block;color:var(--gd)}th.hoy{background:#F3F1E0}
+.g .cb{min-width:42px;height:36px;font-size:1rem}
+/* barra inferior */
+#pie{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:2px solid var(--g);padding:10px 16px calc(10px + env(safe-area-inset-bottom));z-index:20}
+#pie div.in{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:12px}
+#pie .t{flex:1;font-size:.88rem}#pie .t b{font-size:1.15rem;color:var(--gd)}
+.prog{height:6px;background:#eee;border-radius:3px;margin-top:5px;overflow:hidden}.prog i{display:block;height:100%;background:var(--g);transition:width .25s}
+#toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translateX(-50%);background:#1d1d1b;color:#fff;padding:9px 16px;border-radius:20px;font-size:.85rem;z-index:50;max-width:90%;text-align:center}
+#toast.mal{background:var(--nod)}
+.aviso{background:#F3F1E0;border-radius:8px;padding:10px 12px;font-size:.85rem;color:var(--gd);margin-bottom:10px}
+@media (prefers-reduced-motion:reduce){.prog i{transition:none}}
+</style></head><body>
+
+<section id="s-login" class="card login"><h2>Asistencia</h2><p>Evangelio &amp; Vida · ingresa con el correo y la contraseña con que te registraste en la plataforma.</p>
+  <input type="email" id="em" placeholder="Correo" autocomplete="username"><input type="password" id="pw" placeholder="Contraseña" autocomplete="current-password">
+  <button class="btn" style="width:100%" onclick="entrar()">Ingresar</button><p class="err" id="err"></p></section>
+
+<section id="s-no" class="card login" hidden><h2>Sin acceso</h2><p id="no-msg" style="margin:10px 0"></p>
+  <button class="btn o" onclick="salir()">Entrar con otra cuenta</button></section>
+
+<section id="s-app" hidden>
+<header><img src="logo-evangelio-vida.png" alt="Evangelio &amp; Vida"><div><b style="color:var(--gd)">Tomar asistencia</b><small><span id="quien"></span> · <button class="link" onclick="salir()">Salir</button></small></div></header>
+<main>
+  <div id="chips" role="tablist" aria-label="Clases"></div>
+  <div class="vista"><button class="btn on" id="v-lista" onclick="vista('lista')">Esta clase</button><button class="btn" id="v-plan" onclick="vista('plan')">Planilla completa</button></div>
+  <div id="aviso" class="aviso" hidden></div>
+  <div class="card" id="card-lista">
+    <div class="bar"><input type="search" id="q" placeholder="Buscar persona…" oninput="pintar()" aria-label="Buscar persona"></div>
+    <div class="filt" id="filt"></div>
+    <div id="lista"></div>
+  </div>
+  <div class="card" id="card-plan" hidden><div class="scroll" id="plan"></div></div>
+</main>
+<div id="pie"><div class="in"><div class="t"><span id="pie-t"></span><div class="prog"><i id="pie-b" style="width:0"></i></div></div>
+  <button class="btn o s" id="btn-todos" onclick="todos()">✓ Todos presentes</button></div></div>
+</section>
+<div id="toast" hidden></div>
+
+<script>
+const sb=window.supabase.createClient("https://wfwmyuuxceyulmkhogqr.supabase.co","sb_publishable_hrR11nillC0GtzH50LqQfQ_qEqX9FX6");
+const $=i=>document.getElementById(i);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let D={clases:[],personas:[],marcas:[],hoy:''},SEL=null,VISTA='lista',FILT='todos',tt;
+const fdia=d=>d.split('-').reverse().join('/'), corto=d=>d.split('-').reverse().slice(0,2).join('/');
+const dsem=d=>new Date(d+'T12:00:00').toLocaleDateString('es',{weekday:'long'});
+const tag=c=>c.lec?'Lec. '+c.lec:'Intro';
+const marca=(c,p)=>D.marcas.find(m=>m.clase_id===c&&m.perfil_id===p);
+const futura=c=>c.fecha>D.hoy;
+const tomada=c=>D.marcas.some(m=>m.clase_id===c.id);
+function toast(t,mal){const e=$('toast');e.textContent=t;e.className=mal?'mal':'';e.hidden=false;clearTimeout(tt);tt=setTimeout(()=>e.hidden=true,mal?4500:1500);}
+
+async function entrar(){$('err').textContent='';
+  const {error}=await sb.auth.signInWithPassword({email:$('em').value.trim(),password:$('pw').value});
+  if(error)return $('err').textContent='No pudimos ingresar: '+error.message;init();}
+async function salir(){await sb.auth.signOut();location.reload();}
+async function init(){
+  const {data:s}=await sb.auth.getSession();if(!s.session)return;
+  const {data:rol,error}=await sb.rpc('ev_cal_rol');
+  $('s-login').hidden=true;
+  if(error||!rol){$('s-no').hidden=false;$('no-msg').innerHTML=error?'Falta activar la asistencia en el sistema ('+esc(error.message)+').':'La cuenta <b>'+esc(s.session.user.email)+'</b> no tiene permiso para tomar asistencia. Pídele al administrador que te lo active con ese correo.';return;}
+  $('s-app').hidden=false;await cargar(true);}
+async function cargar(primera){
+  const {data,error}=await sb.rpc('ev_cal_planilla');
+  if(error)return toast('No se pudo cargar: '+error.message,true);
+  D=data;$('quien').textContent=D.yo_nombre||'';
+  if(primera||!D.clases.some(c=>c.id===SEL))SEL=elegir();
+  pintar();setTimeout(()=>{const o=document.querySelector('.chip.on');if(o)o.scrollIntoView({inline:'center',block:'nearest'});},50);}
+// Clase por defecto: la de hoy; si no hay, la última ya pasada que aún no se tomó; si no, la última pasada.
+function elegir(){const cl=D.clases,h=cl.find(c=>c.fecha===D.hoy);if(h)return h.id;
+  const pas=cl.filter(c=>!futura(c));if(!pas.length)return cl.length?cl[0].id:null;
+  const sin=pas.filter(c=>!tomada(c));return (sin.length?sin[sin.length-1]:pas[pas.length-1]).id;}
+function vista(v){VISTA=v;$('v-lista').classList.toggle('on',v==='lista');$('v-plan').classList.toggle('on',v==='plan');pintar();}
+function elegirClase(id){SEL=id;pintar();}
+
+function pintar(){
+  const cl=D.clases;
+  $('chips').innerHTML=cl.map(c=>'<button class="chip'+(c.id===SEL?' on':'')+(futura(c)?' fut':'')+'" role="tab" onclick="elegirClase(\''+c.id+'\')"><b>'+esc(tag(c))+(c.parte>1?' · '+c.parte:'')+'</b><span>'+esc(dsem(c.fecha).slice(0,3))+' '+corto(c.fecha)+'</span>'+(c.fecha===D.hoy?'<em>Hoy</em>':(tomada(c)?'<em>✓ tomada</em>':''))+'</button>').join('')||'<div class="aviso">Todavía no hay clases cargadas.</div>';
+  $('card-lista').hidden=VISTA!=='lista';$('card-plan').hidden=VISTA!=='plan';
+  const c=cl.find(x=>x.id===SEL);
+  const av=$('aviso');
+  if(c&&VISTA==='lista'){av.hidden=false;av.innerHTML='<b>'+esc(c.titulo)+'</b> · '+esc(dsem(c.fecha))+' '+fdia(c.fecha)+(futura(c)?'<br>Esta clase todavía no llegó: podrás marcarla ese día.':'<br>Toca el botón de cada persona: <b>Presente</b> → <b>Ausente</b> → sin marcar.');}else av.hidden=true;
+  if(VISTA==='lista')pintarLista(c);else pintarPlan();
+  pintarPie(c);}
+
+function pintarLista(c){
+  if(!c){$('lista').innerHTML='';$('filt').innerHTML='';return;}
+  const q=$('q').value.trim().toLowerCase(),blq=futura(c);
+  const pre=D.personas.filter(p=>{const m=marca(c.id,p.id);return m&&m.presente;}).length,sin=D.personas.filter(p=>!marca(c.id,p.id)).length;
+  $('filt').innerHTML=[['todos','Todos ('+D.personas.length+')'],['pres','Presentes ('+pre+')'],['sin','Sin marcar ('+sin+')']].map(f=>'<button class="btn s'+(FILT===f[0]?' on':'')+'" onclick="FILT=\''+f[0]+'\';pintar()">'+f[1]+'</button>').join('');
+  const L=D.personas.filter(p=>{const m=marca(c.id,p.id);
+    if(FILT==='pres'&&!(m&&m.presente))return false;if(FILT==='sin'&&m)return false;
+    return !q||(p.nombre||'').toLowerCase().includes(q);});
+  $('lista').innerHTML=L.map(p=>{const m=marca(c.id,p.id);
+    return '<div class="fila"><div class="n"><b>'+esc(p.nombre)+'</b>'+(m&&m.por?'<small>Marcó '+esc(m.por.split(' ')[0])+' · '+hora(m.en)+'</small>':'')+'</div>'+
+    '<button class="cb '+(m?(m.presente?'si':'no'):'')+'" '+(blq?'disabled ':'')+'onclick="ciclo(\''+c.id+'\',\''+p.id+'\')">'+(m?(m.presente?'✅ Presente':'❌ Ausente'):'Marcar')+'</button></div>';}).join('')||'<small style="color:var(--mut)">Nadie coincide.</small>';}
+
+function pintarPlan(){
+  const cl=D.clases;if(!cl.length){$('plan').innerHTML='';return;}
+  const q=$('q').value.trim().toLowerCase();
+  const ths=cl.map(c=>'<th class="cl'+(c.fecha===D.hoy?' hoy':'')+'"><b>'+esc(tag(c))+(c.parte>1?' · '+c.parte:'')+'</b>'+corto(c.fecha)+'</th>').join('');
+  const rows=D.personas.filter(p=>!q||(p.nombre||'').toLowerCase().includes(q)).map(p=>'<tr><td class="col-p"><b>'+esc(p.nombre)+'</b></td>'+cl.map(c=>{const m=marca(c.id,p.id);
+    return '<td'+(c.fecha===D.hoy?' class="hoy" style="background:#F3F1E0"':'')+'><button class="cb '+(m?(m.presente?'si':'no'):'')+'" '+(futura(c)?'disabled ':'')+'onclick="ciclo(\''+c.id+'\',\''+p.id+'\')">'+(m?(m.presente?'✅':'❌'):'·')+'</button></td>';}).join('')+'</tr>').join('');
+  $('plan').innerHTML='<table class="g"><thead><tr><th class="col-p">Persona ('+D.personas.length+')</th>'+ths+'</tr></thead><tbody>'+rows+'</tbody></table>';}
+
+function pintarPie(c){
+  const n=D.personas.length;
+  if(!c||VISTA!=='lista'){$('btn-todos').hidden=true;$('pie-t').innerHTML='<b>'+D.personas.length+'</b> personas · '+D.clases.length+' clases';$('pie-b').style.width='0';return;}
+  const pre=D.personas.filter(p=>{const m=marca(c.id,p.id);return m&&m.presente;}).length;
+  $('btn-todos').hidden=futura(c);
+  $('pie-t').innerHTML='<b>'+pre+'</b> presentes de '+n;$('pie-b').style.width=(n?Math.round(pre/n*100):0)+'%';}
+
+const hora=d=>d?new Date(d).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}):'';
+async function guardar(c,ids,val){
+  const antes=D.marcas.filter(m=>m.clase_id===c&&ids.includes(m.perfil_id));
+  D.marcas=D.marcas.filter(m=>!(m.clase_id===c&&ids.includes(m.perfil_id)));
+  if(val!==null)ids.forEach(i=>D.marcas.push({clase_id:c,perfil_id:i,presente:val,por:D.yo_nombre,rol:D.rol,en:new Date().toISOString()}));
+  pintar();
+  const {error}=await sb.rpc('ev_cal_marcar',{p_clase:c,p_perfiles:ids,p_presente:val});
+  if(error){D.marcas=D.marcas.filter(m=>!(m.clase_id===c&&ids.includes(m.perfil_id)));antes.forEach(m=>D.marcas.push(m));pintar();return toast('No se guardó: '+error.message,true);}
+  toast('Guardado ✓');}
+function ciclo(c,p){const m=marca(c,p);guardar(c,[p],!m?true:(m.presente?false:null));}
+function todos(){const c=D.clases.find(x=>x.id===SEL);if(!c)return;
+  const ids=D.personas.filter(p=>!marca(c.id,p.id)).map(p=>p.id);
+  if(!ids.length)return toast('Todos ya tienen marca en esta clase');
+  if(confirm('Marcar como presentes a las '+ids.length+' personas que aún no tienen marca en esta clase?'))guardar(c.id,ids,true);}
+sb.auth.onAuthStateChange((e)=>{if(e==='SIGNED_OUT'&&!$('s-app').hidden)location.reload();});
+init();
+</script>
+</body></html>
