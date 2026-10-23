@@ -310,6 +310,7 @@ header .link{font-size:.85rem}#guardado{font-size:.8rem;color:var(--text-muted);
 <div class="vista" id="view-cursos" hidden><div class="wrap">
   <img class="logo" src="logo-evangelio-vida.png" alt="Iglesia Evangelio & Vida">
   <div class="top"><span id="saludo"></span><button class="link" onclick="salir()">Salir</button></div>
+  <div class="card" id="btn-asis" hidden style="margin-bottom:14px;padding:16px"><button class="btn" onclick="location.href='evangelioyvida-asistencia.html'">✅ Tomar asistencia</button><p style="font-size:.8rem;color:var(--text-muted);margin-top:8px;text-align:center">Acceso solo para quien toma la asistencia de las clases.</p></div>
   <h2 style="color:var(--dark-green);margin-bottom:12px;font-size:1.2rem">Cursos disponibles</h2>
   <div class="card curso-card" onclick="abrirHub()">
     <div style="font-size:2rem">🌳</div>
@@ -613,9 +614,13 @@ async function cargarProgreso(){
   terminado=!!data?.completado;step=terminado?0:(data?.paso_actual||0);maxPaso=data?.paso_max||0;return data;}
 const tope=()=>Math.max(maxPaso,terminado?TOTAL_PASOS:0);
 async function irACursos(){
-  $('saludo').textContent=perfil.nombre_apellido+' · '+perfil.iglesia;ver('view-cursos');cargarAsistencia();}
+  $('saludo').textContent=perfil.nombre_apellido+' · '+perfil.iglesia;ver('view-cursos');cargarAsistencia();botonAsistencia();}
 function volver(){if(PREVIEW){if(window.opener){window.close();}else{history.back();}return;}guardar();if(canal)sb.removeChannel(canal),canal=null;clearInterval(pollG);abrirHub();}
 
+async function botonAsistencia(){
+  // Solo se muestra si la cuenta figura como asistente (o admin). La seguridad real está en la base de datos.
+  const {data,error}=await sb.rpc('ev_cal_rol');
+  $('btn-asis').hidden=!(!error&&(data==='asistente'||data==='admin'));}
 let ASIS=null;
 async function asisData(){const {data,error}=await sb.rpc('ev_cal_mi_asistencia');ASIS=error?null:data;return ASIS;}
 function asisCalc(d){const cl=d.clases,total=cl.length,tom=cl.filter(c=>c.tomada),pres=tom.filter(c=>c.presente===true).length,rest=total-tom.length,need=Math.ceil(d.minimo*total/100),faltan=Math.max(0,need-pres);
