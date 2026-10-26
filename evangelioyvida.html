@@ -189,6 +189,13 @@ textarea.falta{border-color:#E0A526!important;box-shadow:0 0 0 3px rgba(224,165,
 header .link{font-size:.85rem}#guardado{font-size:.8rem;color:var(--text-muted);margin-right:12px}
 .badge-member.approved{background:#d5f5e3}
 .message .body{white-space:pre-wrap}
+.com-h{margin:22px 0 6px!important;color:#2980b9!important}.com-q:first-of-type .com-h{margin-top:0!important}
+.com-acciones{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 6px}.com-acciones .btn{flex:1;min-width:180px}
+.com-msg{font-size:.9rem;min-height:1.2em;margin:4px 0}
+.com-lista{background:#F8FBFE;border:1px solid #bce0f9;border-radius:8px;padding:6px 14px;margin:8px 0;max-height:420px;overflow-y:auto}
+.com-resp{padding:10px 0;border-bottom:1px solid #e1f0fa;font-size:.95rem;line-height:1.55;white-space:pre-wrap}.com-resp:last-child{border-bottom:none}.com-resp strong{color:#1e8449}
+.com-count{font-size:.85rem;color:#555;margin:12px 0 6px}
+.com-q+.com-q{margin-top:34px;padding-top:6px;border-top:1px solid #e1f0fa}
 </style>
 </head>
 <body>
@@ -702,7 +709,7 @@ function mostrarPaso(){
   $('step-'+step).classList.add('active');$('lesson-panel').scrollTop=0;
   if(step===TOTAL_PASOS&&grupo)canalSel='grupo';else if(canalSel==='grupo'&&!grupo)canalSel='comunidad';
   pintarCanal();cargarForo();
-  clearInterval(pollG);if(step===TOTAL_PASOS)cargarGrupo();}
+  clearInterval(pollG);if(step===TOTAL_PASOS)(LECC===3?cargarComunidadResp():cargarGrupo());}
 async function finalizarSemana(){
   if(PREVIEW)return alert('Vista previa: aquí se finalizaría la lección. No se guardó nada.');
   for(let s=0;s<=TOTAL_PASOS;s++){const v=_vacios(s);if(v.length){
@@ -793,6 +800,45 @@ async function firmar(){
   const {error}=await sb.rpc('ev_firmar_grupo',{p_grupo:grupo.id,p_tarea:TAREA,p_firmar:!quitar});
   if(error)return alert(error.message);await refrescarGrupo(true);}
 
+
+// ---------- LECCIÓN 3: respuestas abiertas de la comunidad (sin aprobación ni corrección) ----------
+let COM_NOMBRES=[],COM_RESP=[];const COM_ABIERTO={1:false,2:false};
+const comMsg=(n,t,ok)=>{const e=$('com-msg-'+n);if(e){e.textContent=t||'';e.style.color=ok?'#1e8449':'#b03a2e';}};
+function pintarComunidadResp(){
+  [1,2].forEach(n=>{
+    if(!$('com-chips-'+n)||!user)return;
+    const rs=COM_RESP.filter(r=>r.pregunta===n),ya=new Set(rs.map(r=>r.perfil_id)),otros=rs.filter(r=>r.perfil_id!==user.id);
+    const mapa=new Map(COM_NOMBRES.map(p=>[p.perfil_id,p.nombre]));
+    rs.forEach(r=>{if(!mapa.has(r.perfil_id))mapa.set(r.perfil_id,r.autor_nombre||'—');});
+    const lista=[...mapa].sort((a,b)=>String(a[1]).localeCompare(String(b[1]),'es'));
+    $('com-count-'+n).innerHTML='<strong>Comunidad:</strong> '+ya.size+' de '+Math.max(lista.length,ya.size)+' ya respondieron <span style="color:#1e8449">(en verde)</span>';
+    $('com-chips-'+n).innerHTML=lista.map(([id,nom])=>'<div class="badge-member'+(ya.has(id)?' approved':'')+'">'+(ya.has(id)?'✅ ':'')+esc(nom)+(id===user.id?' (tú)':'')+'</div>').join('');
+    const L=$('com-lista-'+n);L.hidden=!COM_ABIERTO[n];
+    L.innerHTML=otros.length?otros.map(r=>'<div class="com-resp"><strong>'+esc(r.autor_nombre)+':</strong> '+esc(r.texto)+'</div>').join(''):'<div class="com-resp" style="color:#888">Aún nadie más ha respondido.</div>';
+    $('com-ver-'+n).textContent=COM_ABIERTO[n]?'Ocultar respuestas':'Ver respuestas de otros'+(otros.length?' ('+otros.length+')':'');
+    $('com-send-'+n).textContent=ya.has(user.id)?'Actualizar mi respuesta':'Enviar mi respuesta';});}
+async function cargarComunidadResp(){
+  if(!$('com-q1'))return;
+  if(PREVIEW){[1,2].forEach(n=>comMsg(n,'👁 Vista previa: aquí la comunidad escribe sus respuestas y ve las de los demás. No se guarda nada.'));return;}
+  const [rn,rr]=await Promise.all([sb.rpc('ev_comunidad_nombres'),sb.from('ev_comunidad_resp').select('pregunta,perfil_id,autor_nombre,autor_iglesia,texto,created_at').eq('curso',CURSO).order('created_at')]);
+  if(!$('com-q1'))return;
+  if(rr.error){console.error(rr.error);[1,2].forEach(n=>comMsg(n,'Este espacio todavía no está activado. Falta correr evangelioyvida-comunidad.sql en Supabase.'));return;}
+  COM_NOMBRES=rn.error?[]:(rn.data||[]);COM_RESP=rr.data||[];
+  [1,2].forEach(n=>{const mia=COM_RESP.find(r=>r.pregunta===n&&r.perfil_id===user.id),ta=$('com-q'+n);
+    if(mia&&ta&&!ta.dataset.tocado&&!ta.value)ta.value=mia.texto||'';});
+  pintarComunidadResp();}
+async function verRespCom(n){
+  COM_ABIERTO[n]=!COM_ABIERTO[n];
+  if(COM_ABIERTO[n]&&!PREVIEW)await cargarComunidadResp();else pintarComunidadResp();
+  if(PREVIEW){const L=$('com-lista-'+n);L.hidden=!COM_ABIERTO[n];$('com-ver-'+n).textContent=COM_ABIERTO[n]?'Ocultar respuestas':'Ver respuestas de otros';}}
+async function enviarRespCom(n){
+  if(PREVIEW)return alert('Vista previa: no se envía nada.');
+  const t=$('com-q'+n).value.trim();if(!t)return comMsg(n,'Escribe tu respuesta antes de enviarla.');
+  const b=$('com-send-'+n);b.disabled=true;
+  const {error}=await sb.from('ev_comunidad_resp').upsert({curso:CURSO,pregunta:n,perfil_id:user.id,autor_nombre:perfil.nombre_apellido,autor_iglesia:perfil.iglesia,texto:t,updated_at:new Date().toISOString()},{onConflict:'curso,pregunta,perfil_id'});
+  b.disabled=false;
+  if(error){console.error(error);return comMsg(n,'No se pudo enviar: '+error.message);}
+  comMsg(n,'¡Respuesta enviada! ✓',true);await cargarComunidadResp();}
 
 // ---------- LECCIONES ----------
 const TIT={0:'Introducción: El Choque de Historias',1:'Lección 1: El Marco del Evangelio',2:'Lección 2: Aparentando y Cumpliendo',3:'Lección 3: Creyendo en el Evangelio',4:'Lección 4: La Ley y el Evangelio',5:'Lección 5: El Arrepentimiento',6:'Lección 6: La Idolatría del Corazón',7:'Lección 7: La Misión',8:'Lección 8: El Perdón',9:'Lección 9: El Conflicto'};
@@ -964,13 +1010,30 @@ pasos:[
 <h3>Pregunta de Reflexión Personal</h3>`
 +_q('l3_m4_a','Revisa tu tendencia actual: ¿Cuál es un área específica de tu vida donde necesitas dejar de esforzarte por tus propias fuerzas y empezar a descansar como un hijo amado?')
 +'<p>Con este ejercicio cerramos los contenidos personales de la Lección 3: Creyendo en el Evangelio.</p>'+_nav(3),
-`<h2 class="taller-title">Tarea Grupal: Una Comunidad de Huérfanos y una Comunidad de Hijos</h2>
-<p><strong>Objetivo de la misión:</strong> reúnanse en sus grupos asignados para debatir y responder de forma abierta y profunda las siguientes dos interrogantes sobre la vida en comunidad.</p>
-<div class="task-card task-group"><h3>👥 Tarea Grupal</h3>
-<p>Cada equipo trabajará en el lienzo compartido para redactar un texto unificado que responda a estas preguntas:</p><ol style="margin-left:22px;font-size:1.05rem;line-height:1.6">
-<li><strong>¿Cómo se comporta, actúa y convive una comunidad de huérfanos?</strong> Reflexionen sobre el ambiente que se respira cuando una iglesia o grupo pequeño basa su identidad en el rendimiento, la apariencia, el juicio mutuo, la defensiva y la competencia espiritual en lugar de la gracia.</li>
-<li><strong>¿Cómo se comporta, actúa y convive una comunidad de hijos?</strong> Describan vívidamente cómo cambia la convivencia, la vulnerabilidad, el trato hacia los débiles y la resolución de errores cuando una comunidad vive plenamente convencida de su adopción y de la justicia pasiva de Cristo.</li></ol>
-<div id="grupo-box"></div></div>
+`<h2 class="taller-title">Reflexión en Comunidad: Una Comunidad de Huérfanos y una Comunidad de Hijos</h2>
+<p><strong>Objetivo:</strong> compartir con toda la comunidad lo que estás entendiendo de la lección. Es un espacio libre para escribir lo que quieras: aquí nadie corrige ni aprueba lo que escribes.</p>
+<div class="task-card task-group"><h3>💬 Reflexión en Comunidad</h3>
+<div class="com-q">
+<h4 class="com-h">Pregunta 1</h4>
+<p><strong>1. ¿Cómo se comporta, actúa y convive una comunidad de huérfanos?</strong> Reflexionen sobre el ambiente que se respira cuando una iglesia o grupo pequeño basa su identidad en el rendimiento, la apariencia, el juicio mutuo, la defensiva y la competencia espiritual en lugar de la gracia.</p>
+<textarea id="com-q1" placeholder="Escribe aquí tu respuesta..." oninput="this.dataset.tocado=1"></textarea>
+<div class="com-acciones"><button class="btn btn-blue" id="com-send-1" onclick="enviarRespCom(1)">Enviar mi respuesta</button><button class="btn btn-secondary" id="com-ver-1" onclick="verRespCom(1)">Ver respuestas de otros</button></div>
+<div class="com-msg" id="com-msg-1" role="status"></div>
+<div class="com-lista" id="com-lista-1" hidden></div>
+<div class="com-count" id="com-count-1"></div>
+<div class="approval-list" id="com-chips-1"></div>
+</div>
+<div class="com-q">
+<h4 class="com-h">Pregunta 2</h4>
+<p><strong>2. ¿Cómo se comporta, actúa y convive una comunidad de hijos?</strong> Describan vívidamente cómo cambia la convivencia, la vulnerabilidad, el trato hacia los débiles y la resolución de errores cuando una comunidad vive plenamente convencida de su adopción y de la justicia pasiva de Cristo.</p>
+<textarea id="com-q2" placeholder="Escribe aquí tu respuesta..." oninput="this.dataset.tocado=1"></textarea>
+<div class="com-acciones"><button class="btn btn-blue" id="com-send-2" onclick="enviarRespCom(2)">Enviar mi respuesta</button><button class="btn btn-secondary" id="com-ver-2" onclick="verRespCom(2)">Ver respuestas de otros</button></div>
+<div class="com-msg" id="com-msg-2" role="status"></div>
+<div class="com-lista" id="com-lista-2" hidden></div>
+<div class="com-count" id="com-count-2"></div>
+<div class="approval-list" id="com-chips-2"></div>
+</div>
+</div>
 <div class="navigation-bar"><button class="btn btn-secondary" onclick="nextStep(3)">Volver al Módulo 4</button><button class="btn" onclick="finalizarSemana()">Finalizar Lección 3</button></div>`]};
 const LECX={1:LEC1,2:LEC2,3:LEC3};
 const ultimoPaso=n=>LECX[n]?LECX[n].etiq.length-1:5;
