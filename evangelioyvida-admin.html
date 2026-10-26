@@ -96,14 +96,14 @@ th{font-size:.75rem;text-transform:uppercase;color:var(--mut)}small{color:var(--
 <script>
 const sb=window.supabase.createClient("https://wfwmyuuxceyulmkhogqr.supabase.co","sb_publishable_hrR11nillC0GtzH50LqQfQ_qEqX9FX6");
 const LQ=new URLSearchParams(location.search).get('l')||'';
-const CURSO='vida-centrada-evangelio'+(LQ?'-l'+LQ:''),TAREA=LQ?'taller-l'+LQ:'gran-historia',PASOS=5;
+const CURSO='vida-centrada-evangelio'+(LQ?'-l'+LQ:''),TAREA=LQ?'taller-l'+LQ:'gran-historia',PASOS=(LQ===3?4:5);
 document.getElementById('sel-lecc').value=LQ;
 let personas=[],grupos=[],resp=[],foro=[];
 const $=i=>document.getElementById(i);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fecha=d=>d?new Date(d).toLocaleString([],{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
 const LBL={intro_q1:'Punto de partida',micro_historia:'Taller · Mi micro-historia',cambio_perspectiva:'Taller · Cambio de perspectiva'};
-const label=k=>LBL[k]||k.replace(/^acto(\d)_q(\d)$/,'Acto $1 · Pregunta $2');
+const label=k=>LBL[k]||k.replace(/^acto(\d)_q(\d)$/,'Acto $1 · Pregunta $2').replace(/^l(\d)_m(\d)_([a-z])$/,'Lección $1 · Módulo $2 · Pregunta $3');
 async function rpc(n,a){const {data,error}=await sb.rpc(n,a);if(error){alert(error.message);throw error;}return data;}
 
 const KEYS=[...Array(10).keys()].map(n=>'vida-centrada-evangelio'+(n?'-l'+n:''));
@@ -129,7 +129,7 @@ document.querySelectorAll('.tabs .btn').forEach(b=>b.onclick=()=>{
   ['personas','respuestas','foro','grupos','esquema','asistencia','registros','comunidad'].forEach(t=>$('t-'+t).hidden=t!==b.dataset.t);history.replaceState(null,'','#'+b.dataset.t);if(b.dataset.t==='personas'&&personas.length)pintarPersonas();if(b.dataset.t==='esquema')cargarEsquema();if(b.dataset.t==='registros')cargarRegistros();if(b.dataset.t==='comunidad')cargarComunidad();});
 async function cargarLecc(){
   const {data}=await sb.from('ev_lecciones').select('*').order('id');
-  $('tb-lecc').innerHTML=(data||[]).map(l=>'<tr data-id="'+l.id+'"><td>'+esc(LT[l.id]||l.titulo)+'</td>'+['abierta','foro','grupo'].map(k=>'<td><input type="checkbox" '+(l[k]?'checked ':'')+'onchange="guardarLecc('+l.id+')" data-c="'+k+'"></td>').join('')+'<td>'+(l.id<=2?'<button class="btn" onclick="window.open(\'evangelioyvida.html?preview='+l.id+'\',\'_blank\')">👁 Ver</button>':'<small>—</small>')+'</td></tr>').join('')||'<tr><td colspan="5"><small>Ejecuta lecciones.sql en Supabase.</small></td></tr>';}
+  $('tb-lecc').innerHTML=(data||[]).map(l=>'<tr data-id="'+l.id+'"><td>'+esc(LT[l.id]||l.titulo)+'</td>'+['abierta','foro','grupo'].map(k=>'<td><input type="checkbox" '+(l[k]?'checked ':'')+'onchange="guardarLecc('+l.id+')" data-c="'+k+'"></td>').join('')+'<td>'+(l.id<=3?'<button class="btn" onclick="window.open(\'evangelioyvida.html?preview='+l.id+'\',\'_blank\')">👁 Ver</button>':'<small>—</small>')+'</td></tr>').join('')||'<tr><td colspan="5"><small>Ejecuta lecciones.sql en Supabase.</small></td></tr>';}
 async function guardarLecc(id){
   const r=document.querySelector('#tb-lecc tr[data-id="'+id+'"]'),v=k=>r.querySelector('[data-c="'+k+'"]').checked;
   await rpc('ev_admin_leccion',{p_id:id,p_abierta:v('abierta'),p_foro:v('foro'),p_grupo:v('grupo')});}
