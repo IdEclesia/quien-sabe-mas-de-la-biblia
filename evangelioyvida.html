@@ -736,7 +736,13 @@ async function elegirCanal(c){
   canalSel=c;pintarCanal();cargarForo();}
 
 // ---------- FORO (todos ven los comentarios del paso) ----------
+// Solo participantes de la comunidad Evangelio & Vida (cualquier variante: "Evangelio y vida", "Iglesia Evangelio & Vida"…)
+const SOLO_COMUNIDAD=true;
+function esComunidad(ig){if(!SOLO_COMUNIDAD)return true;
+  const t=String(ig||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  return t.includes('evangelio')&&t.includes('vida');}
 function pintarMsg(r){
+  if(r.perfil_id!==user.id&&!esComunidad(r.autor_iglesia))return;
   if(idsForo.has(r.id))return;idsForo.add(r.id);const box=$('chat-messages');
   const h=new Date(r.created_at).toLocaleString([],{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   box.insertAdjacentHTML('beforeend','<div class="message" data-id="'+r.id+'"><div class="meta"><strong>'+esc(r.autor_nombre)+'</strong>'+(r.autor_iglesia?' · '+esc(r.autor_iglesia):'')+' • '+h+'</div><div class="body">'+esc(r.mensaje)+'</div></div>');
@@ -823,7 +829,9 @@ async function cargarComunidadResp(){
   const [rn,rr]=await Promise.all([sb.rpc('ev_comunidad_nombres'),sb.from('ev_comunidad_resp').select('pregunta,perfil_id,autor_nombre,autor_iglesia,texto,created_at').eq('curso',CURSO).order('created_at')]);
   if(!$('com-q1'))return;
   if(rr.error){console.error(rr.error);[1,2].forEach(n=>comMsg(n,'Este espacio todavía no está activado. Falta correr evangelioyvida-comunidad.sql en Supabase.'));return;}
-  COM_NOMBRES=rn.error?[]:(rn.data||[]);COM_RESP=rr.data||[];
+  // Por ahora el curso es solo para la comunidad Evangelio & Vida: se ocultan los nombres de quienes escribieron otra iglesia.
+  const todas=rr.data||[],fuera=new Set(todas.filter(r=>r.perfil_id!==user.id&&!esComunidad(r.autor_iglesia)).map(r=>r.perfil_id));
+  COM_NOMBRES=(rn.error?[]:(rn.data||[])).filter(p=>!fuera.has(p.perfil_id));COM_RESP=todas.filter(r=>!fuera.has(r.perfil_id));
   [1,2].forEach(n=>{const mia=COM_RESP.find(r=>r.pregunta===n&&r.perfil_id===user.id),ta=$('com-q'+n);
     if(mia&&ta&&!ta.dataset.tocado&&!ta.value)ta.value=mia.texto||'';});
   pintarComunidadResp();}
