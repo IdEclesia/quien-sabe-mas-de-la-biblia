@@ -46,7 +46,7 @@ th{font-size:.75rem;text-transform:uppercase;color:var(--mut)}small{color:var(--
   <button class="btn o" style="margin-top:12px" onclick="sb.auth.signOut().then(()=>location.reload())">Entrar con otra cuenta</button></section>
 
 <section id="s-app" hidden>
-<header><img src="logo-evangelio-vida.png" alt="Evangelio & Vida"><div><b>Panel del curso</b> · <select id="sel-lecc" onchange="location.search=this.value?'?l='+this.value:''"><option value="">Introducción</option><option value="1">Lección 1</option><option value="2">Lección 2</option><option value="3">Lección 3</option><option value="4">Lección 4</option><option value="5">Lección 5</option><option value="6">Lección 6</option><option value="7">Lección 7</option><option value="8">Lección 8</option><option value="9">Lección 9</option></select> · <a class="btn o s" href="admin.html" style="text-decoration:none;display:inline-block">← Panel general</a> <button class="btn o s" onclick="cargar()">↻ Actualizar</button> <button class="btn o s" onclick="salir()">Salir</button></div></header>
+<header><img src="logo-evangelio-vida.png" alt="Evangelio & Vida"><div><b>Panel del curso</b> · <select id="sel-lecc" onchange="location.search=this.value?'?l='+this.value:''"><option value="">Introducción</option><option value="1">Lección 1</option><option value="2">Lección 2</option><option value="3">Lección 3</option><option value="4">Lección 4</option><option value="5">Lección 5</option><option value="6">Lección 6</option><option value="7">Lección 7</option><option value="8">Lección 8</option><option value="9">Lección 9</option></select> · <label style="font-size:.85rem;background:#F3F1E0;border:1px solid var(--g);border-radius:6px;padding:4px 10px;white-space:nowrap" title="Oculta en todo el panel a quienes no son de la comunidad Evangelio &amp; Vida"><input type="checkbox" id="solo-com-g" checked onchange="cambiarSolo()"> 🏘 Solo comunidad</label> <a class="btn o s" href="admin.html" style="text-decoration:none;display:inline-block">← Panel general</a> <button class="btn o s" onclick="cargar()">↻ Actualizar</button> <button class="btn o s" onclick="salir()">Salir</button></div></header>
 <nav id="lecbar"></nav>
 <main>
 <div class="kpis" id="kpis"></div>
@@ -135,7 +135,23 @@ async function guardarLecc(id){
   await rpc('ev_admin_leccion',{p_id:id,p_abierta:v('abierta'),p_foro:v('foro'),p_grupo:v('grupo')});}
 function tab(t){document.querySelector('[data-t="'+t+'"]').click();}
 
-async function cargar(){await cargarGrupos();await cargarAsistencia();await cargarPersonas();
+// ---------- FILTRO: SOLO COMUNIDAD EVANGELIO & VIDA ----------
+// Quién es de la comunidad lo define la pestaña 🏘 Comunidad (ev_cm_listar). Con el filtro activo,
+// el resto de los inscriptos no aparece en personas, grupos, esquema, respuestas, foro ni asistencia.
+let COMSET=null,COMNOM=new Set();
+try{const v=localStorage.getItem('ev_solo_com');if(v!==null)$('solo-com-g').checked=v==='1';}catch(e){}
+const SOLO=()=>$('solo-com-g').checked;
+const _nn=s=>String(s||'').trim().toLowerCase();
+const okP=id=>!SOLO()||!COMSET||COMSET.has(id);
+const okNom=(id,nom)=>!SOLO()||!COMSET||(id?COMSET.has(id):COMNOM.has(_nn(nom)));
+async function cargarComSet(){
+  const {data,error}=await sb.rpc('ev_cm_listar');
+  if(error||!data){COMSET=null;COMNOM=new Set();console.error(error);return;}
+  CM=data;const inc=data.filter(cmInc);COMSET=new Set(inc.map(p=>p.id));COMNOM=new Set(inc.map(p=>_nn(p.nombre)));}
+async function cambiarSolo(){
+  try{localStorage.setItem('ev_solo_com',SOLO()?'1':'0');}catch(e){}
+  await cargar();if(!$('t-esquema').hidden)cargarEsquema();}
+async function cargar(){await cargarComSet();await cargarGrupos();await cargarAsistencia();await cargarPersonas();
   resp=await rpc('ev_admin_respuestas',{p_curso:CURSO});pintarResp();
   foro=await rpc('ev_admin_foro_mod',{p_curso:CURSO});pintarForo();}
 const nomGrupo=id=>{const g=grupos.find(x=>x.id===id);return g?g.nombre:'Grupo';};
@@ -144,7 +160,7 @@ function pintarForo(){
   sel.innerHTML='<option value="todos">Todos los canales</option><option value="general">💬 Foro general</option>'+grupos.map(g=>'<option value="'+g.id+'">🔒 '+esc(g.nombre)+'</option>').join('');
   sel.value=[...sel.options].some(o=>o.value===act)?act:'todos';
   const c=sel.value,verOc=$('foro-ocultos').checked,q=$('foro-q').value.trim().toLowerCase();
-  const l=foro.filter(m=>(verOc||!m.oculto)&&(c==='todos'||(c==='general'?!m.grupo_id:m.grupo_id===c))&&(!q||((m.mensaje||'')+' '+(m.autor_nombre||'')).toLowerCase().includes(q)));
+  const l=foro.filter(m=>okNom(m.perfil_id,m.autor_nombre)&&(verOc||!m.oculto)&&(c==='todos'||(c==='general'?!m.grupo_id:m.grupo_id===c))&&(!q||((m.mensaje||'')+' '+(m.autor_nombre||'')).toLowerCase().includes(q)));
   $('tb-foro').innerHTML=l.map(m=>'<tr'+(m.oculto?' style="opacity:.55"':'')+'><td>'+fecha(m.created_at)+'</td><td>'+m.paso+'</td><td>'+(m.grupo_id?'🔒 '+esc(nomGrupo(m.grupo_id)):'General')+'</td><td>'+esc(m.autor_nombre)+'<br><small>'+esc(m.autor_iglesia)+'</small></td><td style="white-space:pre-wrap'+(m.oculto?';text-decoration:line-through':'')+'">'+esc(m.mensaje)+'</td><td>'+
     (m.oculto?'<button class="btn o s" onclick="modForo(\''+m.id+'\',false)">↩ Restaurar</button>':'<button class="btn o s" onclick="modForo(\''+m.id+'\',true)">🗑 Ocultar</button>')+'</td></tr>').join('')||'<tr><td colspan="6"><small>Sin mensajes.</small></td></tr>';}
 async function modForo(id,ocultar){
@@ -153,12 +169,14 @@ async function modForo(id,ocultar){
   const m=foro.find(x=>String(x.id)===String(id));if(m)m.oculto=ocultar;pintarForo();}
 
 async function cargarPersonas(){
-  personas=await rpc('ev_admin_personas',{p_curso:CURSO,p_q:$('q').value.trim(),p_solo_activos:$('activos').checked});
+  const raw=await rpc('ev_admin_personas',{p_curso:CURSO,p_q:$('q').value.trim(),p_solo_activos:$('activos').checked});
+  NOCOM=SOLO()&&COMSET?raw.filter(p=>!COMSET.has(p.id)).length:0;personas=raw.filter(p=>okP(p.id));
   pintarPersonas();pintarAsistencia();}
+let NOCOM=0;
 function pintarPersonas(){
   const av=p=>p.completado?100:Math.round(p.paso_max/PASOS*100),act=personas.filter(p=>p.paso_max>0||p.n_resp>0);
   const prom=act.length?Math.round(act.reduce((a,p)=>a+av(p),0)/act.length):0;
-  $('kpis').innerHTML=[[personas.length,'personas listadas'],[act.length,'con actividad'],[personas.filter(p=>p.completado).length,'terminaron la semana'],[prom+'%','avance promedio'],[personas.reduce((a,p)=>a+Number(p.n_msgs),0),'mensajes en el foro'],[personas.filter(p=>p.grupo_id).length,'en un grupo']].map(k=>'<div class="kpi"><b>'+k[0]+'</b><span>'+k[1]+'</span></div>').join('');
+  $('kpis').innerHTML=[[personas.length,'personas listadas'],[act.length,'con actividad'],[personas.filter(p=>p.completado).length,'terminaron la semana'],[prom+'%','avance promedio'],[personas.reduce((a,p)=>a+Number(p.n_msgs),0),'mensajes en el foro'],[personas.filter(p=>p.grupo_id).length,'en un grupo']].concat(SOLO()&&COMSET?[[NOCOM,'ocultos (no son de la comunidad)']]:[]).map(k=>'<div class="kpi"><b>'+k[0]+'</b><span>'+k[1]+'</span></div>').join('');
   const opts=g=>'<option value="">— Sin grupo —</option>'+grupos.map(x=>'<option value="'+x.id+'"'+(x.id===g?' selected':'')+'>'+esc(x.nombre)+'</option>').join('');
   $('tb-personas').innerHTML=personas.map(p=>'<tr><td><b>'+esc(p.nombre)+'</b><br><small>'+esc(p.iglesia)+' · '+esc([p.barrio,p.ciudad,p.pais].filter(Boolean).join(', '))+'<br>'+esc(p.correo)+'</small></td>'+
     '<td>'+av(p)+'%'+(p.completado?' ✅':'')+'<div class="prog"><i style="width:'+av(p)+'%"></i></div></td><td>'+p.n_resp+'</td><td>'+p.n_msgs+'</td><td>'+asisTxt(p.id)+'</td>'+
@@ -175,19 +193,19 @@ function verResp(id){const p=personas.find(x=>x.id===id);$('fr').value=p.nombre;
 
 function pintarResp(){
   const f=$('fr').value.toLowerCase().trim();
-  const r=resp.filter(x=>!f||(x.nombre+' '+(x.iglesia||'')+' '+x.texto).toLowerCase().includes(f));
+  const r=resp.filter(x=>okNom(x.perfil_id,x.nombre)&&(!f||(x.nombre+' '+(x.iglesia||'')+' '+x.texto).toLowerCase().includes(f)));
   const claves=[...new Set(r.map(x=>x.clave))].sort((a,b)=>label(a).localeCompare(label(b),'es',{numeric:true}));
   $('lista-resp').innerHTML=claves.map(k=>'<h3 style="margin:14px 0 8px;color:var(--gd)">'+esc(label(k))+'</h3>'+
     r.filter(x=>x.clave===k).map(x=>'<div class="resp"><div class="q">'+esc(x.nombre)+' · '+esc(x.iglesia)+' · '+fecha(x.updated_at)+'</div><p>'+esc(x.texto)+'</p></div>').join('')).join('')||'<small>Sin respuestas para este filtro.</small>';}
 function csv(){
   const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
-  const t='\ufeff'+['Nombre,Iglesia,Pregunta,Respuesta,Fecha'].concat(resp.map(x=>[x.nombre,x.iglesia,label(x.clave),x.texto,x.updated_at].map(q).join(','))).join('\n');
+  const t='\ufeff'+['Nombre,Iglesia,Pregunta,Respuesta,Fecha'].concat(resp.filter(x=>okNom(x.perfil_id,x.nombre)).map(x=>[x.nombre,x.iglesia,label(x.clave),x.texto,x.updated_at].map(q).join(','))).join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/csv;charset=utf-8'}));a.download='respuestas-evangelio-y-vida.csv';a.click();}
 
 async function cargarGrupos(){grupos=await rpc('ev_admin_grupos',{p_curso:CURSO,p_tarea:TAREA});
   $('lista-grupos').innerHTML=grupos.map(g=>'<div class="card"><div class="bar"><h3 style="flex:1;color:var(--gd)">'+esc(g.nombre)+' '+(g.aprobado?'<span class="tag ok">🔒 Aprobado</span>':'<span class="tag">✏️ En edición</span>')+'</h3>'+
     (g.aprobado?'<button class="btn o s" onclick="reabrir(\''+g.id+'\')">Reabrir texto</button>':'')+'</div>'+
-    (g.miembros.map(m=>'<span class="tag'+(m.firmado?' ok':'')+'">'+(m.firmado?'✅ ':'')+esc(m.nombre)+' <a href="#" onclick="asignar(\''+m.perfil_id+'\',\'\');return false" title="Quitar del grupo">✕</a></span>').join('')||'<small>Sin integrantes todavía.</small>')+
+    (g.miembros.filter(m=>okP(m.perfil_id)).map(m=>'<span class="tag'+(m.firmado?' ok':'')+'">'+(m.firmado?'✅ ':'')+esc(m.nombre)+' <a href="#" onclick="asignar(\''+m.perfil_id+'\',\'\');return false" title="Quitar del grupo">✕</a></span>').join('')||'<small>Sin integrantes todavía.</small>')+
     '<details style="margin-top:10px"><summary>Ver texto del grupo</summary><p style="white-space:pre-wrap;margin-top:8px">'+(esc(g.contenido)||'<small>Aún no escribieron nada.</small>')+'</p></details></div>').join('')||'<div class="card"><small>Todavía no hay grupos. Crea el primero arriba.</small></div>';}
 async function crearGrupo(){const n=$('ng').value.trim();if(!n)return;await rpc('ev_admin_crear_grupo',{p_curso:CURSO,p_nombre:n});$('ng').value='';await cargarGrupos();await cargarPersonas();}
 async function reabrir(id){if(!confirm('Se borran las firmas y el grupo podrá editar de nuevo. ¿Continuar?'))return;await rpc('ev_admin_reabrir',{p_grupo:id,p_tarea:TAREA});await cargarGrupos();}
@@ -199,7 +217,7 @@ async function cargarEsquema(){$('esq-box').innerHTML='<small>Cargando todas las
     Promise.all(KEYS.map(k=>sb.rpc('ev_admin_personas',{p_curso:k,p_q:'',p_solo_activos:false}).then(r=>r.data||[])))]);
   ESQ.gr=gs;const m=new Map();
   ps.forEach((arr,i)=>arr.forEach(p=>{let o=m.get(p.id);if(!o){o={id:p.id,nombre:p.nombre,iglesia:p.iglesia,g:{}};m.set(p.id,o);}o.g[i]=p.grupo_id||'';}));
-  ESQ.pers=[...m.values()].sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'));pintarEsquema();}
+  ESQ.pers=[...m.values()].filter(p=>okP(p.id)).sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'));pintarEsquema();}
 function pintarEsquema(){
   const f=($('esq-q').value||'').trim().toLowerCase(),L=ESQ.pers.filter(p=>!f||(p.nombre||'').toLowerCase().includes(f));
   const ths=KEYS.map((k,i)=>'<th style="min-width:130px;text-transform:none"><b>'+(i?'Lec. '+i:'Intro')+'</b><br><small>'+ESQ.gr[i].length+' grupos</small><br>'+
@@ -246,7 +264,7 @@ async function cargarAsisPersonas(){
   const solo=!$('todos-perf').checked;
   const rs=await Promise.all(KEYS.map(k=>sb.rpc('ev_admin_personas',{p_curso:k,p_q:q,p_solo_activos:solo}).then(r=>r.data||[])));
   const m=new Map();rs.flat().forEach(p=>{if(!m.has(p.id))m.set(p.id,p);});
-  asisP=[...m.values()].sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'));pintarAsistencia();}
+  asisP=[...m.values()].filter(p=>okP(p.id)).sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'));pintarAsistencia();}
 function buscarAsis(){clearTimeout(tq);tq=setTimeout(cargarAsisPersonas,400);}
 function pintarAsistencia(){
   const cl=clasesAsc(),box=$('lista-asis');
@@ -299,7 +317,7 @@ async function cargarRegistros(){REG=await rpc('ev_cal_registro_listar',{p_limit
   $('rg-por').value=por.includes(pv)?pv:'';$('rg-clase').value=cv;pintarRegistros();}
 function pintarRegistros(){
   const p=$('rg-por').value,c=$('rg-clase').value,q=$('rg-q').value.trim().toLowerCase();
-  const L=REG.filter(r=>(!p||(r.por_nombre||'—')===p)&&(!c||r.clase_titulo+'|'+r.clase_fecha===c)&&(!q||(r.perfil_nombre||'').toLowerCase().includes(q)));
+  const L=REG.filter(r=>(!p||(r.por_nombre||'—')===p)&&(!c||r.clase_titulo+'|'+r.clase_fecha===c)&&(!q||(r.perfil_nombre||'').toLowerCase().includes(q))&&okNom(null,r.perfil_nombre));
   const res=new Map();REG.forEach(r=>{const k=(r.por_nombre||'—')+'|'+r.por_rol,o=res.get(k)||{n:0,ult:r.en,nombre:r.por_nombre||'—',rol:r.por_rol};o.n++;res.set(k,o);});
   $('rg-res').innerHTML=[...res.values()].map(o=>'<span class="tag">'+esc(o.nombre)+' ('+esc(o.rol||'')+') · '+o.n+' cambios · última: '+fecha(o.ult)+'</span>').join('')||'<small>Todavía nadie marcó asistencia.</small>';
   const col={presente:'#1e8449',ausente:'#b03a2e','sin marcar':'#666'},ic={presente:'✅ ',ausente:'❌ ','sin marcar':'· '};
@@ -308,7 +326,7 @@ function pintarRegistros(){
 let CM=[],CMG=[];
 const cmInc=p=>p.incluido===null||p.incluido===undefined?!!p.auto:!!p.incluido;
 async function cargarComunidad(){CM=await rpc('ev_cm_listar');pintarComunidad();}
-async function syncComunidad(){const n=await rpc('ev_cm_sync');await cargarComunidad();alert(n?n+' persona(s) nueva(s) sumadas a la comunidad.':'No hay personas nuevas para sumar.');}
+async function syncComunidad(){const n=await rpc('ev_cm_sync');await cargarComunidad();await cargarComSet();cargarPersonas();alert(n?n+' persona(s) nueva(s) sumadas a la comunidad.':'No hay personas nuevas para sumar.');}
 function pintarComunidad(){
   const q=($('cm-q').value||'').trim().toLowerCase();CMG=[];
   const L=CM.filter(p=>!q||(p.nombre||'').toLowerCase().includes(q)||(p.iglesia||'').toLowerCase().includes(q));
@@ -326,7 +344,9 @@ function pintarComunidad(){
         arr.map(p=>'<label style="display:flex;gap:8px;align-items:center;padding:4px 0"><input type="checkbox" '+(cmInc(p)?'checked ':'')+'onchange="cmUno(\''+p.id+'\',this.checked)"> <span><b>'+esc(p.nombre)+'</b> <small>'+esc([p.barrio,p.ciudad].filter(Boolean).join(', '))+' · '+esc(p.correo||'')+'</small></span></label>').join('')+'</div>';}).join('');
     return '<h3 style="margin:14px 2px 4px;color:var(--gd)">'+s[0]+'</h3><small style="display:block;margin:0 2px 8px">'+s[1]+'</small>'+(cards||'<div class="card"><small>Nadie por aquí.</small></div>');}).join('');}
 async function cmSet(ids,val){try{await rpc('ev_cm_set',{p_perfiles:ids,p_incluido:val});}catch(e){return cargarComunidad();}
-  CM.forEach(p=>{if(ids.includes(p.id))p.incluido=val;});pintarComunidad();cargarAsistencia();}
+  CM.forEach(p=>{if(ids.includes(p.id))p.incluido=val;});
+  const inc=CM.filter(cmInc);COMSET=new Set(inc.map(p=>p.id));COMNOM=new Set(inc.map(p=>_nn(p.nombre)));
+  pintarComunidad();cargarAsistencia();cargarPersonas();}
 const cmUno=(id,v)=>cmSet([id],v);
 const cmGrupo=(i,v)=>cmSet(CMG[i],v);
 
