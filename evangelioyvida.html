@@ -175,6 +175,8 @@ body{display:block;height:auto;overflow:auto;font-family:'Poppins',system-ui,san
 .curso-card h3{margin:0 0 4px;color:var(--dark-green);font-size:1.05rem}
 .curso-card p{font-size:.85rem;color:var(--text-muted);margin:0}
 .barra{height:6px;background:#eee;border-radius:3px;margin-top:8px;overflow:hidden}.barra i{display:block;height:100%;background:var(--primary-green)}
+.invita{background:#FFF8E1;border-left:4px solid #E0A526;border-radius:0 8px 8px 0;padding:12px 16px;margin:14px 0 8px;font-size:.95rem;color:#5b4a14;line-height:1.5}
+textarea.falta{border-color:#E0A526!important;box-shadow:0 0 0 3px rgba(224,165,38,.22)}
 .asis-top{display:flex;align-items:center;gap:14px;margin:6px 0 12px}.asis-pct{font-size:2.3rem;line-height:1;color:var(--dark-green);font-weight:700}
 .asis-top small{color:var(--text-muted)}
 .asis-track{display:flex;gap:3px;margin:6px 0 4px}.asis-track i{flex:1;height:14px;border-radius:4px;background:#e9e7d6}.asis-track i.si{background:#52be80}.asis-track i.no{background:#e6877d}
@@ -545,7 +547,7 @@ header .link{font-size:.85rem}#guardado{font-size:.8rem;color:var(--text-muted);
 const EN_RECUPERACION = /type=recovery/.test(location.hash + location.search);
 const ENLACE_VENCIDO = /error_code=otp_expired|error=access_denied/.test(location.hash + location.search);
 const sb = window.supabase.createClient("https://wfwmyuuxceyulmkhogqr.supabase.co","sb_publishable_hrR11nillC0GtzH50LqQfQ_qEqX9FX6");
-const BASE='vida-centrada-evangelio', TOTAL_PASOS=5; let CURSO=BASE, TAREA='gran-historia', LECC=0, CFG={foro:true,grupo:true}, LECS=[], INTRO=null;
+const BASE='vida-centrada-evangelio'; let TOTAL_PASOS=5, CURSO=BASE, TAREA='gran-historia', LECC=0, CFG={foro:true,grupo:true}, LECS=[], INTRO=null;
 const PREV_N=(new URLSearchParams(location.search).get('preview')),PREV_REQ=PREV_N!==null&&/^\d+$/.test(PREV_N);let PREVIEW=false;
 const forumPrompts = [
             "¡Bienvenido a la comunidad! Preséntate brevemente y comparte desde qué ciudad te estás conectando para estudiar esta Gran Historia.",
@@ -670,7 +672,24 @@ async function abrirCurso(irA){
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'ev_foro',filter:'curso=eq.'+CURSO},p=>{
     const r=p.new;if(r.oculto){const el=document.querySelector('#chat-messages .message[data-id="'+r.id+'"]');if(el)el.remove();}}).subscribe();
   mostrarPaso();}
+// Para avanzar hay que responder: se pide al menos una o dos frases en cada pregunta del paso.
+const MIN_RESP=10;
+const _escrito=t=>t.value.trim().length>=MIN_RESP;
+const _vacios=s=>{const c=$('step-'+s);return c?[...c.querySelectorAll('textarea[data-k]')].filter(t=>!_escrito(t)):[];};
+function invitar(vacios,msg){
+  document.querySelectorAll('.invita').forEach(e=>e.remove());
+  document.querySelectorAll('textarea.falta').forEach(t=>t.classList.remove('falta'));
+  vacios.forEach(t=>t.classList.add('falta'));
+  const d=document.createElement('div');d.className='invita';d.setAttribute('role','alert');
+  d.innerHTML=msg+(vacios.length>1?' <strong>Te quedan '+vacios.length+' preguntas por responder en este paso.</strong>':'');
+  const t=vacios[0],ref=t.previousElementSibling&&t.previousElementSibling.tagName==='LABEL'?t.previousElementSibling:t;
+  ref.before(d);d.scrollIntoView({behavior:'smooth',block:'center'});t.focus({preventScroll:true});}
+document.addEventListener('input',e=>{const t=e.target;if(t.matches&&t.matches('textarea.falta')&&_escrito(t)){t.classList.remove('falta');
+  if(!document.querySelector('textarea.falta'))document.querySelectorAll('.invita').forEach(x=>x.remove());}});
 async function nextStep(i){
+  if(!PREVIEW&&i>step){for(let s=step;s<i;s++){const v=_vacios(s);if(v.length){
+    if(s!==step){step=s;mostrarPaso();}
+    return invitar(v,'💛 Antes de continuar, cuéntanos con tus palabras. No hay respuestas perfectas: con una o dos frases sinceras basta, y es lo que hace tuya esta lección.');}}}
   await guardar();step=i;maxPaso=Math.max(maxPaso,i);mostrarPaso();
   if(PREVIEW)return;
   sb.from('ev_progreso').upsert({perfil_id:user.id,curso:CURSO,paso_actual:i,paso_max:maxPaso,updated_at:new Date().toISOString()},{onConflict:'perfil_id,curso'}).then(()=>{});}
@@ -681,17 +700,20 @@ function mostrarPaso(){
   pintarStepper();
   document.querySelectorAll('.step-content').forEach(el=>el.classList.remove('active'));
   $('step-'+step).classList.add('active');$('lesson-panel').scrollTop=0;
-  if(step===5&&grupo)canalSel='grupo';else if(canalSel==='grupo'&&!grupo)canalSel='comunidad';
+  if(step===TOTAL_PASOS&&grupo)canalSel='grupo';else if(canalSel==='grupo'&&!grupo)canalSel='comunidad';
   pintarCanal();cargarForo();
-  clearInterval(pollG);if(step===5)cargarGrupo();}
+  clearInterval(pollG);if(step===TOTAL_PASOS)cargarGrupo();}
 async function finalizarSemana(){
   if(PREVIEW)return alert('Vista previa: aquí se finalizaría la lección. No se guardó nada.');
+  for(let s=0;s<=TOTAL_PASOS;s++){const v=_vacios(s);if(v.length){
+    if(s!==step){step=s;mostrarPaso();}
+    return invitar(v,'💛 Para cerrar la lección nos falta escuchar tu voz aquí. Cuéntanos con una o dos frases sinceras; luego podrás finalizar.');}}
   await guardar();
-  await sb.from('ev_progreso').upsert({perfil_id:user.id,curso:CURSO,paso_actual:5,paso_max:5,completado:true,updated_at:new Date().toISOString()},{onConflict:'perfil_id,curso'});
+  await sb.from('ev_progreso').upsert({perfil_id:user.id,curso:CURSO,paso_actual:TOTAL_PASOS,paso_max:TOTAL_PASOS,completado:true,updated_at:new Date().toISOString()},{onConflict:'perfil_id,curso'});
   alert('¡Has finalizado todas las tareas de la semana!');volver();}
 function toggleForum(){$('forum-panel').classList.toggle('open');}
 // Dos chats: 'grupo' (hilo único del equipo, paso 5) y 'comunidad' (un hilo por paso)
-const pasoChat=()=>canalSel==='grupo'?5:step;
+const pasoChat=()=>canalSel==='grupo'||step===TOTAL_PASOS?5:step;
 function pintarCanal(){
   const off=canalSel==='grupo'?!CFG.grupo:!CFG.foro,tiene=!!grupo,sinGrupo=canalSel==='grupo'&&!tiene;
   $('tab-grupo').classList.toggle('on',canalSel==='grupo');$('tab-comunidad').classList.toggle('on',canalSel==='comunidad');
@@ -700,7 +722,7 @@ function pintarCanal(){
   $('forum-input').disabled=sinGrupo||off;document.querySelector('.chat-input-area .btn').disabled=sinGrupo||off;
   $('forum-prompt-text').innerHTML=off?'<strong>Este chat no está habilitado esta semana.</strong> Lo activaremos cuando la tarea lo necesite.':sinGrupo?'<strong>Todavía no tienes grupo.</strong> Cuando el administrador te asigne uno, podrás coordinar aquí con tu equipo.'
     :canalSel==='grupo'?'<strong>Chat privado de '+esc(grupo.nombre||'tu grupo')+':</strong> solo lo ven los integrantes. Úsenlo para ponerse de acuerdo y presentar la tarea de esta semana.'+(equipo.length?'<div class="approval-list" style="margin-top:10px">'+chipsEquipo()+'</div>':'')
-    :(step<5?((LECX[LECC]&&LECX[LECC].foro)||forumPrompts)[step]:'Comparte con toda la comunidad lo que Dios te ha mostrado esta semana y anima a otros con sus comentarios.');
+    :(step<TOTAL_PASOS?((LECX[LECC]&&LECX[LECC].foro)||forumPrompts)[step]:'Comparte con toda la comunidad lo que Dios te ha mostrado esta semana y anima a otros con sus comentarios.');
   foroGrupo=canalSel==='grupo'&&tiene?grupo.id:null;}
 async function elegirCanal(c){
   if(c==='grupo'&&!grupo){const {data:g}=await sb.rpc('ev_mi_grupo',{p_curso:CURSO});grupo=(g&&g[0])||null;cargarEquipo();}
@@ -783,19 +805,20 @@ async function abrirHub(){
   const P={};(pr||[]).forEach(r=>P[r.curso]=r);
   const A={},AS=await asisData();if(AS){LECS.forEach(l=>{const cs=AS.clases.filter(c=>c.lec===l.id&&c.tomada);A[l.id]={total:cs.length,presentes:cs.filter(c=>c.presente===true).length};});const q=asisCalc(AS);$('asist-mini').innerHTML=q.tom?'📅 Mi asistencia: <b>'+q.pct+'%</b> · '+q.pres+' de '+q.tom+' clases tomadas (total del curso: '+q.total+')':'';}
   box.innerHTML=LECS.map(l=>{
-    const r=P[claveL(l.id)],pct=r?(r.completado?100:Math.round((r.paso_max||0)/TOTAL_PASOS*100)):0,a=A[l.id];
+    const T=ultimoPaso(l.id),r=P[claveL(l.id)],pct=r?(r.completado?100:Math.round((r.paso_max||0)/T*100)):0,a=A[l.id];
     if(!l.abierta)return '<div class="card leccion bloq"><h3>🔒 '+esc(l.titulo)+'</h3><p style="font-size:.9rem">Se habilitará en su semana.</p></div>';
-    const llego=r&&(r.completado||(r.paso_max||0)>=TOTAL_PASOS);
+    const llego=r&&(r.completado||(r.paso_max||0)>=T);
     return '<div class="card leccion"><h3>'+esc(l.titulo)+'</h3><div class="barra"><i style="width:'+pct+'%"></i></div>'+
       '<p style="font-size:.9rem;margin-top:6px">Avance: <b>'+pct+'%</b>'+(r&&r.completado?' · ✅ Finalizada':'')+(a&&a.total?' · Asistencia: <b>'+a.presentes+' de '+a.total+'</b> clases':'')+'</p>'+
-      '<div class="acciones"><button class="btn" onclick="abrirLeccion('+l.id+')">'+(r?'Continuar':'Comenzar')+'</button>'+(llego?'<button class="btn btn-secondary" onclick="abrirLeccion('+l.id+',5)">📝 Ir a la tarea</button>':'')+'</div></div>';}).join('');}
+      '<div class="acciones"><button class="btn" onclick="abrirLeccion('+l.id+')">'+(r?'Continuar':'Comenzar')+'</button>'+(llego?'<button class="btn btn-secondary" onclick="abrirLeccion('+l.id+','+T+')">📝 Ir a la tarea</button>':'')+'</div></div>';}).join('');}
 async function abrirLeccion(n,irA){
   const L=LECS.find(x=>x.id===n);if(!L||!L.abierta)return;
-  if(n>2)return alert('El contenido de esta lección está en preparación.');
+  if(!LECX[n]&&n!==0)return alert('El contenido de esta lección está en preparación.');
   const els=[...document.querySelectorAll('.step-content')];if(!INTRO)INTRO=els.map(e=>e.innerHTML);
   LECC=n;CURSO=claveL(n);CFG={foro:L.foro!==false,grupo:L.grupo!==false};canalSel='comunidad';
   if(n===0){TAREA='gran-historia';ETIQ=ETIQ0;els.forEach((e,i)=>e.innerHTML=INTRO[i]);}
-  else{const LX=LECX[n];TAREA='taller-l'+n;ETIQ=LX.etiq;els.forEach((e,i)=>e.innerHTML=LX.pasos[i]);}
+  else{const LX=LECX[n];TAREA='taller-l'+n;ETIQ=LX.etiq;els.forEach((e,i)=>e.innerHTML=LX.pasos[i]||'');}
+  TOTAL_PASOS=ETIQ.length-1;
   await abrirCurso(irA);}
 // Contenido de la Lección 1
 const _q=(k,t)=>'<label><strong>'+t+'</strong></label><textarea data-k="'+k+'" placeholder="Escribe aquí..."></textarea>';
@@ -911,12 +934,51 @@ pasos:[
 <li><strong>La diferencia de Jesús:</strong> ¿qué diferencia práctica marcaría en nuestra vida recibir el sentimiento de justicia de parte de Jesús, y no de nuestras reglas? ¿Y cómo cambiaría la manera de tratar a quienes nos imponen las suyas?</li></ol>
 <div id="grupo-box"></div></div>
 <div class="navigation-bar"><button class="btn btn-secondary" onclick="nextStep(4)">Volver al Módulo 5</button><button class="btn" onclick="finalizarSemana()">Finalizar Lección 2</button></div>`]};
-const LECX={1:LEC1,2:LEC2};
+// Contenido de la Lección 3
+const LEC3={etiq:['Módulo 1','Módulo 2','Módulo 3','Módulo 4','📝 Taller'],
+foro:['Comparte con el grupo en qué momento de esta semana descubriste que buscabas tu valor en tus logros o en la aprobación de los demás, y cómo se sintió verlo.','Si te animas, cuenta cómo reaccionas ante un fallo o pecado recurrente y qué cambia cuando recuerdas que tu aceptación descansa en la justicia pasiva de Jesús.','¿Qué miedo o ansiedad cotidiana te mostró que a veces actúas como huérfano? Anímense unos a otros a recordar que son hijos amados.','Comparte (si te sientes cómodo) un área donde necesitas dejar de esforzarte por tus propias fuerzas y empezar a descansar como un hijo amado.'],
+pasos:[
+`<h2>Lección 3: Creyendo en el Evangelio</h2><h3>Módulo 1 · Introducción: La Lucha por la Justicia y la Identidad</h3>
+<p>En las lecciones anteriores nos enfocamos en el aspecto negativo: cómo tendemos a “reducir la Cruz” a través de aparentar y de cumplir. En esta lección cambiamos nuestra atención hacia lo positivo: ¿Qué remedios ha provisto Dios en el Evangelio para liberarnos de la necesidad de depender de nuestros propios esfuerzos?</p>
+<p>La raíz profunda de la condición humana es una incesante lucha por la justicia y la identidad. Anhelamos aprobación, aceptación, seguridad y significado porque fuimos diseñados para encontrar todo eso en Dios. Sin embargo, al separarnos de Él por el pecado, intentamos construir nuestra propia justicia mediante el aparentar y el cumplir.</p>
+<h3>Base Bíblica</h3>
+<blockquote>“Porque ignorando la justicia de Dios, y procurando establecer la suya propia, no se han sujetado a la justicia de Dios.” (Romanos 10:3)</blockquote>
+<h3>Pregunta de Reflexión Personal</h3>`
++_q('l3_m1_a','Al examinar tu semana pasada, ¿en qué momentos descubriste que estabas intentando construir tu propia “justicia” o valor personal a través de tus logros o de la aprobación de los demás en lugar de descansar en Cristo?')+_nav(0),
+`<h2>El Remedio 1: La Justicia Pasiva</h2><h3>Módulo 2</h3>
+<p>La justicia pasiva es la verdad bíblica de que Dios no solo ha perdonado nuestros pecados, sino que también nos confiere la justicia activa de Cristo. Martín Lutero la denominó “pasiva” porque no tenemos que trabajar ni esforzarnos por ganarla; es un regalo que recibimos enteramente por la fe. Si no dependemos de esta justicia que proviene de Cristo, no nos queda más opción que intentar salvarnos mediante nuestras propias obras. Cuando nos apropiamos de la justicia pasiva, ver nuestro propio pecado deja de ser un motivo de terror o vergüenza asfixiante, convirtiéndose en motivo de alabanza porque Jesús ya pagó por todo ello. El pecado deja de definir nuestro valor.</p>
+<h3>Base Bíblica</h3>
+<blockquote>“Pero ahora, aparte de la ley, se ha manifestado la justicia de Dios... la justicia de Dios por medio de la fe en Jesucristo, para todos los que creen en Él.” (Romanos 3:21-22)</blockquote>
+<h3>Pregunta de Reflexión Personal</h3>`
++_q('l3_m2_a','Cuando tomas conciencia de un fallo grave o un pecado recurrente en tu vida, ¿tiendes a paralizarte bajo la culpa o logras recordar que tu aceptación delante de Dios no depende de tu desempeño sino de la justicia pasiva de Jesús? ¿Por qué?')+_nav(1),
+`<h2>El Remedio 2: La Adopción (De Huérfanos a Hijos)</h2><h3>Módulo 3</h3>
+<p>La adopción es la verdad bíblica de que Dios nos ha aceptado en su familia como sus propios hijos e hijas mediante nuestra unión con Jesús. Cuando olvidamos esta identidad, volvemos a vivir como huérfanos. En lugar de descansar en el amor paternal de Dios, nos subimos a la “cinta de correr” religiosa, intentando ser “buenos cristianos” para ganarnos su aprobación mediante el cumplimiento estricto de reglas. Por medio del Espíritu Santo, recibimos el espíritu de adopción que nos libera del temor y nos otorga una posición de plenos herederos.</p>
+<h3>Base Bíblica</h3>
+<blockquote>“Pues no habéis recibido el espíritu de esclavitud para estar otra vez en temor, sino que habéis recibido el espíritu de adopción, por el cual clamamos: ¡Abba, Padre!” (Romanos 8:15)</blockquote>
+<h3>Pregunta de Reflexión Personal</h3>`
++_q('l3_m3_a','¿Qué miedos o ansiedades cotidianas revelan que, en la práctica, a veces actúas más como un huérfano que intenta ganarse el favor de Dios que como un hijo seguro de su amor?')+_nav(2),
+`<h2>Autoevaluación Práctica: Huérfanos vs. Hijos</h2><h3>Módulo 4</h3>
+<p>Para mantenernos humildes y evaluar nuestra necesidad diaria de volver a Cristo, es útil contrastar las actitudes del huérfano (que vive bajo el peso del rendimiento) frente a las actitudes del hijo (que vive desde la gracia). El patrón constante de la vida cristiana es el arrepentimiento y la fe, abandonando la mentalidad de huérfano para asimilar nuestra verdadera identidad en la familia de Dios.</p>
+<h3>Base Bíblica</h3>
+<blockquote>“Mirad cuál amor nos ha dado el Padre, para que seamos llamados hijos de Dios...” (1 Juan 3:1)</blockquote>
+<h3>Pregunta de Reflexión Personal</h3>`
++_q('l3_m4_a','Revisa tu tendencia actual: ¿Cuál es un área específica de tu vida donde necesitas dejar de esforzarte por tus propias fuerzas y empezar a descansar como un hijo amado?')
++'<p>Con este ejercicio cerramos los contenidos personales de la Lección 3: Creyendo en el Evangelio.</p>'+_nav(3),
+`<h2 class="taller-title">Tarea Grupal: Una Comunidad de Huérfanos y una Comunidad de Hijos</h2>
+<p><strong>Objetivo de la misión:</strong> reúnanse en sus grupos asignados para debatir y responder de forma abierta y profunda las siguientes dos interrogantes sobre la vida en comunidad.</p>
+<div class="task-card task-group"><h3>👥 Tarea Grupal</h3>
+<p>Cada equipo trabajará en el lienzo compartido para redactar un texto unificado que responda a estas preguntas:</p><ol style="margin-left:22px;font-size:1.05rem;line-height:1.6">
+<li><strong>¿Cómo se comporta, actúa y convive una comunidad de huérfanos?</strong> Reflexionen sobre el ambiente que se respira cuando una iglesia o grupo pequeño basa su identidad en el rendimiento, la apariencia, el juicio mutuo, la defensiva y la competencia espiritual en lugar de la gracia.</li>
+<li><strong>¿Cómo se comporta, actúa y convive una comunidad de hijos?</strong> Describan vívidamente cómo cambia la convivencia, la vulnerabilidad, el trato hacia los débiles y la resolución de errores cuando una comunidad vive plenamente convencida de su adopción y de la justicia pasiva de Cristo.</li></ol>
+<div id="grupo-box"></div></div>
+<div class="navigation-bar"><button class="btn btn-secondary" onclick="nextStep(3)">Volver al Módulo 4</button><button class="btn" onclick="finalizarSemana()">Finalizar Lección 3</button></div>`]};
+const LECX={1:LEC1,2:LEC2,3:LEC3};
+const ultimoPaso=n=>LECX[n]?LECX[n].etiq.length-1:5;
 
 // ---------- VISTA PREVIA (solo administradores; no guarda ni registra nada) ----------
 async function abrirPreview(n){
   let ok=false;try{const {data}=await sb.rpc('ev_es_admin');ok=data===true;}catch(e){}
-  if(!ok||n>2){history.replaceState(null,'',location.pathname);return entrar();}
+  if(!ok||!LECX[n]){history.replaceState(null,'',location.pathname);return entrar();}
   PREVIEW=true;
   const b=document.createElement('div');b.id='banner-prev';
   b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#7d3c98;color:#fff;text-align:center;padding:6px 10px;font:600 .85rem Poppins,system-ui,sans-serif';
