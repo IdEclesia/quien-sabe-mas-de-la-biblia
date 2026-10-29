@@ -206,8 +206,8 @@ header .link{font-size:.85rem}#guardado{font-size:.8rem;color:var(--text-muted);
   <div class="card">
     <div class="tabs"><button class="btn" id="tab-login" onclick="tab('login')">Ingresar</button><button class="btn btn-secondary" id="tab-reg" onclick="tab('reg')">Registrarme</button></div>
     <form id="f-login">
-      <input type="email" id="l-email" placeholder="Correo electrónico" required>
-      <input type="password" id="l-pass" placeholder="Contraseña" required>
+      <input type="email" id="l-email" placeholder="Correo electrónico" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+      <input type="password" id="l-pass" placeholder="Contraseña" autocomplete="current-password" required>
       <button class="btn">Ingresar</button>
       <p style="text-align:center;margin-top:10px"><a href="#" id="l-olvide" style="font-size:.9rem">¿Olvidaste tu contraseña?</a></p>
     </form>
@@ -286,8 +286,8 @@ header .link{font-size:.85rem}#guardado{font-size:.8rem;color:var(--text-muted);
       <input id="r-ciudad" placeholder="Ciudad" required>
       <input id="r-barrio" placeholder="Barrio" required>
       <label>Fecha de nacimiento</label><input type="date" id="r-nac" required>
-      <input type="email" id="r-email" placeholder="Correo electrónico (para tu cuenta)" required>
-      <input type="password" id="r-pass" placeholder="Contraseña (mínimo 6 caracteres)" minlength="6" required>
+      <input type="email" id="r-email" placeholder="Correo electrónico (para tu cuenta)" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+      <input type="password" id="r-pass" placeholder="Contraseña (mínimo 6 caracteres)" minlength="6" autocomplete="new-password" required>
       <button class="btn">Crear mi cuenta</button>
     </form>
     <p class="msg" id="auth-msg"></p>
@@ -576,13 +576,17 @@ function msg(id,t,ok){const e=$(id);e.textContent=t||'';e.className='msg'+(ok?' 
 function tab(t){const l=t==='login';$('f-login').hidden=!l;$('f-reg').hidden=l;
   $('tab-login').className='btn'+(l?'':' btn-secondary');$('tab-reg').className='btn'+(l?' btn-secondary':'');msg('auth-msg');}
 $('f-login').addEventListener('submit',async e=>{e.preventDefault();msg('auth-msg');
-  const {data,error}=await sb.auth.signInWithPassword({email:$('l-email').value.trim(),password:$('l-pass').value});
+  let res;try{res=await sb.auth.signInWithPassword({email:$('l-email').value.trim(),password:$('l-pass').value});}
+  catch(x){return msg('auth-msg','No pudimos ingresar. Revisa tu conexión e inténtalo de nuevo.');}
+  const {data,error}=res;
   if(error)return msg('auth-msg','No pudimos ingresar: '+error.message);
   user=data.user;entrar();});
 $('f-reg').addEventListener('submit',async e=>{e.preventDefault();msg('auth-msg');
   const d={nombre_apellido:$('r-nombre').value.trim(),iglesia:$('r-iglesia').value.trim(),pais:$('r-pais').value,
     ciudad:$('r-ciudad').value.trim(),barrio:$('r-barrio').value.trim(),fecha_nacimiento:$('r-nac').value};
-  const {data,error}=await sb.auth.signUp({email:$('r-email').value.trim(),password:$('r-pass').value,options:{data:d}});
+  let res;try{res=await sb.auth.signUp({email:$('r-email').value.trim(),password:$('r-pass').value,options:{data:d}});}
+  catch(x){return msg('auth-msg','No pudimos crear la cuenta. Revisa tu conexión e inténtalo de nuevo.');}
+  const {data,error}=res;
   if(error)return msg('auth-msg','No pudimos crear la cuenta: '+error.message);
   if(!data.session)return msg('auth-msg','Cuenta creada. Revisa tu correo para confirmarla y luego ingresa.',true);
   user=data.user;entrar();});
@@ -591,7 +595,21 @@ $('l-olvide').addEventListener('click',async e=>{e.preventDefault();
   if(!email)return msg('auth-msg','Escribe tu correo arriba y vuelve a tocar el enlace.');
   const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
   msg('auth-msg',error?'No pudimos enviar el correo: '+error.message+'. Escríbenos y te ayudamos a recuperar el acceso.':'Si el correo está registrado, te enviamos un enlace para crear una nueva contraseña. Revisa también spam.',!error);});
-sb.auth.onAuthStateChange((evt,ses)=>{if(evt==='PASSWORD_RECOVERY'){user=ses&&ses.user;ver('view-nueva-pass');}});
+// Sesión vencida (p. ej. iPhone: la pestaña quedó abierta y el sistema la congeló): avisar y volver a ingresar sin perder lo escrito
+let saliendo=false,sesionOff=false,uidPerdido=null;
+function sesionPerdida(){
+  if(!user||sesionOff||saliendo||PREVIEW)return;
+  sesionOff=true;uidPerdido=user.id;clearInterval(pollG);if(canal){sb.removeChannel(canal);canal=null;}
+  ver('view-auth');msg('auth-msg','Tu sesión venció. Ingresa de nuevo con tu correo y contraseña; lo que alcanzaste a escribir se conserva.');}
+function revisarSesion(){
+  if(!user||sesionOff||saliendo||PREVIEW)return;
+  sb.auth.getSession().then(({data,error})=>{
+    if(error&&/retryable|fetch|load failed|network/i.test((error.name||'')+' '+(error.message||'')))return;
+    if(!data||!data.session)sesionPerdida();}).catch(()=>{});}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')revisarSesion();});
+window.addEventListener('pageshow',e=>{if(e.persisted)revisarSesion();});
+sb.auth.onAuthStateChange((evt,ses)=>{if(evt==='PASSWORD_RECOVERY'){user=ses&&ses.user;ver('view-nueva-pass');}
+  if(evt==='SIGNED_OUT')sesionPerdida();});
 $('f-nueva-pass').addEventListener('submit',async e=>{e.preventDefault();msg('np-msg');
   const a=$('np-pass').value,b=$('np-pass2').value;
   if(a!==b)return msg('np-msg','Las contraseñas no coinciden.');
@@ -601,8 +619,14 @@ $('f-nueva-pass').addEventListener('submit',async e=>{e.preventDefault();msg('np
 async function entrar(){
   // contraseña temporal puesta por un administrador: obligar a cambiarla
   if(user&&user.user_metadata&&user.user_metadata.must_change_password)return ver('view-nueva-pass');
-  const {data}=await sb.from('perfiles').select('*').eq('id',user.id).single();perfil=data;
+  const {data,error:ep}=await sb.from('perfiles').select('*').eq('id',user.id).single();perfil=data;
+  if(!perfil&&ep&&ep.code!=='PGRST116'){
+    const jwt=/jwt|PGRST30/i.test((ep.message||'')+' '+(ep.code||''));
+    if(jwt){saliendo=true;try{await sb.auth.signOut({scope:'local'});}catch(_){}saliendo=false;}
+    return ver('view-auth'),msg('auth-msg',jwt?'Tu sesión venció. Ingresa de nuevo con tu correo y contraseña.':'No pudimos cargar tu perfil. Revisa tu conexión e inténtalo de nuevo.');}
   if(!perfil)return ver('view-auth'),msg('auth-msg','No encontramos tu perfil. Escríbenos para ayudarte.');
+  if(uidPerdido){if(uidPerdido===user.id&&dirty.size)guardar();else dirty.clear();uidPerdido=null;}
+  sesionOff=false;
   // barrio y fecha_nacimiento: el trigger de perfiles no los copia, así que los completamos desde los datos del registro
   const m=user.user_metadata||{},up={};
   if(!perfil.barrio&&m.barrio)up.barrio=m.barrio;
@@ -615,7 +639,7 @@ $('f-comp').addEventListener('submit',async e=>{e.preventDefault();
   const {error}=await sb.from('perfiles').update(up).eq('id',user.id);
   if(error)return msg('comp-msg','No se pudo guardar: '+error.message);
   Object.assign(perfil,up);irACursos();});
-async function salir(){await sb.auth.signOut();user=perfil=null;ver('view-auth');}
+async function salir(){saliendo=true;try{await sb.auth.signOut();}finally{saliendo=false;}user=perfil=null;ver('view-auth');}
 
 // ---------- CURSOS ----------
 async function cargarProgreso(){
@@ -1063,7 +1087,7 @@ sb.auth.getSession().then(({data})=>{
   if(EN_RECUPERACION){ if(data.session){user=data.session.user;} return ver('view-nueva-pass'); }
   if(data.session&&PREV_REQ){user=data.session.user;return abrirPreview(+PREV_N);}
   if(data.session){user=data.session.user;entrar();}
-  else{ver('view-auth');if(ENLACE_VENCIDO)msg('auth-msg','El enlace venció o ya se usó. Toca "¿Olvidaste tu contraseña?" para pedir uno nuevo.');}});
+  else{ver('view-auth');if(ENLACE_VENCIDO)msg('auth-msg','El enlace venció o ya se usó. Toca "¿Olvidaste tu contraseña?" para pedir uno nuevo.');}}).catch(()=>{ver('view-auth');msg('auth-msg','No pudimos revisar tu sesión. Ingresa con tu correo y contraseña.');});
 </script>
 </body>
 </html>
