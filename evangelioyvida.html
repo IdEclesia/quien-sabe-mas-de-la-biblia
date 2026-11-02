@@ -177,6 +177,11 @@ body{display:block;height:auto;overflow:auto;font-family:'Poppins',system-ui,san
 .barra{height:6px;background:#eee;border-radius:3px;margin-top:8px;overflow:hidden}.barra i{display:block;height:100%;background:var(--primary-green)}
 .invita{background:#FFF8E1;border-left:4px solid #E0A526;border-radius:0 8px 8px 0;padding:12px 16px;margin:14px 0 8px;font-size:.95rem;color:#5b4a14;line-height:1.5}
 textarea.falta{border-color:#E0A526!important;box-shadow:0 0 0 3px rgba(224,165,38,.22)}
+.opciones{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 18px}
+.opcion{flex:1;min-width:200px;padding:14px 16px;border-radius:10px;border:2px solid var(--border-color);background:#fff;color:var(--dark-green);font:inherit;font-weight:600;cursor:pointer;text-align:center;transition:all .15s;touch-action:manipulation}
+.opcion:hover{border-color:var(--primary-green)}
+.opcion.on{background:var(--primary-green);border-color:var(--primary-green);color:#fff}
+input.falta+.opciones .opcion{border-color:#E0A526;box-shadow:0 0 0 3px rgba(224,165,38,.22)}
 .asis-top{display:flex;align-items:center;gap:14px;margin:6px 0 12px}.asis-pct{font-size:2.3rem;line-height:1;color:var(--dark-green);font-weight:700}
 .asis-top small{color:var(--text-muted)}
 .asis-track{display:flex;gap:3px;margin:6px 0 4px}.asis-track i{flex:1;height:14px;border-radius:4px;background:#e9e7d6}.asis-track i.si{background:#52be80}.asis-track i.no{background:#e6877d}
@@ -706,7 +711,7 @@ async function abrirCurso(irA){
 // Para avanzar hay que responder: se pide al menos una o dos frases en cada pregunta del paso.
 const MIN_RESP=10;
 const _escrito=t=>t.value.trim().length>=MIN_RESP;
-const _vacios=s=>{const c=$('step-'+s);return c?[...c.querySelectorAll('textarea[data-k]')].filter(t=>!_escrito(t)):[];};
+const _vacios=s=>{const c=$('step-'+s);return c?[...c.querySelectorAll('textarea[data-k],input[type="hidden"][data-k]')].filter(t=>!_escrito(t)):[];};
 function invitar(vacios,msg){
   document.querySelectorAll('.invita').forEach(e=>e.remove());
   document.querySelectorAll('textarea.falta').forEach(t=>t.classList.remove('falta'));
@@ -728,12 +733,12 @@ const ETIQ0=['Inicio','Acto 1','Acto 2','Acto 3','Acto 4','📝 Tarea'];let ETIQ
 function pintarStepper(){
   $('stepper').innerHTML=ETIQ.map((t,i)=>'<button'+(i===step?' class="on"':'')+(i>tope()?' disabled title="Completa los pasos anteriores"':'')+' onclick="nextStep('+i+')">'+t+'</button>').join('');}
 function mostrarPaso(){
-  pintarStepper();
+  pintarStepper();sincOpciones();
   document.querySelectorAll('.step-content').forEach(el=>el.classList.remove('active'));
   $('step-'+step).classList.add('active');$('lesson-panel').scrollTop=0;
   if(step===TOTAL_PASOS&&grupo)canalSel='grupo';else if(canalSel==='grupo'&&!grupo)canalSel='comunidad';
   pintarCanal();cargarForo();
-  clearInterval(pollG);if(step===TOTAL_PASOS)(LECC===3?cargarComunidadResp():cargarGrupo());}
+  clearInterval(pollG);if(step===TOTAL_PASOS)((LECC===3||LECC===4)?cargarComunidadResp():cargarGrupo());}
 async function finalizarSemana(){
   if(PREVIEW)return alert('Vista previa: aquí se finalizaría la lección. No se guardó nada.');
   for(let s=0;s<=TOTAL_PASOS;s++){const v=_vacios(s);if(v.length){
@@ -900,6 +905,12 @@ async function abrirLeccion(n,irA){
   await abrirCurso(irA);}
 // Contenido de la Lección 1
 const _q=(k,t)=>'<label><strong>'+t+'</strong></label><textarea data-k="'+k+'" placeholder="Escribe aquí..."></textarea>';
+const _opc=(k,t,ops)=>'<label><strong>'+t+'</strong></label><input type="hidden" data-k="'+k+'"><div class="opciones" role="radiogroup" aria-label="'+t.replace(/"/g,'&quot;')+'">'+ops.map(o=>'<button type="button" class="opcion" role="radio" aria-checked="false" data-v="'+o+'" onclick="elegirOpcion(this)">'+o+'</button>').join('')+'</div>';
+function sincOpciones(){document.querySelectorAll('.opciones').forEach(g=>{const h=g.previousElementSibling,v=h?h.value:'';
+  g.querySelectorAll('.opcion').forEach(b=>{const on=b.dataset.v===v;b.classList.toggle('on',on);b.setAttribute('aria-checked',on?'true':'false');});});}
+function elegirOpcion(b){const h=b.parentElement.previousElementSibling;h.value=b.dataset.v;h.classList.remove('falta');
+  if(!document.querySelector('textarea.falta,input.falta'))document.querySelectorAll('.invita').forEach(x=>x.remove());
+  h.dispatchEvent(new Event('input',{bubbles:true}));sincOpciones();}
 const _nav=i=>'<div class="navigation-bar">'+(i>0?'<button class="btn btn-secondary" onclick="nextStep('+(i-1)+')">Volver</button>':'')+'<button class="btn" onclick="nextStep('+(i+1)+')">Guardar y continuar</button></div>';
 const _m4=[
 ['Ponerse a la defensiva','Te cuesta recibir críticas sobre tus debilidades y pecados. Cuando alguien te confronta, tu tendencia inmediata es dar explicaciones, hablar de tus éxitos o justificar tus decisiones, lo que frena cualquier conversación profunda.','Cuando alguien te señala un error con amor, ¿qué dice de tu confianza en la gracia de Dios el hecho de que sientas la necesidad imperiosa de defender tu reputación en lugar de escuchar?'],
@@ -1067,7 +1078,63 @@ pasos:[
 </div>
 </div>
 <div class="navigation-bar"><button class="btn btn-secondary" onclick="nextStep(3)">Volver al Módulo 4</button><button class="btn" onclick="finalizarSemana()">Finalizar Lección 3</button></div>`]};
-const LECX={1:LEC1,2:LEC2,3:LEC3};
+// Contenido de la Lección 4
+const LEC4={etiq:['Módulo 1','Módulo 2','Módulo 3','Módulo 4','📝 Taller'],
+foro:['Comparte con el grupo cómo sueles reaccionar ante los mandatos de la Biblia y qué crees que hay detrás de esa reacción.','Si te animas, cuenta en qué área intentas demostrar que eres “suficientemente bueno” y qué cambia cuando admites que necesitas a Jesús.','Comparte qué experimentas hoy: la paz de saber que ya no estás bajo la ley, o el temor de que Dios te castigue cuando fallas. Anímense unos a otros.','Cuenta de un acto de obediencia o servicio que te cueste y si nace de la obligación o de la gratitud por el amor que ya recibiste.'],
+pasos:[
+`<h2>Lección 4: La Ley y el Evangelio</h2><h3>Módulo 1 · Introducción: El Dilema de la Ley y la Gracia</h3>
+<p>La Biblia está llena de mandatos, prohibiciones y expectativas que nos dicen qué hacer y qué no hacer. Estas reglas a menudo generan confusión o rechazo: los no cristianos ven al cristianismo como un sinfín de normas restrictivas, y los cristianos fieles luchan por entender cómo se relacionan la Ley de Dios y el Evangelio.</p>
+<p>Cuando no comprendemos esta relación, caemos en dos errores opuestos pero igual de destructivos: el legalismo (creer que la aprobación de Dios depende de nuestra buena conducta) y el libertinaje (descartar las reglas pensando que, como estamos bajo la gracia, ya nada importa). El Evangelio nos enseña el equilibrio perfecto: la ley nos conduce a Cristo en nuestra desesperación, y el Evangelio nos libera para obedecer con amor.</p>
+<h3>Base Bíblica</h3>
+<blockquote>“Porque el fin de la ley es Cristo, para justicia a todo aquel que cree.” (Romanos 10:4)</blockquote>
+<h3>Pregunta de Reflexión Personal</h3>`
++_opc('l4_m1_a','Al leer los mandatos de la Biblia, ¿tiendes a verlos como una carga pesada para ganarte el favor de Dios o como sugerencias opcionales que no afectan tu vida diaria?',['Parecen una carga','Creo que son opcionales'])
++_q('l4_m1_b','¿Por qué crees eso?')+_nav(0),
+`<h2>El Propósito de la Ley: Conducirnos a Cristo</h2><h3>Módulo 2</h3>
+<p>Muchos intentan guardar la ley con sus propias fuerzas para sentirse justos ante Dios, pero la ley tiene un propósito completamente diferente: actuar como un espejo que revela nuestra incapacidad. Bien entendida, la ley no hace otra cosa que recordarnos nuestro pecado, matarnos en nuestros intentos de salvación propia y mostrarnos que estamos bajo juicio. Ningún ser humano puede cumplir la ley por su propio poder. Su función principal es cerrar toda puerta de autojusticia y dejarnos sin excusas, empujándonos directamente a los brazos de Jesús, quien cumplió la ley a la perfección en nuestro lugar.</p>
+<h3>Base Bíblica</h3>
+<blockquote>“De manera que la ley ha sido nuestro ayo, para llevarnos a Cristo, a fin de que fuésemos justificados por la fe.” (Gálatas 3:24)</blockquote>
+<h3>Pregunta de Reflexión Personal</h3>`
++_q('l4_m2_a','¿En qué áreas de tu vida sigues intentando demostrar que eres “suficientemente bueno” por tus propias fuerzas, en lugar de admitir tu incapacidad y acudir a Jesús?')+_nav(1),
+`<h2>La Redención: Libres de la Maldición de la Ley</h2><h3>Módulo 3</h3>
+<p>La maravillosa noticia del Evangelio es que Jesús no solo perdonó nuestras faltas, sino que cargó con la maldición y el castigo que la ley exigía por nuestra desobediencia. Al ser justificados por la fe en Él, ya no estamos “bajo la ley” como un juez implacable que nos condena, sino bajo la gracia. Esto significa que nuestra posición delante de Dios no tambalea cuando fallamos. Jesús satisfizo todas las demandas de la ley por nosotros, dándonos una libertad absoluta del temor a la condenación y liberando nuestros corazones para empezar a vivir de verdad para Él.</p>
+<h3>Base Bíblica</h3>
+<blockquote>“Cristo nos redimió de la maldición de la ley, hecho por nosotros maldición... para que por la fe recibiésemos la promesa del Espíritu.” (Gálatas 3:13-14)</blockquote>
+<h3>Pregunta de Reflexión Personal</h3>`
++_q('l4_m3_a','¿Qué tanto experimentas la paz de saber que ya no estás bajo la ley, o sigues viviendo con el temor constante de que Dios te va a castigar cada vez que cometes un error?')+_nav(2),
+`<h2>El Poder del Espíritu: Obedecer por Deleite y Amor</h2><h3>Módulo 4</h3>
+<p>Una vez unidos a Cristo, el Espíritu Santo que mora en nosotros transforma nuestros corazones para cambiar la motivación de nuestra obediencia. Ya no obedecemos por una obligación forzada o por miedo al castigo (lo cual sería legalismo), sino por un profundo deleite y amor hacia Dios. El cumplimiento verdadero de la ley es el amor, y Dios ha puesto su propia capacidad de amar dentro de nosotros. La ley deja de ser una lista de restricciones agobiantes para convertirse en “la ley de la libertad”, guiándonos a vivir una vida que agrada y honra a nuestro Creador de forma espontánea y gozosa.</p>
+<h3>Base Bíblica</h3>
+<blockquote>“El hacer tu voluntad, Dios mío, me ha agradado, y tu ley está en medio de mi corazón.” (Salmo 40:8)</blockquote>
+<h3>Pregunta de Reflexión Personal</h3>`
++_q('l4_m4_a','Piensa en un acto de obediencia o servicio que te cueste hacer: ¿nace de un sentido de obligación pesada o del desborde de gratitud por el amor que ya recibiste de Dios?')
++'<p>Con este ejercicio cerramos los contenidos personales de la Lección 4: La Ley y el Evangelio.</p>'+_nav(3),
+`<h2 class="taller-title">Reflexión en Comunidad: Una Comunidad bajo la Ley y una Comunidad Liberada por el Evangelio</h2>
+<p><strong>Objetivo:</strong> compartir con toda la comunidad lo que estás entendiendo de la lección. Es un espacio libre para escribir lo que quieras: aquí nadie corrige ni aprueba lo que escribes.</p>
+<div class="task-card task-group"><h3>💬 Reflexión en Comunidad</h3>
+<div class="com-q">
+<h4 class="com-h">Pregunta 1</h4>
+<p><strong>1. ¿Cómo se comporta, actúa y convive una comunidad atrapada bajo la ley (el legalismo)?</strong> Reflexionen sobre el ambiente que se respira cuando un grupo basa su unión en el cumplimiento de normas externas, el control riguroso, la crítica a los que “se desvían” y la pérdida total de la gracia.</p>
+<textarea id="com-q1" placeholder="Escribe aquí tu respuesta..." oninput="this.dataset.tocado=1"></textarea>
+<div class="com-acciones"><button class="btn btn-blue" id="com-send-1" onclick="enviarRespCom(1)">Enviar mi respuesta</button><button class="btn btn-secondary" id="com-ver-1" onclick="verRespCom(1)">Ver respuestas de otros</button></div>
+<div class="com-msg" id="com-msg-1" role="status"></div>
+<div class="com-lista" id="com-lista-1" hidden></div>
+<div class="com-count" id="com-count-1"></div>
+<div class="approval-list" id="com-chips-1"></div>
+</div>
+<div class="com-q">
+<h4 class="com-h">Pregunta 2</h4>
+<p><strong>2. ¿Cómo se comporta, actúa y convive una comunidad liberada por el Evangelio (donde se obedece por amor)?</strong> Describan cómo cambia la convivencia cuando los errores de los demás se reciben con paciencia redentora, la obediencia nace del gozo y la gracia de Cristo es el centro que sostiene y une a las personas.</p>
+<textarea id="com-q2" placeholder="Escribe aquí tu respuesta..." oninput="this.dataset.tocado=1"></textarea>
+<div class="com-acciones"><button class="btn btn-blue" id="com-send-2" onclick="enviarRespCom(2)">Enviar mi respuesta</button><button class="btn btn-secondary" id="com-ver-2" onclick="verRespCom(2)">Ver respuestas de otros</button></div>
+<div class="com-msg" id="com-msg-2" role="status"></div>
+<div class="com-lista" id="com-lista-2" hidden></div>
+<div class="com-count" id="com-count-2"></div>
+<div class="approval-list" id="com-chips-2"></div>
+</div>
+</div>
+<div class="navigation-bar"><button class="btn btn-secondary" onclick="nextStep(3)">Volver al Módulo 4</button><button class="btn" onclick="finalizarSemana()">Finalizar Lección 4</button></div>`]};
+const LECX={1:LEC1,2:LEC2,3:LEC3,4:LEC4};
 const ultimoPaso=n=>LECX[n]?LECX[n].etiq.length-1:5;
 
 // ---------- VISTA PREVIA (solo administradores; no guarda ni registra nada) ----------
