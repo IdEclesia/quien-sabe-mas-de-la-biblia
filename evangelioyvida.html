@@ -216,6 +216,11 @@ header .link{font-size:.85rem}#guardado{font-size:.8rem;color:var(--text-muted);
 .idolo-bloque.mentira{background:#FDF3F1;border-color:#f0cfc9}.idolo-bloque.mentira b{color:#b03a2e}
 .idolo-bloque.verdad{background:#EEF7F0;border-color:#c9e4d0}.idolo-bloque.verdad b{color:#1e8449}
 .idolo-pie{font-size:.82rem;color:var(--text-muted,#777);margin:10px 0 0}
+.stepper button.idolo-tab{border-style:dashed;background:#FBFAF3}
+#idolo-modal{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.45);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 14px}
+.idolo-modal-in{position:relative;background:#fff;border-radius:14px;max-width:640px;width:100%;padding:24px 22px;margin:auto;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.idolo-modal-in h3{margin:0 0 12px;color:var(--dark-green);padding-right:34px}
+.idolo-x{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;border:1px solid var(--border-color);background:#fff;color:var(--dark-green);font-size:1rem;cursor:pointer}
 </style>
 </head>
 <body>
@@ -746,7 +751,7 @@ async function nextStep(i){
   sb.from('ev_progreso').upsert({perfil_id:user.id,curso:CURSO,paso_actual:i,paso_max:maxPaso,updated_at:new Date().toISOString()},{onConflict:'perfil_id,curso'}).then(()=>{});}
 const ETIQ0=['Inicio','Acto 1','Acto 2','Acto 3','Acto 4','📝 Tarea'];let ETIQ=ETIQ0;
 function pintarStepper(){
-  $('stepper').innerHTML=ETIQ.map((t,i)=>'<button'+(i===step?' class="on"':'')+(i>tope()?' disabled title="Completa los pasos anteriores"':'')+' onclick="nextStep('+i+')">'+t+'</button>').join('');}
+  $('stepper').innerHTML=ETIQ.map((t,i)=>'<button'+(i===step?' class="on"':'')+(i>tope()?' disabled title="Completa los pasos anteriores"':'')+' onclick="nextStep('+i+')">'+t+'</button>').join('')+(LECC===6?'<button type="button" class="idolo-tab" onclick="idoloAbrir()">🔍 Test opcional</button>':'');}
 function mostrarPaso(){
   pintarStepper();sincOpciones();
   document.querySelectorAll('.step-content').forEach(el=>el.classList.remove('active'));
@@ -1206,9 +1211,7 @@ pasos:[
 <blockquote>“No tendrás dioses ajenos delante de mí.” (Éxodo 20:3)</blockquote>
 <h3>Pregunta de Reflexión Personal</h3>`
 +_q('l6_m2_a','Al observar tus reacciones cotidianas —aquello que más deseas, temes perder o defiendes con fuerza—, ¿qué ídolo del corazón suele asomarse detrás de tus faltas visibles?')
-+`<div class="idolo-card"><div class="idolo-opt">Opcional</div><h3>🔍 Test: ¿Qué ídolo se asoma en tu corazón?</h3>
-<p>Tres preguntas rápidas que parten de una situación cotidiana y van escarbando hasta mostrar el ídolo que podría estar detrás, y la verdad del Evangelio que lo desactiva. No es obligatorio: puedes continuar sin hacerlo.</p>
-<div id="idolo-box"><button type="button" class="btn" onclick="idoloIniciar()">Hacer el test</button></div></div>`
+
 +_nav(1),
 `<h2>Desenmascarar y Reemplazar los Ídolos por Fe</h2><h3>Módulo 3</h3>
 <p>Combatir la idolatría del corazón exige ir más allá de corregir la conducta superficial. Implica reconocer el ídolo que está operando, arrepentirse de haber buscado en él lo que solo Cristo ofrece, y ejercer la fe volviendo la mirada hacia Jesús y las promesas del Evangelio.</p>
@@ -1249,6 +1252,9 @@ pasos:[
 <div class="approval-list" id="com-chips-2"></div>
 </div>
 </div>
+<div class="idolo-card"><div class="idolo-opt">Opcional</div><h3>🔍 Test: ¿Qué ídolo se asoma en tu corazón?</h3>
+<p>Tres preguntas rápidas que parten de una situación cotidiana y van escarbando hasta mostrar el ídolo que podría estar detrás, y la verdad del Evangelio que lo desactiva. No es obligatorio, y también lo encuentras siempre arriba, junto a los módulos.</p>
+<button type="button" class="btn" onclick="idoloAbrir()">Hacer el test</button></div>
 <div class="navigation-bar"><button class="btn btn-secondary" onclick="nextStep(3)">Volver al Módulo 4</button><button class="btn" onclick="finalizarSemana()">Finalizar Lección 6</button></div>`]};
 // ---------- Test opcional de ídolos (Lección 6): no es obligatorio y no bloquea el avance ----------
 const IDOLO_P1=[['A','Que alguien me critique, me malinterprete o no valore lo que hago.'],['B','Que los planes cambien de golpe, surjan imprevistos o pierda el control de una situación.'],['C','Sentirme estancado, sentir que otros avanzan más rápido o que no logro mis metas.'],['D','Tener que enfrentar conflictos incómodos, sacrificios pesados o perder mi tranquilidad.']];
@@ -1264,6 +1270,15 @@ C:{e:'🏆',n:'Éxito y reconocimiento',m:'Eres lo que logras; si no destacas o 
 D:{e:'🛋️',n:'Comodidad y placer',m:'Una buena vida es una vida sin dolor, sin conflictos ni incomodidades.',v:'Jesús no vino a darte una vida libre de problemas, sino a caminar contigo en medio de ellos. Su presencia es un refugio mucho mejor que la comodidad.',r:'Juan 16:33',t:'“En el mundo tendréis aflicción; pero confiad, yo he vencido al mundo.”',o:'¿Qué incomodidad o conversación difícil estoy evitando, y cómo puedo enfrentarla sabiendo que Jesús camina conmigo?'}};
 const IDOLO_N={A1:'Tu reacción es defenderte y demostrar que vales. Detrás suele haber hambre de reconocimiento por tu capacidad.',A2:'Tu reacción es el dolor de “quedar mal”. Detrás suele haber miedo a perder la buena opinión de los demás.',B1:'Sueles asumir que todo depende de ti. Detrás suele haber un deseo de controlar los resultados.',B2:'Lo que más pesa es no saber qué viene. Detrás suele haber una necesidad de seguridad y certeza.',C1:'Mides tu valor por lo que haces o logras. Detrás suele haber una identidad construida sobre los resultados.',C2:'Te duele perder lugar frente a los demás. Detrás suele haber un deseo de respeto y de ser visto.',D1:'Tu impulso es escapar o disimular. Detrás suele haber miedo al dolor y a la incomodidad.',D2:'Sientes que mereces una vida liviana. Detrás suele haber apego a la comodidad y a la tranquilidad.'};
 let IDOLO={p1:null,p2:null};
+function idoloAbrir(){
+  if(!document.getElementById('idolo-modal')){
+    const m=document.createElement('div');m.id='idolo-modal';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-label','Test opcional de ídolos');
+    m.innerHTML='<div class="idolo-modal-in"><button type="button" class="idolo-x" onclick="idoloCerrar()" aria-label="Cerrar">✕</button><div class="idolo-opt">Opcional</div><h3>🔍 ¿Qué ídolo se asoma en tu corazón?</h3><div id="idolo-box"></div></div>';
+    m.addEventListener('click',e=>{if(e.target===m)idoloCerrar();});
+    document.body.appendChild(m);document.body.style.overflow='hidden';}
+  idoloIniciar();}
+function idoloCerrar(){const m=document.getElementById('idolo-modal');if(m)m.remove();document.body.style.overflow='';}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')idoloCerrar();});
 function idoloIniciar(){IDOLO={p1:null,p2:null};idoloPintar();}
 function idoloElegir(n,v){if(n===1){IDOLO.p1=v;IDOLO.p2=null;}else IDOLO.p2=v;idoloPintar();}
 function idoloAtras(){if(IDOLO.p2)IDOLO.p2=null;else IDOLO.p1=null;idoloPintar();}
